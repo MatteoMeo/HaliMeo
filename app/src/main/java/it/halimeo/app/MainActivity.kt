@@ -650,10 +650,12 @@ private fun DiaryScreen(
                 ) {
                     items(filtered, key = { it.id }) { entry ->
                         ElevatedCard(
-                            modifier = Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(28.dp), clip = false).animateContentSize(),
+                            modifier = Modifier.fillMaxWidth()
+                                .shadow(10.dp, RoundedCornerShape(28.dp), clip = false)
+                                .border(1.dp, Color.White.copy(alpha = 0.07f), MaterialTheme.shapes.large)
+                                .animateContentSize(),
                             shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.elevatedCardColors(containerColor = Panel),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.07f))
+                            colors = CardDefaults.elevatedCardColors(containerColor = Panel)
                         ) {
                             Column(
                                 modifier = Modifier.padding(14.dp),
