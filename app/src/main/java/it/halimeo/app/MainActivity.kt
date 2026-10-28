@@ -58,7 +58,8 @@ import kotlinx.coroutines.delay
 
 private val Ink=Color(0xFF07070B); private val Panel=Color(0xCC171720); private val Mint=Color(0xFFC4B5FD); private val Muted=Color(0xFFA6A1B2)
 private val Elevated=Color(0xD91A1A25);
-private val HaliMeoBackdrop = Brush.linearGradient(listOf(Color(0xFF171226), Color(0xFF08080E), Color(0xFF100B19), Color(0xFF060609))) private val TextPrimary=Color(0xFFF5F2FA); private val AccentWarm=Color(0xFFFFB4A2)
+private val HaliMeoBackdrop = Brush.linearGradient(listOf(Color(0xFF171226), Color(0xFF08080E), Color(0xFF100B19), Color(0xFF060609)))
+private val TextPrimary=Color(0xFFF5F2FA); private val AccentWarm=Color(0xFFFFB4A2)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable private fun HaliMeoTheme(content: @Composable () -> Unit) {
