@@ -61,7 +61,7 @@ import com.skydoves.cloudy.sky
 
 private val Ink=Color(0xFF07070B); private val Panel=Color(0xCC171720); private val Mint=Color(0xFFC4B5FD); private val Muted=Color(0xFFA6A1B2)
 private val Elevated=Color(0xD91A1A25);
-private val HaliMeoBackdrop = Brush.verticalGradient(listOf(Color(0xFF0D0C12), Color(0xFF08080D), Color(0xFF09080E)))
+private val HaliMeoBackdrop = Brush.verticalGradient(listOf(Color.Black, Color.Black, Color.Black))
 private val TextPrimary=Color(0xFFF5F2FA); private val AccentWarm=Color(0xFFFFB4A2)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -146,15 +146,6 @@ class MainActivity:ComponentActivity() {
                 .padding(horizontal = 26.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center
         ) {
-            // Soft blurred color halo, not a glass overlay.
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(0.82f)
-                    .height(26.dp)
-                    .offset(y = 3.dp)
-                    .blur(18.dp)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), RoundedCornerShape(50))
-            )
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -664,10 +655,11 @@ private fun DiaryScreen(
                         ElevatedCard(
                             modifier = Modifier.fillMaxWidth()
                                 .shadow(10.dp, RoundedCornerShape(28.dp), clip = false)
-                                .border(1.dp, Color.White.copy(alpha = 0.07f), MaterialTheme.shapes.large)
+                                .border(1.dp, Color.White.copy(alpha = 0.14f), MaterialTheme.shapes.large)
+                                .cloudy(radius = 20, tint = Color(0x6612161D))
                                 .animateContentSize(),
                             shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.elevatedCardColors(containerColor = Panel)
+                            colors = CardDefaults.elevatedCardColors(containerColor = Color(0x6612161D))
                         ) {
                             Column(
                                 modifier = Modifier.padding(14.dp),
@@ -769,9 +761,9 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
         Text("Un archivio di avventure", color = TextPrimary, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text("Apri un viaggio per entrare nella sua pagina dedicata.", color = Color(0xFFC9C5D2), style = MaterialTheme.typography.bodyMedium)
         Surface(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenMonaco),
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenMonaco).cloudy(radius = 22, tint = Color(0x6612161D)),
             shape = RoundedCornerShape(26.dp),
-            color = Color(0xA51C202B),
+            color = Color(0x6612161D),
             border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
             tonalElevation = 0.dp
         ) {
