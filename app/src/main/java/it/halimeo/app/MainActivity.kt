@@ -18,6 +18,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
@@ -304,11 +305,13 @@ private fun DiaryScreen(
     onDelete: (DiaryEntry) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("Tutte") }
+    var newestFirst by remember { mutableStateOf(true) }
+    val categories = listOf("Tutte") + entries.map { it.category.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
     val filtered = entries.filter {
-        it.title.contains(query, true) ||
-            it.body.contains(query, true) ||
-            it.category.contains(query, true)
-    }
+        (it.title.contains(query, true) || it.body.contains(query, true) || it.category.contains(query, true)) &&
+            (selectedCategory == "Tutte" || it.category.equals(selectedCategory, ignoreCase = true))
+    }.let { matches -> if (newestFirst) matches.sortedByDescending { it.memoryDate } else matches.sortedBy { it.memoryDate } }
 
     Column(
         Modifier
@@ -373,6 +376,28 @@ private fun DiaryScreen(
             )
         )
         Spacer(Modifier.height(12.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            categories.forEach { category ->
+                FilterChip(
+                    selected = selectedCategory == category,
+                    onClick = { selectedCategory = category },
+                    label = { Text(category) },
+                    leadingIcon = if (selectedCategory == category) ({ Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }) else null
+                )
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = { newestFirst = !newestFirst }) {
+                Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(if (newestFirst) "Più recenti" else "Più vecchi")
+            }
+        }
+        Spacer(Modifier.height(4.dp))
 
         when {
             entries.isEmpty() -> {
