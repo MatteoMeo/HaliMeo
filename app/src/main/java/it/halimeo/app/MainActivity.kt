@@ -115,7 +115,7 @@ class MainActivity:ComponentActivity() {
     val session=remember{SessionStore(ctx)}; val repo=remember{DiaryRepository(ctx)}
     var signed by remember{mutableStateOf<Boolean?>(null)}; var displayName by remember{mutableStateOf("")}
     LaunchedEffect(Unit){signed=!session.token().isNullOrBlank();displayName=session.name()}
-    if(signed==null){Box(Modifier.fillMaxSize().background(Color(0xFF09090E)),contentAlignment=Alignment.Center){LoadingIndicator(modifier=Modifier.size(64.dp), color=MaterialTheme.colorScheme.primary)};return}
+    if(signed==null){Box(Modifier.fillMaxSize().background(Color.Black),contentAlignment=Alignment.Center){LoadingIndicator(modifier=Modifier.size(64.dp), color=MaterialTheme.colorScheme.primary)};return}
     if(signed==false){AuthScreen(
         onLogin={e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.login(LoginRequest(e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Accesso non riuscito")}}},
         onRedeem={code,n,e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.redeem(RedeemInviteRequest(code,n,e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Invito non valido")}}}
@@ -272,8 +272,8 @@ private fun SettingsScreen(
 
     val glassTint = Color(0xFF101317)
     val primaryText = Color(0xFFF5F7FA)
-    val secondaryText = Color(0xFFD0D4DC)
-    val accentText = Color(0xFFB9DDF5)
+    val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
+    val accentText = MaterialTheme.colorScheme.primary
 
     Column(
         Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(16.dp),
@@ -447,7 +447,7 @@ private fun SettingsScreen(
                 if (inviteMessage.isNotBlank() && isOwner != false) {
                     Text(inviteMessage, color = if (inviteCode.isNotBlank()) accentText else secondaryText, style = MaterialTheme.typography.bodySmall)
                 }
-                Text("Versione ${BuildConfig.VERSION_NAME}", color = Color(0xFFB4BAC5), style = MaterialTheme.typography.bodySmall)
+                Text("Versione ${BuildConfig.VERSION_NAME}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -583,7 +583,7 @@ private fun DiaryScreen(
                     Icon(
                         if (searchExpanded) Icons.Default.Close else Icons.Default.Search,
                         contentDescription = if (searchExpanded) "Chiudi ricerca" else "Cerca ricordi",
-                        tint = Color(0xFFB9DDF5)
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -610,13 +610,13 @@ private fun DiaryScreen(
                     }
                 },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFFB9DDF5),
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = Color.White.copy(alpha = 0.20f),
                     focusedTextColor = Color(0xFFF5F7FA),
                     unfocusedTextColor = Color(0xFFF5F7FA),
-                    focusedPlaceholderColor = Color(0xFFB4BAC5),
-                    unfocusedPlaceholderColor = Color(0xFFB4BAC5),
-                    cursorColor = Color(0xFFB9DDF5)
+                    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    cursorColor = MaterialTheme.colorScheme.primary
                 )
             )
         }
@@ -760,7 +760,7 @@ private fun DiaryScreen(
                                 }
                                 Text(
                                     entry.body,
-                                    color = Color(0xFFDAD7E2),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     style = MaterialTheme.typography.bodyMedium,
                                     maxLines = 4,
                                     overflow = TextOverflow.Ellipsis
@@ -811,7 +811,7 @@ private fun DiaryScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(if (existing == null) "NUOVO RICORDO" else "MODIFICA RICORDO", color = Color(0xFFF5F7FA), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-        Text("I momenti importanti, custoditi in un posto vostro.", color = Color(0xFFB4BAC5), style = MaterialTheme.typography.bodyMedium)
+        Text("I momenti importanti, custoditi in un posto vostro.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         Card(
             modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(26.dp)),
             shape = RoundedCornerShape(26.dp),
@@ -842,7 +842,7 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
     ) {
         Text("I VOSTRI VIAGGI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, letterSpacing = 1.5.sp, fontWeight = FontWeight.SemiBold)
         Text("Un archivio di avventure", color = TextPrimary, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text("Apri un viaggio per entrare nella sua pagina dedicata.", color = Color(0xFFC9C5D2), style = MaterialTheme.typography.bodyMedium)
+        Text("Apri un viaggio per entrare nella sua pagina dedicata.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         Surface(
             modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenMonaco),
             shape = RoundedCornerShape(26.dp),
@@ -851,15 +851,15 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
             tonalElevation = 0.dp
         ) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Box(Modifier.size(76.dp).clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(Color(0xFF18384A), Color(0xFF10191E)))), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.LocationCity, contentDescription = null, tint = Color(0xFFD7ECFF), modifier = Modifier.size(36.dp))
+                Box(Modifier.size(76.dp).clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.24f), MaterialTheme.colorScheme.surfaceVariant))), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.LocationCity, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(36.dp))
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text("Monaco di Baviera", color = TextPrimary, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("Il vostro prossimo capitolo", color = Color(0xFFC9C5D2), style = MaterialTheme.typography.bodySmall)
+                    Text("Il vostro prossimo capitolo", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text("Apri viaggio", color = Color(0xFFB9DCFF), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                        Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Color(0xFFB9DCFF), modifier = Modifier.size(16.dp))
+                        Text("Apri viaggio", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                        Icon(Icons.Default.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                     }
                 }
             }
