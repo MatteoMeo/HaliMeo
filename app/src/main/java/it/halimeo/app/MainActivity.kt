@@ -18,7 +18,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateColorAsState
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -208,11 +208,26 @@ private fun FloatingNavItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit
 ) {
+    val animatedContainer by animateColorAsState(
+        targetValue = if (selected) Color(0xFF16476C) else Color.Transparent,
+        animationSpec = tween(durationMillis = 180),
+        label = "navItemContainer"
+    )
+    val animatedIcon by animateColorAsState(
+        targetValue = if (selected) Color(0xFFD7ECFF) else Color(0xFFD1CED9),
+        animationSpec = tween(durationMillis = 180),
+        label = "navItemIcon"
+    )
+    val animatedLabel by animateColorAsState(
+        targetValue = if (selected) Color(0xFFF2F8FF) else Color(0xFFE0DDE7),
+        animationSpec = tween(durationMillis = 180),
+        label = "navItemLabel"
+    )
     Column(
         modifier = modifier
             .fillMaxHeight()
             .clip(RoundedCornerShape(50))
-            .background(if (selected) Color(0xFF16476C) else Color.Transparent)
+            .background(animatedContainer)
             .then(if (selected) Modifier.border(1.dp, Color(0xFF8CC8FF).copy(alpha = 0.78f), RoundedCornerShape(50)) else Modifier)
             .clickable(onClick = onClick)
             .padding(horizontal = 2.dp, vertical = 2.dp),
@@ -220,11 +235,11 @@ private fun FloatingNavItem(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(icon, contentDescription = label, modifier = Modifier.size(21.dp),
-            tint = if (selected) Color(0xFFD7ECFF) else Color(0xFFD1CED9))
+            tint = animatedIcon)
         Spacer(Modifier.height(2.dp))
         Text(label, style = MaterialTheme.typography.labelSmall,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-            color = if (selected) Color(0xFFF2F8FF) else Color(0xFFE0DDE7),
+            color = animatedLabel,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
