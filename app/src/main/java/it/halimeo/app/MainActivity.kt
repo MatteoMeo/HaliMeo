@@ -364,7 +364,7 @@ private fun SettingsScreen(
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth().cloudy(radius = 22).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().cloudy(sky = glassSky, radius = 22, tint = Color(0x6611161D)).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
         ) {
