@@ -154,7 +154,7 @@ class MainActivity:ComponentActivity() {
                 modifier = Modifier.weight(1f).shadow(14.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(50)),
                 shape = RoundedCornerShape(50), color = Color(0xB812151B), tonalElevation = 0.dp
             ) {
-                Row(Modifier.fillMaxWidth().height(68.dp).padding(horizontal = 4.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().height(68.dp).background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.055f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.045f)))).padding(horizontal = 4.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                     FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
                     FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
                     FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) { nav.navigate("settings") { launchSingleTop = true; restoreState = true } }
