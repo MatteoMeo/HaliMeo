@@ -57,10 +57,13 @@ import it.halimeo.app.sync.SyncScheduler
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
-private val Ink=Color(0xFF000000); private val Panel=Color(0xCC111318); private val Mint=Color(0xFFB9DDF5); private val Muted=Color(0xFFB4BAC5)
-private val Elevated=Color(0xFF101317);
+private val Ink = Color.Black
+private val Panel = Color(0xFF0B0E10)
+private val Mint = Color(0xFFB9DDF5)
+private val Muted = Color(0xFFB4BAC5)
+private val Elevated = Color(0xFF101317)
 private val HaliMeoBackdrop = Brush.verticalGradient(listOf(Color.Black, Color.Black, Color.Black))
-private val TextPrimary=Color(0xFFF5F2FA); private val AccentWarm=Color(0xFFFFB4A2)
+private val TextPrimary = Color(0xFFF5F7FA)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable private fun HaliMeoTheme(content: @Composable () -> Unit) {
@@ -83,7 +86,7 @@ private val TextPrimary=Color(0xFFF5F2FA); private val AccentWarm=Color(0xFFFFB4
         darkColorScheme(
             primary=Mint, onPrimary=Color(0xFF102A3A), secondary=Color(0xFF72D9E8), onSecondary=Color(0xFF06272D),
             background=Ink, onBackground=TextPrimary, surface=Panel, onSurface=TextPrimary,
-            surfaceVariant=Elevated, onSurfaceVariant=Muted, outline=Color(0xFF34323D)
+            surfaceVariant=Elevated, onSurfaceVariant=Muted, outline=Color(0xFF30383E)
         )
     }
     // Material 3 Expressive supplies the expressive motion system and updated component defaults.
@@ -270,7 +273,6 @@ private fun SettingsScreen(
         }
     }
 
-    val glassTint = Color(0xFF101317)
     val primaryText = Color(0xFFF5F7FA)
     val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
     val accentText = MaterialTheme.colorScheme.primary
