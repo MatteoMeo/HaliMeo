@@ -279,20 +279,32 @@ private fun SettingsScreen(
         Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("IMPOSTAZIONI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.headlineSmall)
-        Text("Account: $displayName")
-        Text("I ricordi vengono salvati localmente prima della sincronizzazione.", color = Muted)
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.76f)), modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(20.dp)), shape = RoundedCornerShape(20.dp)) {
-            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(if (pendingSyncCount == 0) Icons.Default.CloudDone else Icons.Default.CloudUpload, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(if (pendingSyncCount == 0) "Tutto aggiornato" else "$pendingSyncCount ricordi in attesa", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Text(if (pendingSyncCount == 0) "Non ci sono modifiche da inviare." else "I dati restano sul dispositivo finché la sincronizzazione non riesce.", style = MaterialTheme.typography.bodySmall, color = Muted)
-                }
+        Text("IMPOSTAZIONI", color = Color(0xFFF5F7FA), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+        Card(
+            modifier = Modifier.fillMaxWidth().cloudy(radius = 22, tint = Color(0xAA111318)).border(1.dp, Color.White.copy(alpha = 0.13f), RoundedCornerShape(24.dp)),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0x66111318))
+        ) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("ACCOUNT", color = Color(0xFFB9DDF5), style = MaterialTheme.typography.labelLarge)
+                Text(displayName, color = Color(0xFFF5F7FA), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Text("I ricordi vengono salvati localmente prima della sincronizzazione.", color = Color(0xFFD0D4DC), style = MaterialTheme.typography.bodyMedium)
             }
         }
-
-        Button(onClick = {
+        Card(
+            modifier = Modifier.fillMaxWidth().cloudy(radius = 22, tint = Color(0xAA111318)).border(1.dp, Color.White.copy(alpha = 0.13f), RoundedCornerShape(24.dp)),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0x66111318))
+        ) {
+            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(if (pendingSyncCount == 0) Icons.Default.CloudDone else Icons.Default.CloudUpload, contentDescription = null, tint = Color(0xFFB9DDF5), modifier = Modifier.size(26.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(if (pendingSyncCount == 0) "Tutto aggiornato" else "$pendingSyncCount ricordi in attesa", color = Color(0xFFF5F7FA), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(if (pendingSyncCount == 0) "Non ci sono modifiche da inviare." else "I dati restano sul dispositivo finché la sincronizzazione non riesce.", color = Color(0xFFD0D4DC), style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                Button(onClick = {
             activity.lifecycleScope.launch {
                 runCatching { repo.syncNow() }
                     .onSuccess { Toast.makeText(ctx, "Sincronizzazione completata", Toast.LENGTH_SHORT).show() }
@@ -419,7 +431,9 @@ private fun SettingsScreen(
         if (inviteMessage.isNotBlank() && isOwner != false) {
             Text(inviteMessage, color = if (inviteCode.isNotBlank()) MaterialTheme.colorScheme.primary else Muted, style = MaterialTheme.typography.bodySmall)
         }
-        Text("Versione ${BuildConfig.VERSION_NAME}", color = Muted)
+                Text("Versione ${BuildConfig.VERSION_NAME}", color = Color(0xFFB4BAC5), style = MaterialTheme.typography.bodySmall)
+            }
+        }
     }
 }
 
