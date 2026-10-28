@@ -38,6 +38,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
@@ -148,55 +149,28 @@ class MainActivity:ComponentActivity() {
             IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.Default.Logout,"Esci")}
         }
     )},bottomBar={
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 26.dp, vertical = 4.dp),
-            contentAlignment = Alignment.Center
-        ) {
+        Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(12.dp, RoundedCornerShape(50), clip = false)
-                    .clip(RoundedCornerShape(50))
-                    
-                    .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(50)),
-                shape = RoundedCornerShape(50),
-                color = Color.Transparent,
-                tonalElevation = 0.dp
+                modifier = Modifier.weight(1f).shadow(14.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(50)),
+                shape = RoundedCornerShape(50), color = Color(0xB812151B), tonalElevation = 0.dp
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().height(68.dp).padding(horizontal = 4.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) {
-                        nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } }
-                    }
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) {
-                        nav.navigate("trips") { launchSingleTop = true; restoreState = true }
-                    }
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) {
-                        nav.navigate("settings") { launchSingleTop = true; restoreState = true }
-                    }
+                Row(Modifier.fillMaxWidth().height(68.dp).padding(horizontal = 4.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) { nav.navigate("settings") { launchSingleTop = true; restoreState = true } }
                 }
             }
+            AnimatedVisibility(visible = currentRoute == "diary", enter = fadeIn(tween(180)) + slideInHorizontally(tween(220)) { it / 3 }, exit = fadeOut(tween(120)) + slideOutHorizontally(tween(160)) { it / 3 }) {
+                val addInteraction = remember { MutableInteractionSource() }
+                val addPressed by addInteraction.collectIsPressedAsState()
+                val addScale by animateFloatAsState(targetValue = if (addPressed) 0.90f else 1f, animationSpec = spring(dampingRatio = 0.55f, stiffness = 600f), label = "addMemoryPress")
+                Surface(
+                    modifier = Modifier.size(62.dp).graphicsLayer { scaleX = addScale; scaleY = addScale }.clickable(interactionSource = addInteraction, indication = null, onClick = { editing = null; nav.navigate("edit") }),
+                    shape = RoundedCornerShape(23.dp), color = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary, shadowElevation = 8.dp
+                ) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(29.dp)) } }
+            }
         }
-    },floatingActionButton={
-        if (currentRoute == "diary") {
-            ExtendedFloatingActionButton(
-                onClick = { editing = null; nav.navigate("edit") },
-                text = { Text("Nuovo ricordo", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge) },
-                icon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                modifier = Modifier.padding(bottom = 2.dp),
-                shape = RoundedCornerShape(20.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
-            )
-        }
-    }){padding->
+    },floatingActionButton={}}){padding->
         NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
             composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
