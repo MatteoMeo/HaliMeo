@@ -24,6 +24,9 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.ui.text.style.TextOverflow
@@ -728,11 +731,19 @@ private fun DiaryScreen(
                     contentPadding = PaddingValues(top = 4.dp, bottom = 100.dp)
                 ) {
                     items(filtered, key = { it.id }) { entry ->
+                        val cardInteraction = remember(entry.id) { MutableInteractionSource() }
+                        val cardPressed by cardInteraction.collectIsPressedAsState()
+                        val cardScale by animateFloatAsState(
+                            targetValue = if (cardPressed) 0.985f else 1f,
+                            animationSpec = spring(dampingRatio = 0.62f, stiffness = 520f),
+                            label = "memoryCardPress"
+                        )
                         ElevatedCard(
                             modifier = Modifier.fillMaxWidth()
+                                .graphicsLayer { scaleX = cardScale; scaleY = cardScale }
+                                .clickable(interactionSource = cardInteraction, indication = null, onClick = { onEdit(entry) })
                                 .shadow(10.dp, RoundedCornerShape(28.dp), clip = false)
                                 .border(1.dp, Color.White.copy(alpha = 0.14f), MaterialTheme.shapes.large)
-                                
                                 .animateContentSize(),
                             shape = MaterialTheme.shapes.large,
                             colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFF101114))
@@ -866,8 +877,17 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
         Text("I VOSTRI VIAGGI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, letterSpacing = 1.5.sp, fontWeight = FontWeight.SemiBold)
         Text("Un archivio di avventure", color = TextPrimary, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text("Apri un viaggio per entrare nella sua pagina dedicata.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+        val tripInteraction = remember { MutableInteractionSource() }
+        val tripPressed by tripInteraction.collectIsPressedAsState()
+        val tripScale by animateFloatAsState(
+            targetValue = if (tripPressed) 0.975f else 1f,
+            animationSpec = spring(dampingRatio = 0.62f, stiffness = 520f),
+            label = "tripCardPress"
+        )
         Surface(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenMonaco),
+            modifier = Modifier.fillMaxWidth()
+                .graphicsLayer { scaleX = tripScale; scaleY = tripScale }
+                .clickable(interactionSource = tripInteraction, indication = null, onClick = onOpenMonaco),
             shape = RoundedCornerShape(26.dp),
             color = Color(0xFF101114),
             border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
