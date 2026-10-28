@@ -156,6 +156,36 @@ private fun SettingsScreen(
             }
         }, modifier = Modifier.fillMaxWidth()) { Text("Sincronizza ora") }
 
+        OutlinedButton(
+            onClick = {
+                activity.lifecycleScope.launch {
+                    runCatching {
+                        val rows = repo.allForBackup().filter { it.deletedAt == null }
+                        fun csv(value: String) = "\\"\\" + value.replace("\\"\\"", "\\"\\"\\"\\\"") + "\\"\\""
+                        val export = buildString {
+                            appendLine("Titolo,Data,Categoria,Ricordo")
+                            rows.forEach { row ->
+                                appendLine(listOf(row.title,row.memoryDate,row.category,row.body).joinToString(",") { csv(it) })
+                            }
+                        }
+                        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/csv"
+                            putExtra(Intent.EXTRA_SUBJECT, "Backup ricordi HaliMeo")
+                            putExtra(Intent.EXTRA_TEXT, export)
+                        }
+                        ctx.startActivity(Intent.createChooser(sendIntent, "Esporta i tuoi ricordi"))
+                    }.onFailure {
+                        Toast.makeText(ctx, "Non sono riuscito a preparare il backup", Toast.LENGTH_LONG).show()
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.FileDownload, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Esporta backup dei ricordi")
+        }
+
         HorizontalDivider(color = Muted.copy(alpha = 0.25f))
         Text("INVITI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleLarge)
         Text("Crea un codice monouso valido 7 giorni e condividilo direttamente dal telefono.", color = Muted)
