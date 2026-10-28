@@ -227,24 +227,21 @@ private fun FloatingNavItem(
         animationSpec = tween(durationMillis = 180),
         label = "navItemLabel"
     )
+    val itemScale by animateFloatAsState(targetValue = if (selected) 1f else 0.94f, animationSpec = spring(dampingRatio = 0.72f, stiffness = 420f), label = "navItemScale")
+    val indicatorAlpha by animateFloatAsState(targetValue = if (selected) 1f else 0f, animationSpec = tween(220), label = "navIndicatorAlpha")
     Column(
-        modifier = modifier
-            .fillMaxHeight()
-            .clip(RoundedCornerShape(50))
-            .background(animatedContainer)
+        modifier = modifier.fillMaxHeight().graphicsLayer { scaleX = itemScale; scaleY = itemScale }
+            .clip(RoundedCornerShape(50)).background(animatedContainer)
             .then(if (selected) Modifier.border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50)) else Modifier)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 2.dp, vertical = 2.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .clickable(onClick = onClick).padding(horizontal = 2.dp, vertical = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
     ) {
-        Icon(icon, contentDescription = label, modifier = Modifier.size(21.dp),
-            tint = animatedIcon)
+        Box(contentAlignment = Alignment.Center) {
+            Box(Modifier.size(width = 34.dp, height = 27.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f * indicatorAlpha)))
+            Icon(icon, contentDescription = label, modifier = Modifier.size(21.dp), tint = animatedIcon)
+        }
         Spacer(Modifier.height(2.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-            color = animatedLabel,
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, color = animatedLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -705,7 +702,11 @@ private fun DiaryScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(top = 4.dp, bottom = 100.dp)
                 ) {
-                    items(filtered, key = { it.id }) { entry ->
+                    itemsIndexed(filtered, key = { _, entry -> entry.id }) { index, entry ->
+                        var itemVisible by remember(entry.id) { mutableStateOf(false) }
+                        LaunchedEffect(entry.id) { delay((index * 42L).coerceAtMost(280L)); itemVisible = true }
+                        val itemAlpha by animateFloatAsState(targetValue = if (itemVisible) 1f else 0f, animationSpec = tween(260), label = "memoryEntryFade")
+                        val itemOffset by animateFloatAsState(targetValue = if (itemVisible) 0f else 22f, animationSpec = spring(dampingRatio = 0.82f, stiffness = 300f), label = "memoryEntryRise")
                         val cardInteraction = remember(entry.id) { MutableInteractionSource() }
                         val cardPressed by cardInteraction.collectIsPressedAsState()
                         val cardScale by animateFloatAsState(
@@ -715,7 +716,7 @@ private fun DiaryScreen(
                         )
                         ElevatedCard(
                             modifier = Modifier.fillMaxWidth()
-                                .graphicsLayer { scaleX = cardScale; scaleY = cardScale }
+                                .graphicsLayer { scaleX = cardScale; scaleY = cardScale; alpha = itemAlpha; translationY = itemOffset }
                                 .clickable(interactionSource = cardInteraction, indication = null, onClick = { onEdit(entry) })
                                 .shadow(10.dp, RoundedCornerShape(28.dp), clip = false)
                                 .border(1.dp, Color.White.copy(alpha = 0.14f), MaterialTheme.shapes.large)
@@ -748,8 +749,12 @@ private fun DiaryScreen(
                                             Text(entry.category, color = Muted, style = MaterialTheme.typography.labelMedium)
                                         }
                                     }
-                                    IconButton(onClick={onToggleFavorite(entry)}) {
-                                        Icon(if(entry.id in favoriteIds) Icons.Default.Favorite else Icons.Default.FavoriteBorder,contentDescription=if(entry.id in favoriteIds) "Rimuovi dai preferiti" else "Aggiungi ai preferiti",tint=if(entry.id in favoriteIds) MaterialTheme.colorScheme.primary else Muted)
+                                    val isFavorite = entry.id in favoriteIds
+                                    val heartInteraction = remember(entry.id) { MutableInteractionSource() }
+                                    val heartPressed by heartInteraction.collectIsPressedAsState()
+                                    val heartScale by animateFloatAsState(targetValue = if (heartPressed) 1.32f else if (isFavorite) 1.08f else 1f, animationSpec = spring(dampingRatio = 0.38f, stiffness = 650f), label = "favoriteHeartPop")
+                                    IconButton(onClick = { onToggleFavorite(entry) }, interactionSource = heartInteraction) {
+                                        Icon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = if (isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti", tint = if (isFavorite) MaterialTheme.colorScheme.primary else Muted, modifier = Modifier.graphicsLayer { scaleX = heartScale; scaleY = heartScale })
                                     }
                                     if (entry.syncState != "SYNCED") {
                                         Surface(
