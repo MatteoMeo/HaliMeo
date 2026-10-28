@@ -62,7 +62,7 @@ import com.skydoves.cloudy.rememberSky
 import com.skydoves.cloudy.sky
 
 private val Ink=Color(0xFF000000); private val Panel=Color(0xCC111318); private val Mint=Color(0xFFB9DDF5); private val Muted=Color(0xFFB4BAC5)
-private val Elevated=Color(0xD91A1A25);
+private val Elevated=Color(0xFF101317);
 private val HaliMeoBackdrop = Brush.verticalGradient(listOf(Color.Black, Color.Black, Color.Black))
 private val TextPrimary=Color(0xFFF5F2FA); private val AccentWarm=Color(0xFFFFB4A2)
 
@@ -75,21 +75,17 @@ private val TextPrimary=Color(0xFFF5F2FA); private val AccentWarm=Color(0xFFFFB4
     // Keep the app dark with a true-black canvas for AMOLED displays.
     val scheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         dynamicDarkColorScheme(context).copy(
-            primary = Color(0xFFB9DDF5),
-            onPrimary = Color(0xFF102A3A),
-            secondary = Color(0xFF72D9E8),
-            onSecondary = Color(0xFF06272D),
             background = Color.Black,
-            surface = Color(0xFF0B0B0D),
-            surfaceVariant = Color(0xFF17191E),
+            surface = Color(0xFF080A0C),
+            surfaceVariant = Color(0xFF111519),
             onBackground = Color(0xFFF5F7FA),
             onSurface = Color(0xFFF5F7FA),
             onSurfaceVariant = Color(0xFFD0D4DC),
-            outline = Color(0xFF3A4149)
+            outline = Color(0xFF30383E)
         )
     } else {
         darkColorScheme(
-            primary=Mint, onPrimary=Ink, secondary=AccentWarm, onSecondary=Ink,
+            primary=Mint, onPrimary=Color(0xFF102A3A), secondary=Color(0xFF72D9E8), onSecondary=Color(0xFF06272D),
             background=Ink, onBackground=TextPrimary, surface=Panel, onSurface=TextPrimary,
             surfaceVariant=Elevated, onSurfaceVariant=Muted, outline=Color(0xFF34323D)
         )
@@ -141,7 +137,7 @@ class MainActivity:ComponentActivity() {
     Scaffold(containerColor=Color.Transparent,topBar={TopAppBar(
         title={Column(verticalArrangement=Arrangement.spacedBy(0.dp)) { Text("HaliMeo",fontWeight=FontWeight.ExtraBold,style=MaterialTheme.typography.titleLarge,letterSpacing=(-0.5).sp); Text("IL VOSTRO SPAZIO PRIVATO",style=MaterialTheme.typography.labelSmall,color=TextPrimary.copy(alpha=0.72f),letterSpacing=1.1.sp) }},
         modifier=Modifier.heightIn(min=56.dp),
-        colors=TopAppBarDefaults.topAppBarColors(containerColor=Color(0xEE0A0A10),titleContentColor=TextPrimary,actionIconContentColor=TextPrimary),
+        colors=TopAppBarDefaults.topAppBarColors(containerColor=Color(0xFF000000),titleContentColor=TextPrimary,actionIconContentColor=TextPrimary),
         actions={
             IconButton(onClick={activity.lifecycleScope.launch{runCatching{repo.syncNow()}.onSuccess{Toast.makeText(ctx,"Sincronizzazione completata",Toast.LENGTH_SHORT).show()}.onFailure{Toast.makeText(ctx,"Offline: dati conservati sul dispositivo",Toast.LENGTH_LONG).show()}}}){Icon(Icons.Default.CloudSync,"Sincronizza")}
             IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.Default.Logout,"Esci")}
@@ -159,11 +155,7 @@ class MainActivity:ComponentActivity() {
                     .fillMaxWidth()
                     .shadow(12.dp, RoundedCornerShape(50), clip = false)
                     .clip(RoundedCornerShape(50))
-                    .cloudy(
-                        sky = glassSky,
-                        radius = 24,
-                        tint = Color(0x99131A25)
-                    )
+                    
                     .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(50)),
                 shape = RoundedCornerShape(50),
                 color = Color.Transparent,
@@ -200,7 +192,7 @@ class MainActivity:ComponentActivity() {
             )
         }
     }){padding->
-        NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding).sky(glassSky),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
+        NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
             composable("diary"){DiaryScreen(entries,favoriteIds,glassSky,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,glassSky,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
             composable("trips"){TripsScreen(glassSky,onOpenMonaco = { nav.navigate("tripMonaco") })}
@@ -284,7 +276,7 @@ private fun SettingsScreen(
         }
     }
 
-    val glassTint = Color(0xAA111318)
+    val glassTint = Color(0xFF101317)
     val primaryText = Color(0xFFF5F7FA)
     val secondaryText = Color(0xFFD0D4DC)
     val accentText = Color(0xFFB9DDF5)
@@ -296,9 +288,9 @@ private fun SettingsScreen(
         Text("IMPOSTAZIONI", color = primaryText, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
 
         Card(
-            modifier = Modifier.fillMaxWidth().cloudy(sky = glassSky, radius = 22, tint = Color(0x6611161D)).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF0B0E10))
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge)
@@ -308,7 +300,7 @@ private fun SettingsScreen(
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth().cloudy(sky = glassSky, radius = 22, tint = Color(0x6611161D)).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
         ) {
@@ -364,7 +356,7 @@ private fun SettingsScreen(
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth().cloudy(sky = glassSky, radius = 22, tint = Color(0x6611161D)).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
         ) {
@@ -412,7 +404,7 @@ private fun SettingsScreen(
 
                         if (inviteCode.isNotBlank()) {
                             Card(
-                                modifier = Modifier.fillMaxWidth().cloudy(sky = glassSky, radius = 18, tint = Color(0x6611161D)).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(20.dp)),
+                                modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(20.dp)),
                                 shape = RoundedCornerShape(20.dp),
                                 colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
                             ) {
@@ -724,10 +716,10 @@ private fun DiaryScreen(
                             modifier = Modifier.fillMaxWidth()
                                 .shadow(10.dp, RoundedCornerShape(28.dp), clip = false)
                                 .border(1.dp, Color.White.copy(alpha = 0.14f), MaterialTheme.shapes.large)
-                                .cloudy(sky = glassSky, radius = 20, tint = Color(0x6611161D))
+                                
                                 .animateContentSize(),
                             shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.elevatedCardColors(containerColor = Color(0x6612161D))
+                            colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFF0D1114))
                         ) {
                             Column(
                                 modifier = Modifier.padding(14.dp),
@@ -828,7 +820,7 @@ private fun DiaryScreen(
         Text(if (existing == null) "NUOVO RICORDO" else "MODIFICA RICORDO", color = Color(0xFFF5F7FA), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Text("I momenti importanti, custoditi in un posto vostro.", color = Color(0xFFB4BAC5), style = MaterialTheme.typography.bodyMedium)
         Card(
-            modifier = Modifier.fillMaxWidth().cloudy(sky = glassSky, radius = 20, tint = Color(0x6611161D)).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(26.dp)),
+            modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(26.dp)),
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
         ) {
@@ -859,14 +851,14 @@ private fun TripsScreen(glassSky: Sky, onOpenMonaco: () -> Unit) {
         Text("Un archivio di avventure", color = TextPrimary, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text("Apri un viaggio per entrare nella sua pagina dedicata.", color = Color(0xFFC9C5D2), style = MaterialTheme.typography.bodyMedium)
         Surface(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenMonaco).cloudy(sky = glassSky, radius = 22, tint = Color(0x6611161D)),
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenMonaco),
             shape = RoundedCornerShape(26.dp),
-            color = Color(0x6612161D),
+            color = Color(0xFF0D1114),
             border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
             tonalElevation = 0.dp
         ) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Box(Modifier.size(76.dp).clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(Color(0xFF214D70), Color(0xFF171526)))), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(76.dp).clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(Color(0xFF18384A), Color(0xFF10191E)))), contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.LocationCity, contentDescription = null, tint = Color(0xFFD7ECFF), modifier = Modifier.size(36.dp))
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
