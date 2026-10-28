@@ -70,7 +70,17 @@ private val Elevated=Color(0xFF1A1A22); private val TextPrimary=Color(0xFFF5F2FA
             surfaceVariant=Elevated, onSurfaceVariant=Muted, outline=Color(0xFF34323D)
         )
     }
-    MaterialTheme(colorScheme=scheme,shapes=Shapes(small=RoundedCornerShape(12.dp),medium=RoundedCornerShape(20.dp),large=RoundedCornerShape(28.dp)),content=content)
+    // Material 3 Expressive supplies the expressive motion system and updated component defaults.
+    MaterialExpressiveTheme(
+        colorScheme = scheme,
+        motionScheme = MotionScheme.expressive(),
+        shapes = Shapes(
+            small = RoundedCornerShape(12.dp),
+            medium = RoundedCornerShape(20.dp),
+            large = RoundedCornerShape(28.dp)
+        ),
+        content = content
+    )
 }
 class MainActivity:ComponentActivity() {
     override fun onCreate(savedInstanceState:Bundle?) {
