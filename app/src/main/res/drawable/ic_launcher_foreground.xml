@@ -4,20 +4,44 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Soft shadow behind the notebook -->
+    <path
+        android:fillColor="#380A1748"
+        android:pathData="M29,24 L72,17 Q80,16 82,24 L88,75 Q89,82 81,85 L42,92 Q34,93 32,85 L24,33 Q23,26 29,24 Z" />
+    <!-- Notebook back cover -->
+    <path
+        android:fillColor="#FFB6F4"
+        android:pathData="M29,21 L72,15 Q79,14 81,22 L88,72 Q89,79 81,82 L42,89 Q34,90 32,82 L24,30 Q23,23 29,21 Z" />
+    <!-- Main page -->
+    <path
+        android:fillColor="#FFF9FF"
+        android:pathData="M24,25 Q24,20 30,19 L68,14 Q75,13 76,20 L83,69 Q84,75 78,77 L39,84 Q32,85 31,78 Z" />
+    <!-- Page tint -->
+    <path
+        android:fillColor="#FFE9FF"
+        android:pathData="M30,25 L68,19 L76,70 L38,77 Z" />
+    <!-- Rainbow bookmark -->
+    <path
+        android:fillColor="#FF4D9D"
+        android:pathData="M57,17 L70,15 L75,48 L66,42 L60,50 Z" />
+    <path
+        android:fillColor="#FFB43B"
+        android:pathData="M57,17 L63,16 L68,43 L66,42 L60,50 Z" />
+    <!-- Notebook binding tabs -->
+    <path
+        android:fillColor="#4D39D8"
+        android:pathData="M20,34 Q20,30 24,30 L31,31 L32,39 L25,41 Q21,41 20,37 Z" />
+    <path
+        android:fillColor="#4D39D8"
+        android:pathData="M23,49 Q23,45 27,45 L33,46 L34,54 L28,56 Q24,56 23,52 Z" />
+    <path
+        android:fillColor="#4D39D8"
+        android:pathData="M26,64 Q26,60 30,60 L35,61 L36,69 L31,71 Q27,71 26,67 Z" />
+    <!-- Subtle page lines -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#B9A1FF"
-        android:strokeWidth="3.8"
+        android:strokeColor="#C4B8F2"
+        android:strokeWidth="1.6"
         android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M30,49 C30,35 42,27 54,38 C66,27 78,35 78,49 C78,63 65,73 54,83 C43,73 30,63 30,49 Z" />
-    <path
-        android:fillColor="#FFF7FF"
-        android:pathData="M54,77 C48,72 35,62 35,49 C35,39 44,35 54,45 C64,35 73,39 73,49 C73,62 60,72 54,77 Z" />
-    <path
-        android:fillColor="#5636B8"
-        android:pathData="M54,70 C48,65 41,59 41,51 C41,44 47,43 54,50 C61,43 67,44 67,51 C67,59 60,65 54,70 Z" />
-    <path
-        android:fillColor="#FFF7FF"
-        android:pathData="M76,22 L79.2,30.8 L88,34 L79.2,37.2 L76,46 L72.8,37.2 L64,34 L72.8,30.8 Z" />
+        android:pathData="M42,40 L55,38 M44,49 L65,45 M45,58 L67,54 M47,67 L63,64" />
 </vector>
