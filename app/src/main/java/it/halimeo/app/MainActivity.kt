@@ -59,7 +59,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
 private val Ink = Color.Black
-private val Panel = Color(0xFF0B0E10)
+private val Panel = Color(0xFF101114)
 private val Mint = Color(0xFFB9DDF5)
 private val Muted = Color(0xFFB4BAC5)
 private val Elevated = Color(0xFF101317)
@@ -381,7 +381,7 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
+            colors = CardDefaults.cardColors(containerColor = Color(0xE6101115))
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("INVITI", color = accentText, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
@@ -429,7 +429,7 @@ private fun SettingsScreen(
                             Card(
                                 modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(20.dp)),
                                 shape = RoundedCornerShape(20.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
+                                colors = CardDefaults.cardColors(containerColor = Color(0xE6101115))
                             ) {
                                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                     Text("IL TUO CODICE", color = accentText, style = MaterialTheme.typography.labelLarge)
@@ -838,7 +838,7 @@ private fun DiaryScreen(
         Card(
             modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(26.dp)),
             shape = RoundedCornerShape(26.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
+            colors = CardDefaults.cardColors(containerColor = Color(0xE6101115))
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(title, { title = it }, label = { Text("Titolo") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -869,7 +869,7 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
         Surface(
             modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenMonaco),
             shape = RoundedCornerShape(26.dp),
-            color = Color(0xFF0D1114),
+            color = Color(0xFF101114),
             border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
             tonalElevation = 0.dp
         ) {
