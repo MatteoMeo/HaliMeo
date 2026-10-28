@@ -202,7 +202,7 @@ class MainActivity:ComponentActivity() {
     }){padding->
         NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding).sky(glassSky),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
             composable("diary"){DiaryScreen(entries,favoriteIds,glassSky,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
-            composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
+            composable("edit"){EditScreen(editing,glassSky,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
             composable("trips"){TripsScreen(glassSky,onOpenMonaco = { nav.navigate("tripMonaco") })}
             composable("tripMonaco"){MissionScreen()}
             composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,glassSky=glassSky)}
@@ -308,7 +308,7 @@ private fun SettingsScreen(
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth().cloudy(radius = 22).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().cloudy(sky = glassSky, radius = 22, tint = Color(0x6611161D)).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
         ) {
@@ -815,7 +815,7 @@ private fun DiaryScreen(
     }
 }
 
-@Composable private fun EditScreen(existing: DiaryEntry?, onSave: (String,String,String,String)->Unit, onCancel:()->Unit) {
+@Composable private fun EditScreen(existing: DiaryEntry?, glassSky: Sky, onSave: (String,String,String,String)->Unit, onCancel:()->Unit) {
     var title by remember(existing?.id) { mutableStateOf(existing?.title.orEmpty()) }
     var body by remember(existing?.id) { mutableStateOf(existing?.body.orEmpty()) }
     var cat by remember(existing?.id) { mutableStateOf(existing?.category ?: "Ricordo") }
@@ -828,7 +828,7 @@ private fun DiaryScreen(
         Text(if (existing == null) "NUOVO RICORDO" else "MODIFICA RICORDO", color = Color(0xFFF5F7FA), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Text("I momenti importanti, custoditi in un posto vostro.", color = Color(0xFFB4BAC5), style = MaterialTheme.typography.bodyMedium)
         Card(
-            modifier = Modifier.fillMaxWidth().cloudy(sky = rememberSky(), radius = 20, tint = Color(0x6611161D)).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(26.dp)),
+            modifier = Modifier.fillMaxWidth().cloudy(sky = glassSky, radius = 20, tint = Color(0x6611161D)).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(26.dp)),
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
         ) {
@@ -859,7 +859,7 @@ private fun TripsScreen(glassSky: Sky, onOpenMonaco: () -> Unit) {
         Text("Un archivio di avventure", color = TextPrimary, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text("Apri un viaggio per entrare nella sua pagina dedicata.", color = Color(0xFFC9C5D2), style = MaterialTheme.typography.bodyMedium)
         Surface(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenMonaco).cloudy(radius = 22),
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenMonaco).cloudy(sky = glassSky, radius = 22, tint = Color(0x6611161D)),
             shape = RoundedCornerShape(26.dp),
             color = Color(0x6612161D),
             border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
