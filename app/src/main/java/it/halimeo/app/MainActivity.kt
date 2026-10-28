@@ -17,7 +17,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -138,8 +143,90 @@ class MainActivity:ComponentActivity() {
             IconButton(onClick={activity.lifecycleScope.launch{runCatching{repo.syncNow()}.onSuccess{Toast.makeText(ctx,"Sincronizzazione completata",Toast.LENGTH_SHORT).show()}.onFailure{Toast.makeText(ctx,"Offline: dati conservati sul dispositivo",Toast.LENGTH_LONG).show()}}}){Icon(Icons.Default.CloudSync,"Sincronizza")}
             IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.Default.Logout,"Esci")}
         }
-    )},bottomBar={NavigationBar(containerColor=Color(0xFF08080B),contentColor=Muted,tonalElevation=0.dp){val navColors=NavigationBarItemDefaults.colors(selectedIconColor=MaterialTheme.colorScheme.primary,selectedTextColor=MaterialTheme.colorScheme.primary,indicatorColor=MaterialTheme.colorScheme.primary.copy(alpha=0.13f),unselectedIconColor=Muted,unselectedTextColor=Muted);NavigationBarItem(selected=currentRoute=="diary",onClick={nav.navigate("diary"){launchSingleTop=true;popUpTo("diary"){saveState=true}}},icon={Icon(Icons.Default.Book,null)},label={Text("Diario")},colors=navColors);NavigationBarItem(selected=currentRoute=="mission",onClick={nav.navigate("mission"){launchSingleTop=true;restoreState=true}},icon={Icon(Icons.Default.Flight,null)},label={Text("Monaco")},colors=navColors);NavigationBarItem(selected=currentRoute=="settings",onClick={nav.navigate("settings"){launchSingleTop=true;restoreState=true}},icon={Icon(Icons.Default.Settings,null)},label={Text("Impostazioni")},colors=navColors)}},floatingActionButton={if(nav.currentDestination?.route!="mission")LargeExtendedFloatingActionButton(onClick={editing=null;nav.navigate("edit")},text={Text("Nuovo ricordo",fontWeight=FontWeight.SemiBold)},icon={Icon(Icons.Default.Add,contentDescription=null)},containerColor=MaterialTheme.colorScheme.primary,contentColor=MaterialTheme.colorScheme.onPrimary,elevation=FloatingActionButtonDefaults.elevation(defaultElevation=4.dp,pressedElevation=8.dp))}){padding->
-        NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(220))+slideInHorizontally(tween(260)){it/14}},exitTransition={fadeOut(tween(150))+slideOutHorizontally(tween(180)){-it/18}},popEnterTransition={fadeIn(tween(220))+slideInHorizontally(tween(260)){ -it/14}},popExitTransition={fadeOut(tween(150))+slideOutHorizontally(tween(180)){it/18}}){
+    )},bottomBar={
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            // Soft blurred color halo, not a glass overlay.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.88f)
+                    .height(42.dp)
+                    .offset(y = 5.dp)
+                    .blur(22.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.20f), RoundedCornerShape(50))
+            )
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(12.dp, RoundedCornerShape(28.dp), clip = false)
+                    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(28.dp)),
+                shape = RoundedCornerShape(28.dp),
+                color = Color(0xF218181F),
+                tonalElevation = 0.dp
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 6.dp, vertical = 5.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    @Composable fun FloatingDestination(
+                        selected: Boolean,
+                        label: String,
+                        icon: androidx.compose.ui.graphics.vector.ImageVector,
+                        onClick: () -> Unit
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent)
+                                .clickable(onClick = onClick)
+                                .padding(horizontal = 3.dp, vertical = 3.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(icon, contentDescription = label, modifier = Modifier.size(21.dp),
+                                tint = if (selected) MaterialTheme.colorScheme.primary else Muted)
+                            Spacer(Modifier.height(2.dp))
+                            Text(label, style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                                color = if (selected) MaterialTheme.colorScheme.primary else Muted,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                    FloatingDestination(currentRoute == "diary", "Diario", Icons.Default.Book) {
+                        nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } }
+                    }
+                    FloatingDestination(currentRoute == "mission", "Monaco", Icons.Default.Flight) {
+                        nav.navigate("mission") { launchSingleTop = true; restoreState = true }
+                    }
+                    FloatingDestination(currentRoute == "settings", "Impostazioni", Icons.Default.Settings) {
+                        nav.navigate("settings") { launchSingleTop = true; restoreState = true }
+                    }
+                }
+            }
+        }
+    },floatingActionButton={
+        if (nav.currentDestination?.route != "mission") {
+            ExtendedFloatingActionButton(
+                onClick = { editing = null; nav.navigate("edit") },
+                text = { Text("Nuovo ricordo", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge) },
+                icon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                modifier = Modifier.padding(bottom = 4.dp),
+                shape = RoundedCornerShape(20.dp),
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 3.dp, pressedElevation = 6.dp)
+            )
+        }
+    }){padding->
+        NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
             composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
             composable("mission"){MissionScreen()}
