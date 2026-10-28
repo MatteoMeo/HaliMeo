@@ -37,13 +37,14 @@ import it.halimeo.app.sync.SyncScheduler
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
-private val Ink=Color(0xFF071014); private val Panel=Color(0xFF102126); private val Mint=Color(0xFF65FFE8); private val Muted=Color(0xFF9CB3B5)
+private val Ink=Color(0xFF000000); private val Panel=Color(0xFF111116); private val Mint=Color(0xFFC4B5FD); private val Muted=Color(0xFFA6A1B2)
+private val Elevated=Color(0xFF1A1A22); private val TextPrimary=Color(0xFFF5F2FA); private val AccentWarm=Color(0xFFFFB4A2)
 class MainActivity:ComponentActivity() {
     override fun onCreate(savedInstanceState:Bundle?) {
         super.onCreate(savedInstanceState)
         ApiClient.initialize(applicationContext)
         SyncScheduler.schedule(this)
-        setContent { MaterialTheme(colorScheme=darkColorScheme(primary=Mint,onPrimary=Ink,background=Ink,onBackground=Color(0xFFEAF6F4),surface=Panel,onSurface=Color(0xFFEAF6F4))) { HaliMeoRoot() } }
+        setContent { MaterialTheme(colorScheme=darkColorScheme(primary=Mint,onPrimary=Ink,secondary=AccentWarm,onSecondary=Ink,background=Ink,onBackground=TextPrimary,surface=Panel,onSurface=TextPrimary,surfaceVariant=Elevated,onSurfaceVariant=Muted,outline=Color(0xFF34323D)),shapes=Shapes(small=RoundedCornerShape(12.dp),medium=RoundedCornerShape(20.dp),large=RoundedCornerShape(28.dp))) { HaliMeoRoot() } }
     }
 }
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,10 +60,10 @@ class MainActivity:ComponentActivity() {
     );return}
     val entries by repo.entries.collectAsState(initial= emptyList()); var editing by remember{mutableStateOf<DiaryEntry?>(null)}
     val nav= rememberNavController()
-    Scaffold(containerColor=Ink,topBar={TopAppBar(title={Column{Text("HaliMeo",fontWeight=FontWeight.Black);Text("IL VOSTRO SPAZIO PRIVATO",style=MaterialTheme.typography.labelSmall,color=Muted)}},colors=TopAppBarDefaults.topAppBarColors(containerColor=Ink,titleContentColor=Mint),actions={
+    Scaffold(containerColor=Ink,topBar={TopAppBar(title={Column(verticalArrangement=Arrangement.spacedBy(1.dp)){Text("HaliMeo",fontWeight=FontWeight.ExtraBold,style=MaterialTheme.typography.titleLarge,letterSpacing=(-0.5).sp);Text("IL VOSTRO SPAZIO PRIVATO",style=MaterialTheme.typography.labelSmall,color=Muted,letterSpacing=1.2.sp)}},colors=TopAppBarDefaults.topAppBarColors(containerColor=Ink,titleContentColor=TextPrimary,actionIconContentColor=Muted),actions={
         IconButton(onClick={activity.lifecycleScope.launch{runCatching{repo.syncNow()}.onSuccess{Toast.makeText(ctx,"Sincronizzazione completata",Toast.LENGTH_SHORT).show()}.onFailure{Toast.makeText(ctx,"Offline: dati conservati sul dispositivo",Toast.LENGTH_LONG).show()}}}){Icon(Icons.Default.CloudSync,"Sincronizza")}
         IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.Default.Logout,"Esci")}
-    })},bottomBar={NavigationBar(containerColor=Panel){NavigationBarItem(nav.currentDestination?.route=="diary",{nav.navigate("diary")},{Icon(Icons.Default.Book,null)},label={Text("Diario")});NavigationBarItem(nav.currentDestination?.route=="mission",{nav.navigate("mission")},{Icon(Icons.Default.Flight,null)},label={Text("Monaco")});NavigationBarItem(nav.currentDestination?.route=="settings",{nav.navigate("settings")},{Icon(Icons.Default.Settings,null)},label={Text("Impostazioni")})}},floatingActionButton={if(nav.currentDestination?.route!="mission")FloatingActionButton(onClick={editing=null;nav.navigate("edit")},containerColor=Mint,contentColor=Ink){Icon(Icons.Default.Add,"Nuovo ricordo")}}){padding->
+    })},bottomBar={NavigationBar(containerColor=Color(0xFF08080B),contentColor=Muted,tonalElevation=0.dp){val navColors=NavigationBarItemDefaults.colors(selectedIconColor=Mint,selectedTextColor=Mint,indicatorColor=Mint.copy(alpha=0.13f),unselectedIconColor=Muted,unselectedTextColor=Muted);NavigationBarItem(selected=nav.currentDestination?.route=="diary",onClick={nav.navigate("diary"){launchSingleTop=true;popUpTo("diary"){saveState=true}}},icon={Icon(Icons.Default.Book,null)},label={Text("Diario")},colors=navColors);NavigationBarItem(selected=nav.currentDestination?.route=="mission",onClick={nav.navigate("mission"){launchSingleTop=true;restoreState=true}},icon={Icon(Icons.Default.Flight,null)},label={Text("Monaco")},colors=navColors);NavigationBarItem(selected=nav.currentDestination?.route=="settings",onClick={nav.navigate("settings"){launchSingleTop=true;restoreState=true}},icon={Icon(Icons.Default.Settings,null)},label={Text("Impostazioni")},colors=navColors)}},floatingActionButton={if(nav.currentDestination?.route!="mission")FloatingActionButton(onClick={editing=null;nav.navigate("edit")},containerColor=Mint,contentColor=Ink,shape=RoundedCornerShape(20.dp),elevation=FloatingActionButtonDefaults.elevation(defaultElevation=8.dp,pressedElevation=12.dp)){Icon(Icons.Default.Add,"Nuovo ricordo")}}){padding->
         NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding)){
             composable("diary"){DiaryScreen(entries,{editing=it;nav.navigate("edit")},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
@@ -235,7 +236,7 @@ private fun SettingsScreen(
         Card(colors=CardDefaults.cardColors(containerColor=Panel), modifier=Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    val dotColor = when (serverOnline) { true -> Color(0xFF65E6A5); false -> Color(0xFFFF879B); null -> Color(0xFFFFD479) }
+                    val dotColor = when (serverOnline) { true -> Color(0xFF86E3B0); false -> Color(0xFFFF8E9B); null -> Color(0xFFFFD18A) }
                     Box(Modifier.size(10.dp).background(dotColor, RoundedCornerShape(50)))
                     Text(serverMessage, color=dotColor, style=MaterialTheme.typography.labelLarge)
                 }
@@ -296,7 +297,7 @@ private fun DiaryScreen(
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    "I vostri ricordi",
+                    "La vostra storia",
                     style = MaterialTheme.typography.headlineMedium,
                     color = Color.White,
                     fontWeight = FontWeight.Bold
@@ -454,7 +455,7 @@ private fun DiaryScreen(
                                 }
                                 Text(
                                     entry.body,
-                                    color = Color(0xFFD6E4E3),
+                                    color = Color(0xFFDAD7E2),
                                     style = MaterialTheme.typography.bodyMedium,
                                     maxLines = 4,
                                     overflow = TextOverflow.Ellipsis
