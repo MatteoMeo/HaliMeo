@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.*
@@ -59,11 +60,11 @@ class MainActivity:ComponentActivity() {
         onRedeem={code,n,e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.redeem(RedeemInviteRequest(code,n,e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Invito non valido")}}}
     );return}
     val entries by repo.entries.collectAsState(initial= emptyList()); var editing by remember{mutableStateOf<DiaryEntry?>(null)}
-    val nav= rememberNavController()
+    val nav= rememberNavController(); val backStackEntry by nav.currentBackStackEntryAsState(); val currentRoute=backStackEntry?.destination?.route
     Scaffold(containerColor=Ink,topBar={TopAppBar(title={Column(verticalArrangement=Arrangement.spacedBy(1.dp)){Text("HaliMeo",fontWeight=FontWeight.ExtraBold,style=MaterialTheme.typography.titleLarge,letterSpacing=(-0.5).sp);Text("IL VOSTRO SPAZIO PRIVATO",style=MaterialTheme.typography.labelSmall,color=Muted,letterSpacing=1.2.sp)}},colors=TopAppBarDefaults.topAppBarColors(containerColor=Ink,titleContentColor=TextPrimary,actionIconContentColor=Muted),actions={
         IconButton(onClick={activity.lifecycleScope.launch{runCatching{repo.syncNow()}.onSuccess{Toast.makeText(ctx,"Sincronizzazione completata",Toast.LENGTH_SHORT).show()}.onFailure{Toast.makeText(ctx,"Offline: dati conservati sul dispositivo",Toast.LENGTH_LONG).show()}}}){Icon(Icons.Default.CloudSync,"Sincronizza")}
         IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.Default.Logout,"Esci")}
-    })},bottomBar={NavigationBar(containerColor=Color(0xFF08080B),contentColor=Muted,tonalElevation=0.dp){val navColors=NavigationBarItemDefaults.colors(selectedIconColor=Mint,selectedTextColor=Mint,indicatorColor=Mint.copy(alpha=0.13f),unselectedIconColor=Muted,unselectedTextColor=Muted);NavigationBarItem(selected=nav.currentDestination?.route=="diary",onClick={nav.navigate("diary"){launchSingleTop=true;popUpTo("diary"){saveState=true}}},icon={Icon(Icons.Default.Book,null)},label={Text("Diario")},colors=navColors);NavigationBarItem(selected=nav.currentDestination?.route=="mission",onClick={nav.navigate("mission"){launchSingleTop=true;restoreState=true}},icon={Icon(Icons.Default.Flight,null)},label={Text("Monaco")},colors=navColors);NavigationBarItem(selected=nav.currentDestination?.route=="settings",onClick={nav.navigate("settings"){launchSingleTop=true;restoreState=true}},icon={Icon(Icons.Default.Settings,null)},label={Text("Impostazioni")},colors=navColors)}},floatingActionButton={if(nav.currentDestination?.route!="mission")FloatingActionButton(onClick={editing=null;nav.navigate("edit")},containerColor=Mint,contentColor=Ink,shape=RoundedCornerShape(20.dp),elevation=FloatingActionButtonDefaults.elevation(defaultElevation=8.dp,pressedElevation=12.dp)){Icon(Icons.Default.Add,"Nuovo ricordo")}}){padding->
+    })},bottomBar={NavigationBar(containerColor=Color(0xFF08080B),contentColor=Muted,tonalElevation=0.dp){val navColors=NavigationBarItemDefaults.colors(selectedIconColor=Mint,selectedTextColor=Mint,indicatorColor=Mint.copy(alpha=0.13f),unselectedIconColor=Muted,unselectedTextColor=Muted);NavigationBarItem(selected=currentRoute=="diary",onClick={nav.navigate("diary"){launchSingleTop=true;popUpTo("diary"){saveState=true}}},icon={Icon(Icons.Default.Book,null)},label={Text("Diario")},colors=navColors);NavigationBarItem(selected=currentRoute=="mission",onClick={nav.navigate("mission"){launchSingleTop=true;restoreState=true}},icon={Icon(Icons.Default.Flight,null)},label={Text("Monaco")},colors=navColors);NavigationBarItem(selected=currentRoute=="settings",onClick={nav.navigate("settings"){launchSingleTop=true;restoreState=true}},icon={Icon(Icons.Default.Settings,null)},label={Text("Impostazioni")},colors=navColors)}},floatingActionButton={if(nav.currentDestination?.route!="mission")FloatingActionButton(onClick={editing=null;nav.navigate("edit")},containerColor=Mint,contentColor=Ink,shape=RoundedCornerShape(20.dp),elevation=FloatingActionButtonDefaults.elevation(defaultElevation=8.dp,pressedElevation=12.dp)){Icon(Icons.Default.Add,"Nuovo ricordo")}}){padding->
         NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding)){
             composable("diary"){DiaryScreen(entries,{editing=it;nav.navigate("edit")},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
@@ -296,6 +297,7 @@ private fun DiaryScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("IL VOSTRO DIARIO", style=MaterialTheme.typography.labelSmall, color=Muted, letterSpacing=1.8.sp, fontWeight=FontWeight.SemiBold)
                 Text(
                     "La vostra storia",
                     style = MaterialTheme.typography.headlineMedium,
