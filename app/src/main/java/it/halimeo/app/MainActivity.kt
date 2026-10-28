@@ -63,12 +63,12 @@ private val Elevated=Color(0xFF1A1A22); private val TextPrimary=Color(0xFFF5F2FA
     val context = LocalContext.current
     var fontPulse by remember { mutableIntStateOf(0) }
     val animatedFontWidth by animateFloatAsState(
-        targetValue = if (fontPulse % 2 == 0) 100f else 108f,
+        targetValue = if (fontPulse % 2 == 0) 96f else 110f,
         animationSpec = tween(durationMillis = 520),
         label = "googleSansFlexWidth"
     )
     val animatedFontRoundness by animateFloatAsState(
-        targetValue = if (fontPulse % 2 == 0) 0f else 55f,
+        targetValue = if (fontPulse % 2 == 0) 12f else 62f,
         animationSpec = tween(durationMillis = 520),
         label = "googleSansFlexRoundness"
     )
@@ -149,7 +149,7 @@ class MainActivity:ComponentActivity() {
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 8.dp),
+                .padding(horizontal = 18.dp, vertical = 6.dp),
             contentAlignment = Alignment.Center
         ) {
             // Soft blurred color halo, not a glass overlay.
@@ -171,7 +171,7 @@ class MainActivity:ComponentActivity() {
                 tonalElevation = 0.dp
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 6.dp, vertical = 5.dp),
+                    modifier = Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 5.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -193,7 +193,7 @@ class MainActivity:ComponentActivity() {
                 onClick = { editing = null; nav.navigate("edit") },
                 text = { Text("Nuovo ricordo", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge) },
                 icon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                modifier = Modifier.padding(bottom = 4.dp),
+                modifier = Modifier.padding(bottom = 2.dp),
                 shape = RoundedCornerShape(20.dp),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -366,7 +366,7 @@ private fun SettingsScreen(
 
                 if (inviteCode.isNotBlank()) {
                     Card(colors = CardDefaults.cardColors(containerColor = Panel), modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text("IL TUO CODICE", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                             SelectionContainer { Text(inviteCode, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -438,7 +438,7 @@ private fun SettingsScreen(
             delay(15000)
         }
     }
-    Column(Modifier.fillMaxSize().background(Ink).padding(24.dp),verticalArrangement=Arrangement.Center){Text("HaliMeo",style=MaterialTheme.typography.displayMedium,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black);Text("Un posto solo vostro.",color=Muted);Spacer(Modifier.height(16.dp))
+    Column(Modifier.fillMaxSize().background(Ink).padding(20.dp),verticalArrangement=Arrangement.Center){Text("HaliMeo",style=MaterialTheme.typography.displayMedium,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black);Text("Un posto solo vostro.",color=Muted);Spacer(Modifier.height(16.dp))
         Card(colors=CardDefaults.cardColors(containerColor=Panel), modifier=Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -650,7 +650,7 @@ private fun DiaryScreen(
                             colors = CardDefaults.elevatedCardColors(containerColor = Panel)
                         ) {
                             Column(
-                                modifier = Modifier.padding(16.dp),
+                                modifier = Modifier.padding(14.dp),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Row(
