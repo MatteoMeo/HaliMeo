@@ -11,6 +11,7 @@ import android.webkit.*
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -529,6 +530,7 @@ private fun DiaryScreen(
     onDelete: (DiaryEntry) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
+    var searchExpanded by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf("Tutte") }
     var favoritesOnly by remember { mutableStateOf(false) }
     var newestFirst by remember { mutableStateOf(true) }
@@ -565,43 +567,65 @@ private fun DiaryScreen(
                     color = Muted
                 )
             }
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-            ) {
-                Text(
-                    entries.size.toString(),
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color.White.copy(alpha = 0.07f)
+                ) {
+                    Text(
+                        entries.size.toString(),
+                        modifier = Modifier.padding(horizontal = 13.dp, vertical = 9.dp),
+                        color = Color(0xFFF5F7FA),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        searchExpanded = !searchExpanded
+                        if (!searchExpanded) query = ""
+                    }
+                ) {
+                    Icon(
+                        if (searchExpanded) Icons.Default.Close else Icons.Default.Search,
+                        contentDescription = if (searchExpanded) "Chiudi ricerca" else "Cerca ricordi",
+                        tint = Color(0xFFB9DDF5)
+                    )
+                }
             }
         }
 
-        Spacer(Modifier.height(18.dp))
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            shape = RoundedCornerShape(18.dp),
-            placeholder = { Text("Cerca un ricordo…") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Cerca") },
-            trailingIcon = {
-                if (query.isNotBlank()) {
-                    IconButton(onClick = { query = "" }) {
-                        Icon(Icons.Default.Close, contentDescription = "Cancella ricerca")
+        AnimatedVisibility(
+            visible = searchExpanded,
+            enter = fadeIn(tween(180)),
+            exit = fadeOut(tween(140))
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(18.dp),
+                placeholder = { Text("Cerca un ricordo…") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Cerca") },
+                trailingIcon = {
+                    if (query.isNotBlank()) {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Cancella ricerca")
+                        }
                     }
-                }
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = Muted.copy(alpha = 0.35f),
-                focusedLabelColor = MaterialTheme.colorScheme.primary,
-                cursorColor = MaterialTheme.colorScheme.primary
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFFB9DDF5),
+                    unfocusedBorderColor = Color.White.copy(alpha = 0.20f),
+                    focusedTextColor = Color(0xFFF5F7FA),
+                    unfocusedTextColor = Color(0xFFF5F7FA),
+                    focusedPlaceholderColor = Color(0xFFB4BAC5),
+                    unfocusedPlaceholderColor = Color(0xFFB4BAC5),
+                    cursorColor = Color(0xFFB9DDF5)
+                )
             )
-        )
+        }
         Spacer(Modifier.height(12.dp))
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
