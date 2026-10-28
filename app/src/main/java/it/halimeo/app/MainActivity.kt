@@ -287,7 +287,7 @@ private fun SettingsScreen(
         Text("IMPOSTAZIONI", color = primaryText, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
 
         Card(
-            modifier = Modifier.fillMaxWidth().cloudy(radius = 22, tint = glassTint).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().cloudy(radius = 22).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
         ) {
@@ -299,7 +299,7 @@ private fun SettingsScreen(
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth().cloudy(radius = 22, tint = glassTint).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().cloudy(radius = 22).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
         ) {
@@ -355,7 +355,7 @@ private fun SettingsScreen(
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth().cloudy(radius = 22, tint = glassTint).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().cloudy(radius = 22).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
         ) {
@@ -403,7 +403,7 @@ private fun SettingsScreen(
 
                         if (inviteCode.isNotBlank()) {
                             Card(
-                                modifier = Modifier.fillMaxWidth().cloudy(radius = 18, tint = glassTint).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(20.dp)),
+                                modifier = Modifier.fillMaxWidth().cloudy(radius = 18).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(20.dp)),
                                 shape = RoundedCornerShape(20.dp),
                                 colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
                             ) {
@@ -691,7 +691,7 @@ private fun DiaryScreen(
                             modifier = Modifier.fillMaxWidth()
                                 .shadow(10.dp, RoundedCornerShape(28.dp), clip = false)
                                 .border(1.dp, Color.White.copy(alpha = 0.14f), MaterialTheme.shapes.large)
-                                .cloudy(radius = 20, tint = Color(0x6612161D))
+                                .cloudy(radius = 20)
                                 .animateContentSize(),
                             shape = MaterialTheme.shapes.large,
                             colors = CardDefaults.elevatedCardColors(containerColor = Color(0x6612161D))
@@ -796,7 +796,7 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
         Text("Un archivio di avventure", color = TextPrimary, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text("Apri un viaggio per entrare nella sua pagina dedicata.", color = Color(0xFFC9C5D2), style = MaterialTheme.typography.bodyMedium)
         Surface(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenMonaco).cloudy(radius = 22, tint = Color(0x6612161D)),
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenMonaco).cloudy(radius = 22),
             shape = RoundedCornerShape(26.dp),
             color = Color(0x6612161D),
             border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
