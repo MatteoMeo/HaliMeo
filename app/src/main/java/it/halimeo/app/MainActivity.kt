@@ -129,7 +129,7 @@ class MainActivity:ComponentActivity() {
         favoritesPrefs.edit().putStringSet("ids", updated.toSet()).apply()
     }
     val nav= rememberNavController(); val backStackEntry by nav.currentBackStackEntryAsState(); val currentRoute=backStackEntry?.destination?.route
-    Scaffold(containerColor=Color.Transparent,topBar={TopAppBar(
+    Scaffold(containerColor=Color.Black,topBar={TopAppBar(
         title={Column(verticalArrangement=Arrangement.spacedBy(0.dp)) { Text("HaliMeo",fontWeight=FontWeight.ExtraBold,style=MaterialTheme.typography.titleLarge,letterSpacing=(-0.5).sp); Text("IL VOSTRO SPAZIO PRIVATO",style=MaterialTheme.typography.labelSmall,color=TextPrimary.copy(alpha=0.72f),letterSpacing=1.1.sp) }},
         modifier=Modifier.heightIn(min=56.dp),
         colors=TopAppBarDefaults.topAppBarColors(containerColor=Color(0xFF000000),titleContentColor=TextPrimary,actionIconContentColor=TextPrimary),
