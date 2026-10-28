@@ -120,6 +120,8 @@ private fun SettingsScreen(
     activity: ComponentActivity,
     ctx: android.content.Context
 ) {
+    val diaryEntries by repo.entries.collectAsState(initial = emptyList())
+    val pendingSyncCount = diaryEntries.count { it.syncState != "SYNCED" }
     var isOwner by remember { mutableStateOf<Boolean?>(null) }
     var inviteCode by remember { mutableStateOf("") }
     var inviteBusy by remember { mutableStateOf(false) }
@@ -147,6 +149,15 @@ private fun SettingsScreen(
         Text("IMPOSTAZIONI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.headlineSmall)
         Text("Account: $displayName")
         Text("I ricordi vengono salvati localmente prima della sincronizzazione.", color = Muted)
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), modifier = Modifier.fillMaxWidth()) {
+            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(if (pendingSyncCount == 0) Icons.Default.CloudDone else Icons.Default.CloudUpload, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(if (pendingSyncCount == 0) "Tutto aggiornato" else "$pendingSyncCount ricordi in attesa", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(if (pendingSyncCount == 0) "Non ci sono modifiche da inviare." else "I dati restano sul dispositivo finché la sincronizzazione non riesce.", style = MaterialTheme.typography.bodySmall, color = Muted)
+                }
+            }
+        }
 
         Button(onClick = {
             activity.lifecycleScope.launch {
