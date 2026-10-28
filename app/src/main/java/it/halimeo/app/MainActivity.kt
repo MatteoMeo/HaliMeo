@@ -133,10 +133,12 @@ class MainActivity:ComponentActivity() {
         favoritesPrefs.edit().putStringSet("ids", updated.toSet()).apply()
     }
     val nav= rememberNavController(); val backStackEntry by nav.currentBackStackEntryAsState(); val currentRoute=backStackEntry?.destination?.route
-    Scaffold(containerColor=Color.Black,topBar={TopAppBar(
-        title={Column(verticalArrangement=Arrangement.spacedBy(0.dp)) { Text("HaliMeo",fontWeight=FontWeight.ExtraBold,style=MaterialTheme.typography.titleLarge,letterSpacing=(-0.5).sp); Text("IL VOSTRO SPAZIO PRIVATO",style=MaterialTheme.typography.labelSmall,color=TextPrimary.copy(alpha=0.72f),letterSpacing=1.1.sp) }},
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    HaliMeoAmbientBackdrop(Modifier.fillMaxSize())
+    Scaffold(containerColor=Color.Transparent,topBar={TopAppBar(
+        title={Text("HaliMeo", fontWeight=FontWeight.ExtraBold, style=MaterialTheme.typography.headlineSmall.copy(letterSpacing=(-1.1).sp, brush=Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.primary))))},
         modifier=Modifier.heightIn(min=56.dp),
-        colors=TopAppBarDefaults.topAppBarColors(containerColor=Color(0xFF000000),titleContentColor=TextPrimary,actionIconContentColor=TextPrimary),
+        colors=TopAppBarDefaults.topAppBarColors(containerColor=Color.Transparent, scrolledContainerColor=Color.Transparent, titleContentColor=TextPrimary,actionIconContentColor=TextPrimary),
         actions={
             IconButton(onClick={activity.lifecycleScope.launch{runCatching{repo.syncNow()}.onSuccess{Toast.makeText(ctx,"Sincronizzazione completata",Toast.LENGTH_SHORT).show()}.onFailure{Toast.makeText(ctx,"Offline: dati conservati sul dispositivo",Toast.LENGTH_LONG).show()}}}){Icon(Icons.Default.CloudSync,"Sincronizza")}
             IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.Default.Logout,"Esci")}
@@ -191,18 +193,14 @@ class MainActivity:ComponentActivity() {
             )
         }
     }){padding->
-        Box(
-            modifier = Modifier.fillMaxSize().background(Color.Black)
-        ) {
-            HaliMeoAmbientBackdrop(Modifier.fillMaxSize())
-            NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
-                composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
-                composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
-                composable("trips"){TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })}
-                composable("tripMonaco"){MissionScreen()}
-                composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,)}
-            }
+        NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
+            composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
+            composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
+            composable("trips"){TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })}
+            composable("tripMonaco"){MissionScreen()}
+            composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,)}
         }
+    }
     }
 }
 /**
@@ -212,46 +210,19 @@ class MainActivity:ComponentActivity() {
 @Composable
 private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     val palette = MaterialTheme.colorScheme
-    Box(modifier = modifier.clipToBounds()) {
-        Box(
-            Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = 110.dp, y = 18.dp)
-                .size(250.dp)
-                .blur(100.dp)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(palette.primary.copy(alpha = 0.20f), Color.Transparent)
-                    ),
-                    shape = RoundedCornerShape(50)
-                )
-        )
-        Box(
-            Modifier
-                .align(Alignment.CenterStart)
-                .offset(x = (-145).dp, y = 70.dp)
-                .size(260.dp)
-                .blur(110.dp)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(palette.tertiary.copy(alpha = 0.12f), Color.Transparent)
-                    ),
-                    shape = RoundedCornerShape(50)
-                )
-        )
-        Box(
-            Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 70.dp, y = 100.dp)
-                .size(220.dp)
-                .blur(90.dp)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(palette.secondary.copy(alpha = 0.10f), Color.Transparent)
-                    ),
-                    shape = RoundedCornerShape(50)
-                )
-        )
+    Box(modifier = modifier.clipToBounds().background(Color.Black)) {
+        Box(Modifier.fillMaxSize().background(Brush.linearGradient(colorStops = arrayOf(
+            0.0f to Color.Black, 0.18f to Color(0xFF080D15), 0.42f to Color(0xFF090B11),
+            0.68f to Color(0xFF050A0D), 1.0f to Color.Black
+        ))))
+        Box(Modifier.align(Alignment.TopEnd).offset(x=80.dp,y=(-55).dp).size(300.dp).blur(115.dp)
+            .background(Brush.radialGradient(listOf(palette.primary.copy(alpha=0.25f),Color.Transparent)),RoundedCornerShape(50)))
+        Box(Modifier.align(Alignment.CenterStart).offset(x=(-165).dp,y=30.dp).size(300.dp).blur(120.dp)
+            .background(Brush.radialGradient(listOf(palette.tertiary.copy(alpha=0.17f),Color.Transparent)),RoundedCornerShape(50)))
+        Box(Modifier.align(Alignment.CenterEnd).offset(x=145.dp,y=180.dp).size(280.dp).blur(105.dp)
+            .background(Brush.radialGradient(listOf(palette.secondary.copy(alpha=0.14f),Color.Transparent)),RoundedCornerShape(50)))
+        Box(Modifier.align(Alignment.BottomStart).offset(x=(-80).dp,y=105.dp).size(260.dp).blur(100.dp)
+            .background(Brush.radialGradient(listOf(palette.primary.copy(alpha=0.10f),Color.Transparent)),RoundedCornerShape(50)))
     }
 }
 
@@ -342,7 +313,7 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF0B0E10))
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF101114))
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge)
@@ -354,7 +325,7 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
+            colors = CardDefaults.cardColors(containerColor = Color(0xE6101115))
         ) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -600,23 +571,17 @@ private fun DiaryScreen(
             .background(Color.Transparent)
             .padding(horizontal = 16.dp)
     ) {
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("IL VOSTRO DIARIO", style=MaterialTheme.typography.labelSmall, color=Muted, letterSpacing=1.8.sp, fontWeight=FontWeight.SemiBold)
                 Text(
-                    "La vostra storia",
+                    "Il vostro diario",
                     style = MaterialTheme.typography.headlineMedium,
                     color = Color.White,
                     fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "Piccoli momenti, tutti in un posto solo.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Muted
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -770,7 +735,7 @@ private fun DiaryScreen(
                                 
                                 .animateContentSize(),
                             shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFF0D1114))
+                            colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFF101114))
                         ) {
                             Column(
                                 modifier = Modifier.padding(14.dp),
