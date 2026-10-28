@@ -30,8 +30,8 @@ internal fun rememberHaliMeoTypography(width: Float, roundness: Float): Typograp
                     weight = weight,
                     style = FontStyle.Normal,
                     variationSettings = FontVariation.Settings(
-                        weight = weight,
-                        style = FontStyle.Normal,
+                        weight,
+                        FontStyle.Normal,
                         FontVariation.width(width.coerceIn(25f, 151f)),
                         FontVariation.Setting("ROND", roundness.coerceIn(0f, 100f))
                     )
