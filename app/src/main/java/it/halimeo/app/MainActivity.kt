@@ -55,6 +55,9 @@ import it.halimeo.app.network.*
 import it.halimeo.app.sync.SyncScheduler
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import com.skydoves.cloudy.cloudy
+import com.skydoves.cloudy.rememberSky
+import com.skydoves.cloudy.sky
 
 private val Ink=Color(0xFF07070B); private val Panel=Color(0xCC171720); private val Mint=Color(0xFFC4B5FD); private val Muted=Color(0xFFA6A1B2)
 private val Elevated=Color(0xD91A1A25);
@@ -126,6 +129,7 @@ class MainActivity:ComponentActivity() {
         favoritesPrefs.edit().putStringSet("ids", updated.toSet()).apply()
     }
     val nav= rememberNavController(); val backStackEntry by nav.currentBackStackEntryAsState(); val currentRoute=backStackEntry?.destination?.route
+    val glassSky = rememberSky()
     Scaffold(containerColor=Color.Transparent,topBar={TopAppBar(
         title={Column(verticalArrangement=Arrangement.spacedBy(0.dp)) { Text("HaliMeo",fontWeight=FontWeight.ExtraBold,style=MaterialTheme.typography.titleLarge,letterSpacing=(-0.5).sp); Text("IL VOSTRO SPAZIO PRIVATO",style=MaterialTheme.typography.labelSmall,color=TextPrimary.copy(alpha=0.72f),letterSpacing=1.1.sp) }},
         modifier=Modifier.heightIn(min=56.dp),
@@ -155,9 +159,16 @@ class MainActivity:ComponentActivity() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(12.dp, RoundedCornerShape(50), clip = false)
-                    .border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(50)),
+                    .clip(RoundedCornerShape(50))
+                    .cloudy(
+                        sky = glassSky,
+                        radius = 24,
+                        tint = Color(0x99131A25),
+                        shape = RoundedCornerShape(50)
+                    )
+                    .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(50)),
                 shape = RoundedCornerShape(50),
-                color = Color(0xC91B202B),
+                color = Color.Transparent,
                 tonalElevation = 0.dp
             ) {
                 Row(
@@ -191,7 +202,7 @@ class MainActivity:ComponentActivity() {
             )
         }
     }){padding->
-        NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
+        NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding).sky(glassSky),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
             composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
             composable("trips"){TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })}
