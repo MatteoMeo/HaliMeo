@@ -1,0 +1,13 @@
+services:
+  halimeo-api:
+    build: .
+    container_name: halimeo-api
+    restart: unless-stopped
+    environment:
+      HALIMEO_DATA_DIR: /data
+      HALIMEO_JWT_SECRET: ${HALIMEO_JWT_SECRET:?Set a random secret in .env}
+      HALIMEO_OWNER_USER_ID: ${HALIMEO_OWNER_USER_ID:-}
+    volumes:
+      - ./data:/data
+    ports:
+      - "127.0.0.1:8000:8000"
