@@ -17,6 +17,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -54,6 +55,17 @@ private val Elevated=Color(0xFF1A1A22); private val TextPrimary=Color(0xFFF5F2FA
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable private fun HaliMeoTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
+    var fontPulse by remember { mutableIntStateOf(0) }
+    val animatedFontWidth by animateFloatAsState(
+        targetValue = if (fontPulse % 2 == 0) 100f else 108f,
+        animationSpec = tween(durationMillis = 520),
+        label = "googleSansFlexWidth"
+    )
+    val animatedFontRoundness by animateFloatAsState(
+        targetValue = if (fontPulse % 2 == 0) 0f else 55f,
+        animationSpec = tween(durationMillis = 520),
+        label = "googleSansFlexRoundness"
+    )
     // Android 12+ supplies Material You / Monet colors derived from the device wallpaper.
     // Keep the app dark with a true-black canvas for AMOLED displays.
     val scheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -72,16 +84,21 @@ private val Elevated=Color(0xFF1A1A22); private val TextPrimary=Color(0xFFF5F2FA
         )
     }
     // Material 3 Expressive supplies the expressive motion system and updated component defaults.
-    MaterialExpressiveTheme(
-        colorScheme = scheme,
-        motionScheme = MotionScheme.expressive(),
-        shapes = Shapes(
-            small = RoundedCornerShape(16.dp),
-            medium = RoundedCornerShape(24.dp),
-            large = RoundedCornerShape(32.dp)
-        ),
-        content = content
-    )
+    CompositionLocalProvider(
+        LocalExpressiveFontPulse provides { fontPulse += 1 }
+    ) {
+        MaterialExpressiveTheme(
+            colorScheme = scheme,
+            typography = rememberHaliMeoTypography(animatedFontWidth, animatedFontRoundness),
+            motionScheme = MotionScheme.expressive(),
+            shapes = Shapes(
+                small = RoundedCornerShape(16.dp),
+                medium = RoundedCornerShape(24.dp),
+                large = RoundedCornerShape(32.dp)
+            ),
+            content = content
+        )
+    }
 }
 class MainActivity:ComponentActivity() {
     override fun onCreate(savedInstanceState:Bundle?) {
@@ -111,6 +128,8 @@ class MainActivity:ComponentActivity() {
         favoritesPrefs.edit().putStringSet("ids", updated.toSet()).apply()
     }
     val nav= rememberNavController(); val backStackEntry by nav.currentBackStackEntryAsState(); val currentRoute=backStackEntry?.destination?.route
+    val pulseExpressiveFont = LocalExpressiveFontPulse.current
+    LaunchedEffect(currentRoute) { pulseExpressiveFont() }
     Scaffold(containerColor=Ink,topBar={MediumFlexibleTopAppBar(
         title={Text("HaliMeo",fontWeight=FontWeight.ExtraBold,style=MaterialTheme.typography.headlineSmall,letterSpacing=(-0.6).sp)},
         subtitle={Text("IL VOSTRO SPAZIO PRIVATO",style=MaterialTheme.typography.labelSmall,color=Muted,letterSpacing=1.4.sp)},
