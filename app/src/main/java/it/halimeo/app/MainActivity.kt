@@ -51,6 +51,7 @@ import kotlinx.coroutines.delay
 private val Ink=Color(0xFF000000); private val Panel=Color(0xFF111116); private val Mint=Color(0xFFC4B5FD); private val Muted=Color(0xFFA6A1B2)
 private val Elevated=Color(0xFF1A1A22); private val TextPrimary=Color(0xFFF5F2FA); private val AccentWarm=Color(0xFFFFB4A2)
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable private fun HaliMeoTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
     // Android 12+ supplies Material You / Monet colors derived from the device wallpaper.
