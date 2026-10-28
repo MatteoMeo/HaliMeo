@@ -247,7 +247,6 @@ private fun SettingsScreen(
     repo: DiaryRepository,
     activity: ComponentActivity,
     ctx: android.content.Context,
-    glassSky: Sky
 ) {
     val diaryEntries by repo.entries.collectAsState(initial = emptyList())
     val pendingSyncCount = diaryEntries.count { it.syncState != "SYNCED" }
