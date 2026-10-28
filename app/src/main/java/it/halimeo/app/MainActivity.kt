@@ -10,9 +10,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -62,10 +65,147 @@ class MainActivity:ComponentActivity() {
             composable("diary"){DiaryScreen(entries,{editing=it;nav.navigate("edit")},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
             composable("mission"){MissionScreen()}
-            composable("settings"){Column(Modifier.fillMaxSize().background(Ink).padding(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){Text("IMPOSTAZIONI",color=Mint,style=MaterialTheme.typography.headlineSmall);Text("Account: $displayName");Text("I ricordi vengono salvati localmente prima della sincronizzazione.",color=Muted);Button(onClick={activity.lifecycleScope.launch{runCatching{repo.syncNow()}.onFailure{Toast.makeText(ctx,"Server non raggiungibile",Toast.LENGTH_SHORT).show()}}}){Text("Sincronizza ora")};Text("Versione ${BuildConfig.VERSION_NAME}",color=Muted)}}
+            composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx)}
         }
     }
 }
+@Composable
+private fun SettingsScreen(
+    displayName: String,
+    session: SessionStore,
+    repo: DiaryRepository,
+    activity: ComponentActivity,
+    ctx: android.content.Context
+) {
+    var isOwner by remember { mutableStateOf<Boolean?>(null) }
+    var inviteCode by remember { mutableStateOf("") }
+    var inviteBusy by remember { mutableStateOf(false) }
+    var inviteMessage by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        val token = session.token()
+        if (token.isNullOrBlank()) {
+            isOwner = false
+            inviteMessage = "Sessione non disponibile. Accedi di nuovo."
+        } else {
+            runCatching { ApiClient.api.me("Bearer $token") }
+                .onSuccess { isOwner = it.isOwner }
+                .onFailure {
+                    isOwner = false
+                    inviteMessage = "Impossibile verificare i permessi. Controlla la connessione e aggiorna il server."
+                }
+        }
+    }
+
+    Column(
+        Modifier.fillMaxSize().background(Ink).verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Text("IMPOSTAZIONI", color = Mint, style = MaterialTheme.typography.headlineSmall)
+        Text("Account: $displayName")
+        Text("I ricordi vengono salvati localmente prima della sincronizzazione.", color = Muted)
+
+        Button(onClick = {
+            activity.lifecycleScope.launch {
+                runCatching { repo.syncNow() }
+                    .onSuccess { Toast.makeText(ctx, "Sincronizzazione completata", Toast.LENGTH_SHORT).show() }
+                    .onFailure { Toast.makeText(ctx, "Server non raggiungibile: dati conservati sul dispositivo", Toast.LENGTH_LONG).show() }
+            }
+        }, modifier = Modifier.fillMaxWidth()) { Text("Sincronizza ora") }
+
+        HorizontalDivider(color = Muted.copy(alpha = 0.25f))
+        Text("INVITI", color = Mint, style = MaterialTheme.typography.titleLarge)
+        Text("Crea un codice monouso valido 7 giorni e condividilo direttamente dal telefono.", color = Muted)
+
+        when (isOwner) {
+            null -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                Text("Verifica dei permessi…", color = Muted)
+            }
+            true -> {
+                Button(
+                    enabled = !inviteBusy,
+                    onClick = {
+                        inviteBusy = true
+                        inviteMessage = ""
+                        inviteCode = ""
+                        activity.lifecycleScope.launch {
+                            val token = session.token()
+                            if (token.isNullOrBlank()) {
+                                inviteMessage = "Sessione scaduta. Accedi di nuovo."
+                                inviteBusy = false
+                            } else {
+                                runCatching { ApiClient.api.createInvite("Bearer $token", InviteRequest()) }
+                                    .onSuccess {
+                                        inviteCode = it.inviteCode
+                                        inviteMessage = "Invito creato. Valido per 7 giorni e utilizzabile una sola volta."
+                                    }
+                                    .onFailure {
+                                        inviteMessage = "Non sono riuscito a creare l'invito. Controlla la connessione e riprova."
+                                    }
+                                inviteBusy = false
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (inviteBusy) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    else Icon(Icons.Default.PersonAdd, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (inviteBusy) "Creo l'invito…" else "Genera codice d'invito")
+                }
+
+                if (inviteCode.isNotBlank()) {
+                    Card(colors = CardDefaults.cardColors(containerColor = Panel), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("IL TUO CODICE", color = Mint, style = MaterialTheme.typography.labelLarge)
+                            SelectionContainer { Text(inviteCode, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(
+                                    onClick = {
+                                        val clipboard = ctx.getSystemService(android.content.ClipboardManager::class.java)
+                                        clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Codice invito HaliMeo", inviteCode))
+                                        Toast.makeText(ctx, "Codice copiato", Toast.LENGTH_SHORT).show()
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.ContentCopy, contentDescription = null)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Copia")
+                                }
+                                Button(
+                                    onClick = {
+                                        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_TEXT, "Ti invito su HaliMeo! Inserisci questo codice nell'app per registrarti: $inviteCode")
+                                        }
+                                        ctx.startActivity(Intent.createChooser(sendIntent, "Condividi invito HaliMeo"))
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.Share, contentDescription = null)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Condividi")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            false -> Text(
+                if (inviteMessage.isNotBlank()) inviteMessage else "La creazione degli inviti è riservata al proprietario.",
+                color = Muted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        if (inviteMessage.isNotBlank() && isOwner != false) {
+            Text(inviteMessage, color = if (inviteCode.isNotBlank()) Mint else Muted, style = MaterialTheme.typography.bodySmall)
+        }
+        Text("Versione ${BuildConfig.VERSION_NAME}", color = Muted)
+    }
+}
+
 @Composable private fun AuthScreen(onLogin:(String,String,(String)->Unit)->Unit,onRedeem:(String,String,String,String,(String)->Unit)->Unit){
     var redeem by remember{mutableStateOf(false)};var code by remember{mutableStateOf("")};var name by remember{mutableStateOf("")};var email by remember{mutableStateOf("")};var pass by remember{mutableStateOf("")};var error by remember{mutableStateOf("")};var busy by remember{mutableStateOf(false)}
     var serverUrl by remember { mutableStateOf(ApiClient.baseUrl().removeSuffix("/")) }

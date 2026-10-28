@@ -95,6 +95,11 @@ def login(data: LoginIn):
         raise HTTPException(401, "Email o password non corretti")
     return {"accessToken":make_token(dict(row)),"tokenType":"Bearer",**public_user(dict(row))}
 
+@app.get("/v1/auth/me")
+def me(user=Depends(current_user)):
+    return {"userId": user["id"], "displayName": user["display_name"], "isOwner": bool(OWNER_ID and user["id"] == OWNER_ID)}
+
+
 @app.post("/v1/auth/redeem-invite")
 def redeem(data: RedeemIn):
     now = int(time.time())
