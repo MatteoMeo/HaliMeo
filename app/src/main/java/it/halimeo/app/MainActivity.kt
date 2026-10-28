@@ -18,7 +18,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.animateColorAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -163,8 +163,7 @@ class MainActivity:ComponentActivity() {
                     .cloudy(
                         sky = glassSky,
                         radius = 24,
-                        tint = Color(0x99131A25),
-                        shape = RoundedCornerShape(50)
+                        tint = Color(0x99131A25)
                     )
                     .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(50)),
                 shape = RoundedCornerShape(50),
