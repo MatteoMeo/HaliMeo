@@ -8,6 +8,8 @@ import android.webkit.*
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -268,13 +270,221 @@ private fun SettingsScreen(
         TextButton(onClick={redeem=!redeem;error=""}){Text(if(redeem)"Ho già un account" else "Ho un codice invito")}
     }
 }
-@Composable private fun DiaryScreen(entries:List<DiaryEntry>,onEdit:(DiaryEntry)->Unit,onDelete:(DiaryEntry)->Unit){
-    var query by remember{mutableStateOf("")};val filtered=entries.filter{it.title.contains(query,true)||it.body.contains(query,true)||it.category.contains(query,true)}
-    Column(Modifier.fillMaxSize().background(Ink).padding(horizontal=16.dp)){Spacer(Modifier.height(12.dp));Text("I VOSTRI RICORDI",style=MaterialTheme.typography.headlineSmall,color=Mint,fontWeight=FontWeight.Bold);Text("Salvati prima sul dispositivo.",color=Muted,style=MaterialTheme.typography.bodySmall);Spacer(Modifier.height(10.dp));OutlinedTextField(query,{query=it},label={Text("Cerca nei ricordi")},modifier=Modifier.fillMaxWidth(),singleLine=true)
-        if(filtered.isEmpty())Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text("Ancora nessun ricordo. Il primo lo scrivete voi.",color=Muted)}
-        else LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(top=12.dp,bottom=90.dp)){items(filtered,key={it.id}){e->Card(colors=CardDefaults.cardColors(containerColor=Panel),shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth()){Column(Modifier.padding(16.dp)){Text(e.title,style=MaterialTheme.typography.titleMedium,color=Color.White,fontWeight=FontWeight.Bold);Text("${e.memoryDate} · ${e.category}",color=Mint,style=MaterialTheme.typography.labelSmall);Spacer(Modifier.height(8.dp));Text(e.body);Row{TextButton(onClick={onEdit(e)}){Text("Modifica")};TextButton(onClick={onDelete(e)}){Icon(Icons.Default.Delete,null);Text("Elimina")};if(e.syncState!="SYNCED")Text("In attesa",color=Color(0xFFFFD479),style=MaterialTheme.typography.labelSmall)}}}}}
+@Composable
+private fun DiaryScreen(
+    entries: List<DiaryEntry>,
+    onEdit: (DiaryEntry) -> Unit,
+    onDelete: (DiaryEntry) -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+    val filtered = entries.filter {
+        it.title.contains(query, true) ||
+            it.body.contains(query, true) ||
+            it.category.contains(query, true)
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(Ink)
+            .padding(horizontal = 18.dp)
+    ) {
+        Spacer(Modifier.height(18.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    "I vostri ricordi",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "Piccoli momenti, tutti in un posto solo.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Muted
+                )
+            }
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Mint.copy(alpha = 0.12f)
+            ) {
+                Text(
+                    entries.size.toString(),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    color = Mint,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(Modifier.height(18.dp))
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(18.dp),
+            placeholder = { Text("Cerca un ricordo…") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Cerca") },
+            trailingIcon = {
+                if (query.isNotBlank()) {
+                    IconButton(onClick = { query = "" }) {
+                        Icon(Icons.Default.Close, contentDescription = "Cancella ricerca")
+                    }
+                }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Mint,
+                unfocusedBorderColor = Muted.copy(alpha = 0.35f),
+                focusedLabelColor = Mint,
+                cursorColor = Mint
+            )
+        )
+        Spacer(Modifier.height(12.dp))
+
+        when {
+            entries.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(28.dp),
+                        colors = CardDefaults.cardColors(containerColor = Panel)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(22.dp),
+                                color = Mint.copy(alpha = 0.12f)
+                            ) {
+                                Icon(
+                                    Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = Mint,
+                                    modifier = Modifier.padding(18.dp).size(32.dp)
+                                )
+                            }
+                            Text(
+                                "La vostra storia comincia qui",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                "Salvate il primo momento speciale. I ricordi vengono conservati sul dispositivo e sincronizzati quando possibile.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Muted
+                            )
+                        }
+                    }
+                }
+            }
+            filtered.isEmpty() -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.SearchOff, contentDescription = null, tint = Muted, modifier = Modifier.size(36.dp))
+                        Text("Nessun ricordo trovato", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                        Text("Prova con un'altra parola.", color = Muted, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+            else -> {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(top = 4.dp, bottom = 100.dp)
+                ) {
+                    items(filtered, key = { it.id }) { entry ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth().animateContentSize(),
+                            shape = RoundedCornerShape(22.dp),
+                            colors = CardDefaults.cardColors(containerColor = Panel)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text(
+                                            entry.title,
+                                            style = MaterialTheme.typography.titleLarge,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Mint, modifier = Modifier.size(15.dp))
+                                            Text(entry.memoryDate, color = Mint, style = MaterialTheme.typography.labelMedium)
+                                            Text("·", color = Muted)
+                                            Text(entry.category, color = Muted, style = MaterialTheme.typography.labelMedium)
+                                        }
+                                    }
+                                    if (entry.syncState != "SYNCED") {
+                                        Surface(
+                                            color = Color(0xFFFFD479).copy(alpha = 0.12f),
+                                            shape = RoundedCornerShape(50)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(Icons.Default.CloudOff, contentDescription = null, tint = Color(0xFFFFD479), modifier = Modifier.size(13.dp))
+                                                Text("In attesa", color = Color(0xFFFFD479), style = MaterialTheme.typography.labelSmall)
+                                            }
+                                        }
+                                    }
+                                }
+                                Text(
+                                    entry.body,
+                                    color = Color(0xFFD6E4E3),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 4,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                HorizontalDivider(color = Muted.copy(alpha = 0.16f))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    TextButton(onClick = { onEdit(entry) }) {
+                                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(17.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("Modifica")
+                                    }
+                                    TextButton(onClick = { onDelete(entry) }) {
+                                        Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = Color(0xFFFF879B), modifier = Modifier.size(17.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("Elimina", color = Color(0xFFFF879B))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
+
 @Composable private fun EditScreen(existing:DiaryEntry?,onSave:(String,String,String,String)->Unit,onCancel:()->Unit){
     var title by remember(existing?.id){mutableStateOf(existing?.title.orEmpty())};var body by remember(existing?.id){mutableStateOf(existing?.body.orEmpty())};var cat by remember(existing?.id){mutableStateOf(existing?.category?:"Ricordo")};var date by remember(existing?.id){mutableStateOf(existing?.memoryDate?:java.time.LocalDate.now().toString())}
     Column(Modifier.fillMaxSize().background(Ink).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text(if(existing==null)"NUOVO RICORDO" else "MODIFICA RICORDO",color=Mint,style=MaterialTheme.typography.headlineSmall);OutlinedTextField(title,{title=it},label={Text("Titolo")},modifier=Modifier.fillMaxWidth());OutlinedTextField(date,{date=it},label={Text("Data AAAA-MM-GG")},modifier=Modifier.fillMaxWidth());OutlinedTextField(cat,{cat=it},label={Text("Categoria")},modifier=Modifier.fillMaxWidth());OutlinedTextField(body,{body=it},label={Text("Ricordo")},modifier=Modifier.fillMaxWidth().weight(1f),minLines=5);Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick=onCancel,modifier=Modifier.weight(1f)){Text("Annulla")};Button(onClick={if(title.isNotBlank()&&body.isNotBlank())onSave(title,body,cat,date)},modifier=Modifier.weight(1f)){Text("Salva")}}}
