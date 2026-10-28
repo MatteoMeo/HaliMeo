@@ -2,6 +2,8 @@ package it.halimeo.app
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.Build
@@ -90,13 +92,20 @@ class MainActivity:ComponentActivity() {
         onRedeem={code,n,e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.redeem(RedeemInviteRequest(code,n,e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Invito non valido")}}}
     );return}
     val entries by repo.entries.collectAsState(initial= emptyList()); var editing by remember{mutableStateOf<DiaryEntry?>(null)}
+    val favoritesPrefs = remember { ctx.getSharedPreferences("halimeo_favorites", android.content.Context.MODE_PRIVATE) }
+    var favoriteIds by remember { mutableStateOf(favoritesPrefs.getStringSet("ids", emptySet())?.toSet() ?: emptySet()) }
+    fun toggleFavorite(id: String) {
+        val updated = if (id in favoriteIds) favoriteIds - id else favoriteIds + id
+        favoriteIds = updated
+        favoritesPrefs.edit().putStringSet("ids", updated.toSet()).apply()
+    }
     val nav= rememberNavController(); val backStackEntry by nav.currentBackStackEntryAsState(); val currentRoute=backStackEntry?.destination?.route
     Scaffold(containerColor=Ink,topBar={TopAppBar(title={Column(verticalArrangement=Arrangement.spacedBy(1.dp)){Text("HaliMeo",fontWeight=FontWeight.ExtraBold,style=MaterialTheme.typography.titleLarge,letterSpacing=(-0.5).sp);Text("IL VOSTRO SPAZIO PRIVATO",style=MaterialTheme.typography.labelSmall,color=Muted,letterSpacing=1.2.sp)}},colors=TopAppBarDefaults.topAppBarColors(containerColor=Ink,titleContentColor=TextPrimary,actionIconContentColor=Muted),actions={
         IconButton(onClick={activity.lifecycleScope.launch{runCatching{repo.syncNow()}.onSuccess{Toast.makeText(ctx,"Sincronizzazione completata",Toast.LENGTH_SHORT).show()}.onFailure{Toast.makeText(ctx,"Offline: dati conservati sul dispositivo",Toast.LENGTH_LONG).show()}}}){Icon(Icons.Default.CloudSync,"Sincronizza")}
         IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.Default.Logout,"Esci")}
     })},bottomBar={NavigationBar(containerColor=Color(0xFF08080B),contentColor=Muted,tonalElevation=0.dp){val navColors=NavigationBarItemDefaults.colors(selectedIconColor=MaterialTheme.colorScheme.primary,selectedTextColor=MaterialTheme.colorScheme.primary,indicatorColor=MaterialTheme.colorScheme.primary.copy(alpha=0.13f),unselectedIconColor=Muted,unselectedTextColor=Muted);NavigationBarItem(selected=currentRoute=="diary",onClick={nav.navigate("diary"){launchSingleTop=true;popUpTo("diary"){saveState=true}}},icon={Icon(Icons.Default.Book,null)},label={Text("Diario")},colors=navColors);NavigationBarItem(selected=currentRoute=="mission",onClick={nav.navigate("mission"){launchSingleTop=true;restoreState=true}},icon={Icon(Icons.Default.Flight,null)},label={Text("Monaco")},colors=navColors);NavigationBarItem(selected=currentRoute=="settings",onClick={nav.navigate("settings"){launchSingleTop=true;restoreState=true}},icon={Icon(Icons.Default.Settings,null)},label={Text("Impostazioni")},colors=navColors)}},floatingActionButton={if(nav.currentDestination?.route!="mission")FloatingActionButton(onClick={editing=null;nav.navigate("edit")},containerColor=MaterialTheme.colorScheme.primary,contentColor=Ink,shape=RoundedCornerShape(20.dp),elevation=FloatingActionButtonDefaults.elevation(defaultElevation=8.dp,pressedElevation=12.dp)){Icon(Icons.Default.Add,"Nuovo ricordo")}}){padding->
         NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(220))+slideInHorizontally(tween(260)){it/14}},exitTransition={fadeOut(tween(150))+slideOutHorizontally(tween(180)){-it/18}},popEnterTransition={fadeIn(tween(220))+slideInHorizontally(tween(260)){ -it/14}},popExitTransition={fadeOut(tween(150))+slideOutHorizontally(tween(180)){it/18}}){
-            composable("diary"){DiaryScreen(entries,{editing=it;nav.navigate("edit")},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
+            composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
             composable("mission"){MissionScreen()}
             composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx)}
@@ -305,16 +314,21 @@ private fun SettingsScreen(
 @Composable
 private fun DiaryScreen(
     entries: List<DiaryEntry>,
+    favoriteIds: Set<String>,
     onEdit: (DiaryEntry) -> Unit,
+    onToggleFavorite: (DiaryEntry) -> Unit,
     onDelete: (DiaryEntry) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Tutte") }
+    var favoritesOnly by remember { mutableStateOf(false) }
     var newestFirst by remember { mutableStateOf(true) }
+    var pendingDelete by remember { mutableStateOf<DiaryEntry?>(null) }
     val categories = listOf("Tutte") + entries.map { it.category.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
     val filtered = entries.filter {
         (it.title.contains(query, true) || it.body.contains(query, true) || it.category.contains(query, true)) &&
-            (selectedCategory == "Tutte" || it.category.equals(selectedCategory, ignoreCase = true))
+            (selectedCategory == "Tutte" || it.category.equals(selectedCategory, ignoreCase = true)) &&
+            (!favoritesOnly || it.id in favoriteIds)
     }.let { matches -> if (newestFirst) matches.sortedByDescending { it.memoryDate } else matches.sortedBy { it.memoryDate } }
 
     Column(
@@ -385,6 +399,7 @@ private fun DiaryScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            FilterChip(selected=favoritesOnly,onClick={favoritesOnly=!favoritesOnly},label={Text("Preferiti")},leadingIcon={Icon(if(favoritesOnly) Icons.Default.Favorite else Icons.Default.FavoriteBorder,contentDescription=null,modifier=Modifier.size(16.dp))})
             categories.forEach { category ->
                 FilterChip(
                     selected = selectedCategory == category,
@@ -493,6 +508,9 @@ private fun DiaryScreen(
                                             Text(entry.category, color = Muted, style = MaterialTheme.typography.labelMedium)
                                         }
                                     }
+                                    IconButton(onClick={onToggleFavorite(entry)}) {
+                                        Icon(if(entry.id in favoriteIds) Icons.Default.Favorite else Icons.Default.FavoriteBorder,contentDescription=if(entry.id in favoriteIds) "Rimuovi dai preferiti" else "Aggiungi ai preferiti",tint=if(entry.id in favoriteIds) MaterialTheme.colorScheme.primary else Muted)
+                                    }
                                     if (entry.syncState != "SYNCED") {
                                         Surface(
                                             color = Color(0xFFFFD479).copy(alpha = 0.12f),
@@ -527,7 +545,7 @@ private fun DiaryScreen(
                                         Spacer(Modifier.width(6.dp))
                                         Text("Modifica")
                                     }
-                                    TextButton(onClick = { onDelete(entry) }) {
+                                    TextButton(onClick = { pendingDelete = entry }) {
                                         Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = Color(0xFFFF879B), modifier = Modifier.size(17.dp))
                                         Spacer(Modifier.width(6.dp))
                                         Text("Elimina", color = Color(0xFFFF879B))
@@ -539,6 +557,15 @@ private fun DiaryScreen(
                 }
             }
         }
+    }
+    if (pendingDelete != null) {
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("Eliminare questo ricordo?") },
+            text = { Text("Il ricordo verrà rimosso dalla tua lista e la modifica sarà sincronizzata quando possibile.") },
+            confirmButton = { TextButton(onClick = { pendingDelete?.let(onDelete); pendingDelete = null }) { Text("Elimina", color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Annulla") } }
+        )
     }
 }
 
