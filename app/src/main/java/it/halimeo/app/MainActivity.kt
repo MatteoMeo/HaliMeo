@@ -58,23 +58,14 @@ import kotlinx.coroutines.delay
 
 private val Ink=Color(0xFF07070B); private val Panel=Color(0xCC171720); private val Mint=Color(0xFFC4B5FD); private val Muted=Color(0xFFA6A1B2)
 private val Elevated=Color(0xD91A1A25);
-private val HaliMeoBackdrop = Brush.linearGradient(listOf(Color(0xFF171226), Color(0xFF08080E), Color(0xFF100B19), Color(0xFF060609)))
+private val HaliMeoBackdrop = Brush.verticalGradient(listOf(Color(0xFF0D0C12), Color(0xFF08080D), Color(0xFF09080E)))
 private val TextPrimary=Color(0xFFF5F2FA); private val AccentWarm=Color(0xFFFFB4A2)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable private fun HaliMeoTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
-    var fontPulse by remember { mutableIntStateOf(0) }
-    val animatedFontWidth by animateFloatAsState(
-        targetValue = if (fontPulse % 2 == 0) 96f else 110f,
-        animationSpec = tween(durationMillis = 520),
-        label = "googleSansFlexWidth"
-    )
-    val animatedFontRoundness by animateFloatAsState(
-        targetValue = if (fontPulse % 2 == 0) 12f else 62f,
-        animationSpec = tween(durationMillis = 520),
-        label = "googleSansFlexRoundness"
-    )
+    val staticFontWidth = 100f
+    val staticFontRoundness = 28f
     // Android 12+ supplies Material You / Monet colors derived from the device wallpaper.
     // Keep the app dark with a true-black canvas for AMOLED displays.
     val scheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -93,12 +84,9 @@ private val TextPrimary=Color(0xFFF5F2FA); private val AccentWarm=Color(0xFFFFB4
         )
     }
     // Material 3 Expressive supplies the expressive motion system and updated component defaults.
-    CompositionLocalProvider(
-        LocalExpressiveFontPulse provides { fontPulse += 1 }
-    ) {
-        MaterialExpressiveTheme(
+    MaterialExpressiveTheme(
             colorScheme = scheme,
-            typography = rememberHaliMeoTypography(animatedFontWidth, animatedFontRoundness),
+            typography = rememberHaliMeoTypography(staticFontWidth, staticFontRoundness),
             motionScheme = MotionScheme.expressive(),
             shapes = Shapes(
                 small = RoundedCornerShape(16.dp),
@@ -107,13 +95,14 @@ private val TextPrimary=Color(0xFFF5F2FA); private val AccentWarm=Color(0xFFFFB4
             ),
             content = content
         )
-    }
 }
 class MainActivity:ComponentActivity() {
     override fun onCreate(savedInstanceState:Bundle?) {
         super.onCreate(savedInstanceState)
         ApiClient.initialize(applicationContext)
         SyncScheduler.schedule(this)
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) window.isNavigationBarContrastEnforced = false
         setContent { HaliMeoTheme { HaliMeoRoot() } }
     }
 }
@@ -123,7 +112,7 @@ class MainActivity:ComponentActivity() {
     val session=remember{SessionStore(ctx)}; val repo=remember{DiaryRepository(ctx)}
     var signed by remember{mutableStateOf<Boolean?>(null)}; var displayName by remember{mutableStateOf("")}
     LaunchedEffect(Unit){signed=!session.token().isNullOrBlank();displayName=session.name()}
-    if(signed==null){Box(Modifier.fillMaxSize().background(HaliMeoBackdrop),contentAlignment=Alignment.Center){LoadingIndicator(modifier=Modifier.size(64.dp), color=MaterialTheme.colorScheme.primary)};return}
+    if(signed==null){Box(Modifier.fillMaxSize().background(Color(0xFF09090E)),contentAlignment=Alignment.Center){LoadingIndicator(modifier=Modifier.size(64.dp), color=MaterialTheme.colorScheme.primary)};return}
     if(signed==false){AuthScreen(
         onLogin={e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.login(LoginRequest(e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Accesso non riuscito")}}},
         onRedeem={code,n,e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.redeem(RedeemInviteRequest(code,n,e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Invito non valido")}}}
@@ -137,12 +126,10 @@ class MainActivity:ComponentActivity() {
         favoritesPrefs.edit().putStringSet("ids", updated.toSet()).apply()
     }
     val nav= rememberNavController(); val backStackEntry by nav.currentBackStackEntryAsState(); val currentRoute=backStackEntry?.destination?.route
-    val pulseExpressiveFont = LocalExpressiveFontPulse.current
-    LaunchedEffect(currentRoute) { pulseExpressiveFont() }
-    Scaffold(containerColor=Color.Transparent,topBar={MediumFlexibleTopAppBar(
-        title={Text("HaliMeo",fontWeight=FontWeight.ExtraBold,style=MaterialTheme.typography.headlineSmall,letterSpacing=(-0.6).sp)},
-        subtitle={Text("IL VOSTRO SPAZIO PRIVATO",style=MaterialTheme.typography.labelSmall,color=Muted,letterSpacing=1.4.sp)},
-        colors=TopAppBarDefaults.topAppBarColors(containerColor=Color(0xCC08080E),titleContentColor=TextPrimary,actionIconContentColor=Muted),
+    Scaffold(containerColor=Color.Transparent,topBar={TopAppBar(
+        title={Column(verticalArrangement=Arrangement.spacedBy(0.dp)) { Text("HaliMeo",fontWeight=FontWeight.ExtraBold,style=MaterialTheme.typography.titleLarge,letterSpacing=(-0.5).sp); Text("IL VOSTRO SPAZIO PRIVATO",style=MaterialTheme.typography.labelSmall,color=TextPrimary.copy(alpha=0.72f),letterSpacing=1.1.sp) }},
+        modifier=Modifier.heightIn(min=56.dp),
+        colors=TopAppBarDefaults.topAppBarColors(containerColor=Color(0xEE0A0A10),titleContentColor=TextPrimary,actionIconContentColor=TextPrimary),
         actions={
             IconButton(onClick={activity.lifecycleScope.launch{runCatching{repo.syncNow()}.onSuccess{Toast.makeText(ctx,"Sincronizzazione completata",Toast.LENGTH_SHORT).show()}.onFailure{Toast.makeText(ctx,"Offline: dati conservati sul dispositivo",Toast.LENGTH_LONG).show()}}}){Icon(Icons.Default.CloudSync,"Sincronizza")}
             IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.Default.Logout,"Esci")}
@@ -152,37 +139,37 @@ class MainActivity:ComponentActivity() {
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 18.dp, vertical = 6.dp),
+                .padding(horizontal = 26.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center
         ) {
             // Soft blurred color halo, not a glass overlay.
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.88f)
-                    .height(42.dp)
-                    .offset(y = 5.dp)
-                    .blur(22.dp)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.20f), RoundedCornerShape(50))
+                    .fillMaxWidth(0.82f)
+                    .height(26.dp)
+                    .offset(y = 3.dp)
+                    .blur(18.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), RoundedCornerShape(50))
             )
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(16.dp, RoundedCornerShape(50), clip = false)
-                    .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(50)),
+                    .shadow(12.dp, RoundedCornerShape(50), clip = false)
+                    .border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(50)),
                 shape = RoundedCornerShape(50),
-                color = Color(0xE61B1B25),
+                color = Color(0xC91B202B),
                 tonalElevation = 0.dp
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(88.dp).padding(horizontal = 5.dp, vertical = 5.dp),
+                    modifier = Modifier.fillMaxWidth().height(68.dp).padding(horizontal = 4.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) {
                         nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } }
                     }
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "mission", "Monaco", Icons.Default.Flight) {
-                        nav.navigate("mission") { launchSingleTop = true; restoreState = true }
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) {
+                        nav.navigate("trips") { launchSingleTop = true; restoreState = true }
                     }
                     FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) {
                         nav.navigate("settings") { launchSingleTop = true; restoreState = true }
@@ -191,7 +178,7 @@ class MainActivity:ComponentActivity() {
             }
         }
     },floatingActionButton={
-        if (nav.currentDestination?.route != "mission") {
+        if (nav.currentDestination?.route != "tripMonaco") {
             ExtendedFloatingActionButton(
                 onClick = { editing = null; nav.navigate("edit") },
                 text = { Text("Nuovo ricordo", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge) },
@@ -207,7 +194,8 @@ class MainActivity:ComponentActivity() {
         NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
             composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
-            composable("mission"){MissionScreen()}
+            composable("trips"){TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })}
+            composable("tripMonaco"){MissionScreen()}
             composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx)}
         }
     }
@@ -224,20 +212,19 @@ private fun FloatingNavItem(
         modifier = modifier
             .fillMaxHeight()
             .clip(RoundedCornerShape(50))
-            .background(if (selected) Brush.linearGradient(listOf(Color(0xFF174D77), Color(0xFF082E4D))) else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)))
-            .then(if (selected) Modifier.border(1.5.dp, Color(0xFF8CC8FF).copy(alpha = 0.78f), RoundedCornerShape(50)) else Modifier)
-            .animateContentSize(animationSpec = spring(dampingRatio = 0.78f, stiffness = 420f))
+            .background(if (selected) Color(0xFF16476C) else Color.Transparent)
+            .then(if (selected) Modifier.border(1.dp, Color(0xFF8CC8FF).copy(alpha = 0.78f), RoundedCornerShape(50)) else Modifier)
             .clickable(onClick = onClick)
-            .padding(horizontal = 4.dp, vertical = 5.dp),
+            .padding(horizontal = 2.dp, vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(icon, contentDescription = label, modifier = Modifier.size(25.dp),
+        Icon(icon, contentDescription = label, modifier = Modifier.size(21.dp),
             tint = if (selected) Color(0xFFD7ECFF) else Color(0xFFD1CED9))
-        Spacer(Modifier.height(5.dp))
-        Text(label, style = MaterialTheme.typography.labelLarge,
+        Spacer(Modifier.height(2.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-            color = if (selected) Color(0xFFF2F8FF) else Color(0xFFD1CED9),
+            color = if (selected) Color(0xFFF2F8FF) else Color(0xFFE0DDE7),
             maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -273,7 +260,7 @@ private fun SettingsScreen(
     }
 
     Column(
-        Modifier.fillMaxSize().background(HaliMeoBackdrop).verticalScroll(rememberScrollState()).padding(20.dp),
+        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text("IMPOSTAZIONI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.headlineSmall)
@@ -505,8 +492,8 @@ private fun DiaryScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .background(HaliMeoBackdrop)
-            .padding(horizontal = 18.dp)
+            .background(Color.Transparent)
+            .padding(horizontal = 16.dp)
     ) {
         Spacer(Modifier.height(18.dp))
         Row(
@@ -745,8 +732,41 @@ private fun DiaryScreen(
 
 @Composable private fun EditScreen(existing:DiaryEntry?,onSave:(String,String,String,String)->Unit,onCancel:()->Unit){
     var title by remember(existing?.id){mutableStateOf(existing?.title.orEmpty())};var body by remember(existing?.id){mutableStateOf(existing?.body.orEmpty())};var cat by remember(existing?.id){mutableStateOf(existing?.category?:"Ricordo")};var date by remember(existing?.id){mutableStateOf(existing?.memoryDate?:java.time.LocalDate.now().toString())}
-    Column(Modifier.fillMaxSize().background(HaliMeoBackdrop).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text(if(existing==null)"NUOVO RICORDO" else "MODIFICA RICORDO",color=MaterialTheme.colorScheme.primary,style=MaterialTheme.typography.headlineSmall);OutlinedTextField(title,{title=it},label={Text("Titolo")},modifier=Modifier.fillMaxWidth());OutlinedTextField(date,{date=it},label={Text("Data AAAA-MM-GG")},modifier=Modifier.fillMaxWidth());OutlinedTextField(cat,{cat=it},label={Text("Categoria")},modifier=Modifier.fillMaxWidth());OutlinedTextField(body,{body=it},label={Text("Ricordo")},modifier=Modifier.fillMaxWidth().weight(1f),minLines=5);Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick=onCancel,modifier=Modifier.weight(1f)){Text("Annulla")};Button(onClick={if(title.isNotBlank()&&body.isNotBlank())onSave(title,body,cat,date)},modifier=Modifier.weight(1f)){Text("Salva")}}}
+    Column(Modifier.fillMaxSize().background(Color.Transparent).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){Text(if(existing==null)"NUOVO RICORDO" else "MODIFICA RICORDO",color=MaterialTheme.colorScheme.primary,style=MaterialTheme.typography.headlineSmall);OutlinedTextField(title,{title=it},label={Text("Titolo")},modifier=Modifier.fillMaxWidth());OutlinedTextField(date,{date=it},label={Text("Data AAAA-MM-GG")},modifier=Modifier.fillMaxWidth());OutlinedTextField(cat,{cat=it},label={Text("Categoria")},modifier=Modifier.fillMaxWidth());OutlinedTextField(body,{body=it},label={Text("Ricordo")},modifier=Modifier.fillMaxWidth().weight(1f),minLines=5);Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick=onCancel,modifier=Modifier.weight(1f)){Text("Annulla")};Button(onClick={if(title.isNotBlank()&&body.isNotBlank())onSave(title,body,cat,date)},modifier=Modifier.weight(1f)){Text("Salva")}}}
 }
+@Composable
+private fun TripsScreen(onOpenMonaco: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Text("I VOSTRI VIAGGI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, letterSpacing = 1.5.sp, fontWeight = FontWeight.SemiBold)
+        Text("Un archivio di avventure", color = TextPrimary, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text("Apri un viaggio per entrare nella sua pagina dedicata.", color = Color(0xFFC9C5D2), style = MaterialTheme.typography.bodyMedium)
+        Surface(
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenMonaco),
+            shape = RoundedCornerShape(26.dp),
+            color = Color(0xA51C202B),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
+            tonalElevation = 0.dp
+        ) {
+            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Box(Modifier.size(76.dp).clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(Color(0xFF214D70), Color(0xFF171526)))), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.LocationCity, contentDescription = null, tint = Color(0xFFD7ECFF), modifier = Modifier.size(36.dp))
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("Monaco di Baviera", color = TextPrimary, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Il vostro prossimo capitolo", color = Color(0xFFC9C5D2), style = MaterialTheme.typography.bodySmall)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("Apri viaggio", color = Color(0xFFB9DCFF), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                        Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Color(0xFFB9DCFF), modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable private fun MissionScreen(){
     AndroidView(modifier=Modifier.fillMaxSize(),factory={ctx->WebView(ctx).apply{
