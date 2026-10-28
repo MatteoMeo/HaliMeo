@@ -20,6 +20,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
@@ -174,39 +175,13 @@ class MainActivity:ComponentActivity() {
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    @Composable fun FloatingDestination(
-                        selected: Boolean,
-                        label: String,
-                        icon: androidx.compose.ui.graphics.vector.ImageVector,
-                        onClick: () -> Unit
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clip(RoundedCornerShape(22.dp))
-                                .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent)
-                                .clickable(onClick = onClick)
-                                .padding(horizontal = 3.dp, vertical = 3.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(icon, contentDescription = label, modifier = Modifier.size(21.dp),
-                                tint = if (selected) MaterialTheme.colorScheme.primary else Muted)
-                            Spacer(Modifier.height(2.dp))
-                            Text(label, style = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                                color = if (selected) MaterialTheme.colorScheme.primary else Muted,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                    FloatingDestination(currentRoute == "diary", "Diario", Icons.Default.Book) {
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) {
                         nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } }
                     }
-                    FloatingDestination(currentRoute == "mission", "Monaco", Icons.Default.Flight) {
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "mission", "Monaco", Icons.Default.Flight) {
                         nav.navigate("mission") { launchSingleTop = true; restoreState = true }
                     }
-                    FloatingDestination(currentRoute == "settings", "Impostazioni", Icons.Default.Settings) {
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) {
                         nav.navigate("settings") { launchSingleTop = true; restoreState = true }
                     }
                 }
@@ -234,6 +209,34 @@ class MainActivity:ComponentActivity() {
         }
     }
 }
+@Composable
+private fun FloatingNavItem(
+    modifier: Modifier = Modifier,
+    selected: Boolean,
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .clip(RoundedCornerShape(22.dp))
+            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 3.dp, vertical = 3.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(icon, contentDescription = label, modifier = Modifier.size(21.dp),
+            tint = if (selected) MaterialTheme.colorScheme.primary else Muted)
+        Spacer(Modifier.height(2.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            color = if (selected) MaterialTheme.colorScheme.primary else Muted,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
 @Composable
 private fun SettingsScreen(
     displayName: String,
