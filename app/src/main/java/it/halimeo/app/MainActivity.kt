@@ -56,10 +56,6 @@ import it.halimeo.app.network.*
 import it.halimeo.app.sync.SyncScheduler
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
-import com.skydoves.cloudy.Sky
-import com.skydoves.cloudy.cloudy
-import com.skydoves.cloudy.rememberSky
-import com.skydoves.cloudy.sky
 
 private val Ink=Color(0xFF000000); private val Panel=Color(0xCC111318); private val Mint=Color(0xFFB9DDF5); private val Muted=Color(0xFFB4BAC5)
 private val Elevated=Color(0xFF101317);
@@ -133,7 +129,6 @@ class MainActivity:ComponentActivity() {
         favoritesPrefs.edit().putStringSet("ids", updated.toSet()).apply()
     }
     val nav= rememberNavController(); val backStackEntry by nav.currentBackStackEntryAsState(); val currentRoute=backStackEntry?.destination?.route
-    val glassSky = rememberSky()
     Scaffold(containerColor=Color.Transparent,topBar={TopAppBar(
         title={Column(verticalArrangement=Arrangement.spacedBy(0.dp)) { Text("HaliMeo",fontWeight=FontWeight.ExtraBold,style=MaterialTheme.typography.titleLarge,letterSpacing=(-0.5).sp); Text("IL VOSTRO SPAZIO PRIVATO",style=MaterialTheme.typography.labelSmall,color=TextPrimary.copy(alpha=0.72f),letterSpacing=1.1.sp) }},
         modifier=Modifier.heightIn(min=56.dp),
@@ -193,11 +188,11 @@ class MainActivity:ComponentActivity() {
         }
     }){padding->
         NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
-            composable("diary"){DiaryScreen(entries,favoriteIds,glassSky,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
-            composable("edit"){EditScreen(editing,glassSky,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
-            composable("trips"){TripsScreen(glassSky,onOpenMonaco = { nav.navigate("tripMonaco") })}
+            composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
+            composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
+            composable("trips"){TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })}
             composable("tripMonaco"){MissionScreen()}
-            composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,glassSky=glassSky)}
+            composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,)}
         }
     }
 }
@@ -210,17 +205,17 @@ private fun FloatingNavItem(
     onClick: () -> Unit
 ) {
     val animatedContainer by animateColorAsState(
-        targetValue = if (selected) Color(0xFF16476C) else Color.Transparent,
+        targetValue = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.24f) else Color.Transparent,
         animationSpec = tween(durationMillis = 180),
         label = "navItemContainer"
     )
     val animatedIcon by animateColorAsState(
-        targetValue = if (selected) Color(0xFFD7ECFF) else Color(0xFFD1CED9),
+        targetValue = if (selected) MaterialTheme.colorScheme.primary else Color(0xFFD1D5D9),
         animationSpec = tween(durationMillis = 180),
         label = "navItemIcon"
     )
     val animatedLabel by animateColorAsState(
-        targetValue = if (selected) Color(0xFFF2F8FF) else Color(0xFFE0DDE7),
+        targetValue = if (selected) MaterialTheme.colorScheme.onSurface else Color(0xFFD5D9DD),
         animationSpec = tween(durationMillis = 180),
         label = "navItemLabel"
     )
@@ -229,7 +224,7 @@ private fun FloatingNavItem(
             .fillMaxHeight()
             .clip(RoundedCornerShape(50))
             .background(animatedContainer)
-            .then(if (selected) Modifier.border(1.dp, Color(0xFF8CC8FF).copy(alpha = 0.78f), RoundedCornerShape(50)) else Modifier)
+            .then(if (selected) Modifier.border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50)) else Modifier)
             .clickable(onClick = onClick)
             .padding(horizontal = 2.dp, vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -525,7 +520,6 @@ private fun SettingsScreen(
 private fun DiaryScreen(
     entries: List<DiaryEntry>,
     favoriteIds: Set<String>,
-    glassSky: Sky,
     onEdit: (DiaryEntry) -> Unit,
     onToggleFavorite: (DiaryEntry) -> Unit,
     onDelete: (DiaryEntry) -> Unit
@@ -807,7 +801,7 @@ private fun DiaryScreen(
     }
 }
 
-@Composable private fun EditScreen(existing: DiaryEntry?, glassSky: Sky, onSave: (String,String,String,String)->Unit, onCancel:()->Unit) {
+@Composable private fun EditScreen(existing: DiaryEntry?, onSave: (String,String,String,String)->Unit, onCancel:()->Unit) {
     var title by remember(existing?.id) { mutableStateOf(existing?.title.orEmpty()) }
     var body by remember(existing?.id) { mutableStateOf(existing?.body.orEmpty()) }
     var cat by remember(existing?.id) { mutableStateOf(existing?.category ?: "Ricordo") }
@@ -842,7 +836,7 @@ private fun DiaryScreen(
     }
 }
 @Composable
-private fun TripsScreen(glassSky: Sky, onOpenMonaco: () -> Unit) {
+private fun TripsScreen(onOpenMonaco: () -> Unit) {
     Column(
         Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
