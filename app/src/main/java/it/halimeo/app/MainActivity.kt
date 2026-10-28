@@ -56,11 +56,12 @@ import it.halimeo.app.network.*
 import it.halimeo.app.sync.SyncScheduler
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import com.skydoves.cloudy.Sky
 import com.skydoves.cloudy.cloudy
 import com.skydoves.cloudy.rememberSky
 import com.skydoves.cloudy.sky
 
-private val Ink=Color(0xFF07070B); private val Panel=Color(0xCC171720); private val Mint=Color(0xFFC4B5FD); private val Muted=Color(0xFFA6A1B2)
+private val Ink=Color(0xFF000000); private val Panel=Color(0xCC111318); private val Mint=Color(0xFFB9DDF5); private val Muted=Color(0xFFB4BAC5)
 private val Elevated=Color(0xD91A1A25);
 private val HaliMeoBackdrop = Brush.verticalGradient(listOf(Color.Black, Color.Black, Color.Black))
 private val TextPrimary=Color(0xFFF5F2FA); private val AccentWarm=Color(0xFFFFB4A2)
@@ -74,11 +75,17 @@ private val TextPrimary=Color(0xFFF5F2FA); private val AccentWarm=Color(0xFFFFB4
     // Keep the app dark with a true-black canvas for AMOLED displays.
     val scheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         dynamicDarkColorScheme(context).copy(
+            primary = Color(0xFFB9DDF5),
+            onPrimary = Color(0xFF102A3A),
+            secondary = Color(0xFF72D9E8),
+            onSecondary = Color(0xFF06272D),
             background = Color.Black,
             surface = Color(0xFF0B0B0D),
-            surfaceVariant = Color(0xFF17171C),
-            onBackground = Color(0xFFF4F0F8),
-            onSurface = Color(0xFFF4F0F8)
+            surfaceVariant = Color(0xFF17191E),
+            onBackground = Color(0xFFF5F7FA),
+            onSurface = Color(0xFFF5F7FA),
+            onSurfaceVariant = Color(0xFFD0D4DC),
+            outline = Color(0xFF3A4149)
         )
     } else {
         darkColorScheme(
@@ -180,7 +187,7 @@ class MainActivity:ComponentActivity() {
             }
         }
     },floatingActionButton={
-        if (nav.currentDestination?.route != "tripMonaco") {
+        if (currentRoute == "diary") {
             ExtendedFloatingActionButton(
                 onClick = { editing = null; nav.navigate("edit") },
                 text = { Text("Nuovo ricordo", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge) },
@@ -194,11 +201,11 @@ class MainActivity:ComponentActivity() {
         }
     }){padding->
         NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding).sky(glassSky),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
-            composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
+            composable("diary"){DiaryScreen(entries,favoriteIds,glassSky,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
-            composable("trips"){TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })}
+            composable("trips"){TripsScreen(glassSky,onOpenMonaco = { nav.navigate("tripMonaco") })}
             composable("tripMonaco"){MissionScreen()}
-            composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx)}
+            composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,glassSky=glassSky)}
         }
     }
 }
@@ -252,7 +259,8 @@ private fun SettingsScreen(
     session: SessionStore,
     repo: DiaryRepository,
     activity: ComponentActivity,
-    ctx: android.content.Context
+    ctx: android.content.Context,
+    glassSky: Sky
 ) {
     val diaryEntries by repo.entries.collectAsState(initial = emptyList())
     val pendingSyncCount = diaryEntries.count { it.syncState != "SYNCED" }
@@ -288,7 +296,7 @@ private fun SettingsScreen(
         Text("IMPOSTAZIONI", color = primaryText, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
 
         Card(
-            modifier = Modifier.fillMaxWidth().cloudy(radius = 22).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().cloudy(sky = glassSky, radius = 22, tint = Color(0x6611161D)).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
         ) {
@@ -404,7 +412,7 @@ private fun SettingsScreen(
 
                         if (inviteCode.isNotBlank()) {
                             Card(
-                                modifier = Modifier.fillMaxWidth().cloudy(radius = 18).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(20.dp)),
+                                modifier = Modifier.fillMaxWidth().cloudy(sky = glassSky, radius = 18, tint = Color(0x6611161D)).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(20.dp)),
                                 shape = RoundedCornerShape(20.dp),
                                 colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
                             ) {
@@ -525,6 +533,7 @@ private fun SettingsScreen(
 private fun DiaryScreen(
     entries: List<DiaryEntry>,
     favoriteIds: Set<String>,
+    glassSky: Sky,
     onEdit: (DiaryEntry) -> Unit,
     onToggleFavorite: (DiaryEntry) -> Unit,
     onDelete: (DiaryEntry) -> Unit
@@ -715,7 +724,7 @@ private fun DiaryScreen(
                             modifier = Modifier.fillMaxWidth()
                                 .shadow(10.dp, RoundedCornerShape(28.dp), clip = false)
                                 .border(1.dp, Color.White.copy(alpha = 0.14f), MaterialTheme.shapes.large)
-                                .cloudy(radius = 20)
+                                .cloudy(sky = glassSky, radius = 20, tint = Color(0x6611161D))
                                 .animateContentSize(),
                             shape = MaterialTheme.shapes.large,
                             colors = CardDefaults.elevatedCardColors(containerColor = Color(0x6612161D))
@@ -806,12 +815,42 @@ private fun DiaryScreen(
     }
 }
 
-@Composable private fun EditScreen(existing:DiaryEntry?,onSave:(String,String,String,String)->Unit,onCancel:()->Unit){
-    var title by remember(existing?.id){mutableStateOf(existing?.title.orEmpty())};var body by remember(existing?.id){mutableStateOf(existing?.body.orEmpty())};var cat by remember(existing?.id){mutableStateOf(existing?.category?:"Ricordo")};var date by remember(existing?.id){mutableStateOf(existing?.memoryDate?:java.time.LocalDate.now().toString())}
-    Column(Modifier.fillMaxSize().background(Color.Transparent).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){Text(if(existing==null)"NUOVO RICORDO" else "MODIFICA RICORDO",color=MaterialTheme.colorScheme.primary,style=MaterialTheme.typography.headlineSmall);OutlinedTextField(title,{title=it},label={Text("Titolo")},modifier=Modifier.fillMaxWidth());OutlinedTextField(date,{date=it},label={Text("Data AAAA-MM-GG")},modifier=Modifier.fillMaxWidth());OutlinedTextField(cat,{cat=it},label={Text("Categoria")},modifier=Modifier.fillMaxWidth());OutlinedTextField(body,{body=it},label={Text("Ricordo")},modifier=Modifier.fillMaxWidth().weight(1f),minLines=5);Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick=onCancel,modifier=Modifier.weight(1f)){Text("Annulla")};Button(onClick={if(title.isNotBlank()&&body.isNotBlank())onSave(title,body,cat,date)},modifier=Modifier.weight(1f)){Text("Salva")}}}
+@Composable private fun EditScreen(existing: DiaryEntry?, onSave: (String,String,String,String)->Unit, onCancel:()->Unit) {
+    var title by remember(existing?.id) { mutableStateOf(existing?.title.orEmpty()) }
+    var body by remember(existing?.id) { mutableStateOf(existing?.body.orEmpty()) }
+    var cat by remember(existing?.id) { mutableStateOf(existing?.category ?: "Ricordo") }
+    var date by remember(existing?.id) { mutableStateOf(existing?.memoryDate ?: java.time.LocalDate.now().toString()) }
+
+    Column(
+        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(if (existing == null) "NUOVO RICORDO" else "MODIFICA RICORDO", color = Color(0xFFF5F7FA), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+        Text("I momenti importanti, custoditi in un posto vostro.", color = Color(0xFFB4BAC5), style = MaterialTheme.typography.bodyMedium)
+        Card(
+            modifier = Modifier.fillMaxWidth().cloudy(sky = rememberSky(), radius = 20, tint = Color(0x6611161D)).border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(26.dp)),
+            shape = RoundedCornerShape(26.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0x55111318))
+        ) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(title, { title = it }, label = { Text("Titolo") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(date, { date = it }, label = { Text("Data AAAA-MM-GG") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(cat, { cat = it }, label = { Text("Categoria") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(body, { body = it }, label = { Text("Ricordo") }, modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp), minLines = 5)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) { Text("Annulla") }
+                    Button(onClick = { if (title.isNotBlank() && body.isNotBlank()) onSave(title, body, cat, date) }, modifier = Modifier.weight(1f), enabled = title.isNotBlank() && body.isNotBlank()) {
+                        Icon(Icons.Default.Check, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Salva")
+                    }
+                }
+            }
+        }
+    }
 }
 @Composable
-private fun TripsScreen(onOpenMonaco: () -> Unit) {
+private fun TripsScreen(glassSky: Sky, onOpenMonaco: () -> Unit) {
     Column(
         Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
