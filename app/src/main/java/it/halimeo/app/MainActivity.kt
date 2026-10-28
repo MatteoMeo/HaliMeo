@@ -161,7 +161,7 @@ private fun SettingsScreen(
                 activity.lifecycleScope.launch {
                     runCatching {
                         val rows = repo.allForBackup().filter { it.deletedAt == null }
-                        fun csv(value: String) = "\\"\\" + value.replace("\\"\\"", "\\"\\"\\"\\\"") + "\\"\\""
+                        fun csv(value: String) = "\"" + value.replace("\"", "\"\"") + "\""
                         val export = buildString {
                             appendLine("Titolo,Data,Categoria,Ricordo")
                             rows.forEach { row ->
