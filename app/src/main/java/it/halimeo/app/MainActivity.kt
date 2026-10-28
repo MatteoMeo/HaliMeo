@@ -51,21 +51,25 @@ private val Elevated=Color(0xFF1A1A22); private val TextPrimary=Color(0xFFF5F2FA
 
 @Composable private fun HaliMeoTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
-    val dark = isSystemInDarkTheme()
+    // Android 12+ supplies Material You / Monet colors derived from the device wallpaper.
+    // Keep the app dark with a true-black canvas for AMOLED displays.
     val scheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        if (dark) dynamicDarkColorScheme(context).copy(
+        dynamicDarkColorScheme(context).copy(
             background = Color.Black,
             surface = Color(0xFF0B0B0D),
             surfaceVariant = Color(0xFF17171C),
             onBackground = Color(0xFFF4F0F8),
             onSurface = Color(0xFFF4F0F8)
-        ) else dynamicLightColorScheme(context)
-    } else if (dark) {
-        darkColorScheme(primary=Mint,onPrimary=Ink,secondary=AccentWarm,onSecondary=Ink,background=Ink,onBackground=TextPrimary,surface=Panel,onSurface=TextPrimary,surfaceVariant=Elevated,onSurfaceVariant=Muted,outline=Color(0xFF34323D))
-    } else lightColorScheme(primary=Color(0xFF65558F),onPrimary=Color.White,secondary=Color(0xFF825247),background=Color(0xFFFFF8FF),surface=Color(0xFFFFF8FF),onSurface=Color(0xFF1D1A22))
+        )
+    } else {
+        darkColorScheme(
+            primary=Mint, onPrimary=Ink, secondary=AccentWarm, onSecondary=Ink,
+            background=Ink, onBackground=TextPrimary, surface=Panel, onSurface=TextPrimary,
+            surfaceVariant=Elevated, onSurfaceVariant=Muted, outline=Color(0xFF34323D)
+        )
+    }
     MaterialTheme(colorScheme=scheme,shapes=Shapes(small=RoundedCornerShape(12.dp),medium=RoundedCornerShape(20.dp),large=RoundedCornerShape(28.dp)),content=content)
 }
-
 class MainActivity:ComponentActivity() {
     override fun onCreate(savedInstanceState:Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,7 +94,7 @@ class MainActivity:ComponentActivity() {
     Scaffold(containerColor=Ink,topBar={TopAppBar(title={Column(verticalArrangement=Arrangement.spacedBy(1.dp)){Text("HaliMeo",fontWeight=FontWeight.ExtraBold,style=MaterialTheme.typography.titleLarge,letterSpacing=(-0.5).sp);Text("IL VOSTRO SPAZIO PRIVATO",style=MaterialTheme.typography.labelSmall,color=Muted,letterSpacing=1.2.sp)}},colors=TopAppBarDefaults.topAppBarColors(containerColor=Ink,titleContentColor=TextPrimary,actionIconContentColor=Muted),actions={
         IconButton(onClick={activity.lifecycleScope.launch{runCatching{repo.syncNow()}.onSuccess{Toast.makeText(ctx,"Sincronizzazione completata",Toast.LENGTH_SHORT).show()}.onFailure{Toast.makeText(ctx,"Offline: dati conservati sul dispositivo",Toast.LENGTH_LONG).show()}}}){Icon(Icons.Default.CloudSync,"Sincronizza")}
         IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.Default.Logout,"Esci")}
-    })},bottomBar={NavigationBar(containerColor=Color(0xFF08080B),contentColor=Muted,tonalElevation=0.dp){val navColors=NavigationBarItemDefaults.colors(selectedIconColor=Mint,selectedTextColor=Mint,indicatorColor=Mint.copy(alpha=0.13f),unselectedIconColor=Muted,unselectedTextColor=Muted);NavigationBarItem(selected=currentRoute=="diary",onClick={nav.navigate("diary"){launchSingleTop=true;popUpTo("diary"){saveState=true}}},icon={Icon(Icons.Default.Book,null)},label={Text("Diario")},colors=navColors);NavigationBarItem(selected=currentRoute=="mission",onClick={nav.navigate("mission"){launchSingleTop=true;restoreState=true}},icon={Icon(Icons.Default.Flight,null)},label={Text("Monaco")},colors=navColors);NavigationBarItem(selected=currentRoute=="settings",onClick={nav.navigate("settings"){launchSingleTop=true;restoreState=true}},icon={Icon(Icons.Default.Settings,null)},label={Text("Impostazioni")},colors=navColors)}},floatingActionButton={if(nav.currentDestination?.route!="mission")FloatingActionButton(onClick={editing=null;nav.navigate("edit")},containerColor=Mint,contentColor=Ink,shape=RoundedCornerShape(20.dp),elevation=FloatingActionButtonDefaults.elevation(defaultElevation=8.dp,pressedElevation=12.dp)){Icon(Icons.Default.Add,"Nuovo ricordo")}}){padding->
+    })},bottomBar={NavigationBar(containerColor=Color(0xFF08080B),contentColor=Muted,tonalElevation=0.dp){val navColors=NavigationBarItemDefaults.colors(selectedIconColor=MaterialTheme.colorScheme.primary,selectedTextColor=MaterialTheme.colorScheme.primary,indicatorColor=MaterialTheme.colorScheme.primary.copy(alpha=0.13f),unselectedIconColor=Muted,unselectedTextColor=Muted);NavigationBarItem(selected=currentRoute=="diary",onClick={nav.navigate("diary"){launchSingleTop=true;popUpTo("diary"){saveState=true}}},icon={Icon(Icons.Default.Book,null)},label={Text("Diario")},colors=navColors);NavigationBarItem(selected=currentRoute=="mission",onClick={nav.navigate("mission"){launchSingleTop=true;restoreState=true}},icon={Icon(Icons.Default.Flight,null)},label={Text("Monaco")},colors=navColors);NavigationBarItem(selected=currentRoute=="settings",onClick={nav.navigate("settings"){launchSingleTop=true;restoreState=true}},icon={Icon(Icons.Default.Settings,null)},label={Text("Impostazioni")},colors=navColors)}},floatingActionButton={if(nav.currentDestination?.route!="mission")FloatingActionButton(onClick={editing=null;nav.navigate("edit")},containerColor=MaterialTheme.colorScheme.primary,contentColor=Ink,shape=RoundedCornerShape(20.dp),elevation=FloatingActionButtonDefaults.elevation(defaultElevation=8.dp,pressedElevation=12.dp)){Icon(Icons.Default.Add,"Nuovo ricordo")}}){padding->
         NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(220))+slideInHorizontally(tween(260)){it/14}},exitTransition={fadeOut(tween(150))+slideOutHorizontally(tween(180)){-it/18}},popEnterTransition={fadeIn(tween(220))+slideInHorizontally(tween(260)){ -it/14}},popExitTransition={fadeOut(tween(150))+slideOutHorizontally(tween(180)){it/18}}){
             composable("diary"){DiaryScreen(entries,{editing=it;nav.navigate("edit")},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
@@ -131,7 +135,7 @@ private fun SettingsScreen(
         Modifier.fillMaxSize().background(Ink).verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("IMPOSTAZIONI", color = Mint, style = MaterialTheme.typography.headlineSmall)
+        Text("IMPOSTAZIONI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.headlineSmall)
         Text("Account: $displayName")
         Text("I ricordi vengono salvati localmente prima della sincronizzazione.", color = Muted)
 
@@ -144,7 +148,7 @@ private fun SettingsScreen(
         }, modifier = Modifier.fillMaxWidth()) { Text("Sincronizza ora") }
 
         HorizontalDivider(color = Muted.copy(alpha = 0.25f))
-        Text("INVITI", color = Mint, style = MaterialTheme.typography.titleLarge)
+        Text("INVITI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleLarge)
         Text("Crea un codice monouso valido 7 giorni e condividilo direttamente dal telefono.", color = Muted)
 
         when (isOwner) {
@@ -188,7 +192,7 @@ private fun SettingsScreen(
                 if (inviteCode.isNotBlank()) {
                     Card(colors = CardDefaults.cardColors(containerColor = Panel), modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("IL TUO CODICE", color = Mint, style = MaterialTheme.typography.labelLarge)
+                            Text("IL TUO CODICE", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                             SelectionContainer { Text(inviteCode, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 OutlinedButton(
@@ -230,7 +234,7 @@ private fun SettingsScreen(
         }
 
         if (inviteMessage.isNotBlank() && isOwner != false) {
-            Text(inviteMessage, color = if (inviteCode.isNotBlank()) Mint else Muted, style = MaterialTheme.typography.bodySmall)
+            Text(inviteMessage, color = if (inviteCode.isNotBlank()) MaterialTheme.colorScheme.primary else Muted, style = MaterialTheme.typography.bodySmall)
         }
         Text("Versione ${BuildConfig.VERSION_NAME}", color = Muted)
     }
@@ -259,7 +263,7 @@ private fun SettingsScreen(
             delay(15000)
         }
     }
-    Column(Modifier.fillMaxSize().background(Ink).padding(24.dp),verticalArrangement=Arrangement.Center){Text("HaliMeo",style=MaterialTheme.typography.displayMedium,color=Mint,fontWeight=FontWeight.Black);Text("Un posto solo vostro.",color=Muted);Spacer(Modifier.height(16.dp))
+    Column(Modifier.fillMaxSize().background(Ink).padding(24.dp),verticalArrangement=Arrangement.Center){Text("HaliMeo",style=MaterialTheme.typography.displayMedium,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black);Text("Un posto solo vostro.",color=Muted);Spacer(Modifier.height(16.dp))
         Card(colors=CardDefaults.cardColors(containerColor=Panel), modifier=Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -340,12 +344,12 @@ private fun DiaryScreen(
             }
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = Mint.copy(alpha = 0.12f)
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
             ) {
                 Text(
                     entries.size.toString(),
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                    color = Mint,
+                    color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -369,10 +373,10 @@ private fun DiaryScreen(
                 }
             },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Mint,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = Muted.copy(alpha = 0.35f),
-                focusedLabelColor = Mint,
-                cursorColor = Mint
+                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                cursorColor = MaterialTheme.colorScheme.primary
             )
         )
         Spacer(Modifier.height(12.dp))
@@ -417,12 +421,12 @@ private fun DiaryScreen(
                         ) {
                             Surface(
                                 shape = RoundedCornerShape(22.dp),
-                                color = Mint.copy(alpha = 0.12f)
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                             ) {
                                 Icon(
                                     Icons.Default.AutoAwesome,
                                     contentDescription = null,
-                                    tint = Mint,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.padding(18.dp).size(32.dp)
                                 )
                             }
@@ -483,8 +487,8 @@ private fun DiaryScreen(
                                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Mint, modifier = Modifier.size(15.dp))
-                                            Text(entry.memoryDate, color = Mint, style = MaterialTheme.typography.labelMedium)
+                                            Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
+                                            Text(entry.memoryDate, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
                                             Text("·", color = Muted)
                                             Text(entry.category, color = Muted, style = MaterialTheme.typography.labelMedium)
                                         }
@@ -540,7 +544,7 @@ private fun DiaryScreen(
 
 @Composable private fun EditScreen(existing:DiaryEntry?,onSave:(String,String,String,String)->Unit,onCancel:()->Unit){
     var title by remember(existing?.id){mutableStateOf(existing?.title.orEmpty())};var body by remember(existing?.id){mutableStateOf(existing?.body.orEmpty())};var cat by remember(existing?.id){mutableStateOf(existing?.category?:"Ricordo")};var date by remember(existing?.id){mutableStateOf(existing?.memoryDate?:java.time.LocalDate.now().toString())}
-    Column(Modifier.fillMaxSize().background(Ink).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text(if(existing==null)"NUOVO RICORDO" else "MODIFICA RICORDO",color=Mint,style=MaterialTheme.typography.headlineSmall);OutlinedTextField(title,{title=it},label={Text("Titolo")},modifier=Modifier.fillMaxWidth());OutlinedTextField(date,{date=it},label={Text("Data AAAA-MM-GG")},modifier=Modifier.fillMaxWidth());OutlinedTextField(cat,{cat=it},label={Text("Categoria")},modifier=Modifier.fillMaxWidth());OutlinedTextField(body,{body=it},label={Text("Ricordo")},modifier=Modifier.fillMaxWidth().weight(1f),minLines=5);Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick=onCancel,modifier=Modifier.weight(1f)){Text("Annulla")};Button(onClick={if(title.isNotBlank()&&body.isNotBlank())onSave(title,body,cat,date)},modifier=Modifier.weight(1f)){Text("Salva")}}}
+    Column(Modifier.fillMaxSize().background(Ink).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text(if(existing==null)"NUOVO RICORDO" else "MODIFICA RICORDO",color=MaterialTheme.colorScheme.primary,style=MaterialTheme.typography.headlineSmall);OutlinedTextField(title,{title=it},label={Text("Titolo")},modifier=Modifier.fillMaxWidth());OutlinedTextField(date,{date=it},label={Text("Data AAAA-MM-GG")},modifier=Modifier.fillMaxWidth());OutlinedTextField(cat,{cat=it},label={Text("Categoria")},modifier=Modifier.fillMaxWidth());OutlinedTextField(body,{body=it},label={Text("Ricordo")},modifier=Modifier.fillMaxWidth().weight(1f),minLines=5);Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick=onCancel,modifier=Modifier.weight(1f)){Text("Annulla")};Button(onClick={if(title.isNotBlank()&&body.isNotBlank())onSave(title,body,cat,date)},modifier=Modifier.weight(1f)){Text("Salva")}}}
 }
 @SuppressLint("SetJavaScriptEnabled")
 @Composable private fun MissionScreen(){
