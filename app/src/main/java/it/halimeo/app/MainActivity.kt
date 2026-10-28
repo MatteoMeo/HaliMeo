@@ -91,7 +91,7 @@ class MainActivity:ComponentActivity() {
         setContent { HaliMeoTheme { HaliMeoRoot() } }
     }
 }
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable private fun HaliMeoRoot() {
     val ctx= LocalContext.current; val activity=ctx as ComponentActivity
     val session=remember{SessionStore(ctx)}; val repo=remember{DiaryRepository(ctx)}
