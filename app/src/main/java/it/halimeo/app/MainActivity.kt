@@ -41,6 +41,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.text.font.FontWeight
@@ -55,8 +56,9 @@ import it.halimeo.app.sync.SyncScheduler
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
-private val Ink=Color(0xFF000000); private val Panel=Color(0xFF111116); private val Mint=Color(0xFFC4B5FD); private val Muted=Color(0xFFA6A1B2)
-private val Elevated=Color(0xFF1A1A22); private val TextPrimary=Color(0xFFF5F2FA); private val AccentWarm=Color(0xFFFFB4A2)
+private val Ink=Color(0xFF07070B); private val Panel=Color(0xCC171720); private val Mint=Color(0xFFC4B5FD); private val Muted=Color(0xFFA6A1B2)
+private val Elevated=Color(0xD91A1A25);
+private val HaliMeoBackdrop = Brush.linearGradient(listOf(Color(0xFF171226), Color(0xFF08080E), Color(0xFF100B19), Color(0xFF060609))) private val TextPrimary=Color(0xFFF5F2FA); private val AccentWarm=Color(0xFFFFB4A2)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable private fun HaliMeoTheme(content: @Composable () -> Unit) {
@@ -120,7 +122,7 @@ class MainActivity:ComponentActivity() {
     val session=remember{SessionStore(ctx)}; val repo=remember{DiaryRepository(ctx)}
     var signed by remember{mutableStateOf<Boolean?>(null)}; var displayName by remember{mutableStateOf("")}
     LaunchedEffect(Unit){signed=!session.token().isNullOrBlank();displayName=session.name()}
-    if(signed==null){Box(Modifier.fillMaxSize().background(Ink),contentAlignment=Alignment.Center){LoadingIndicator(modifier=Modifier.size(64.dp), color=MaterialTheme.colorScheme.primary)};return}
+    if(signed==null){Box(Modifier.fillMaxSize().background(HaliMeoBackdrop),contentAlignment=Alignment.Center){LoadingIndicator(modifier=Modifier.size(64.dp), color=MaterialTheme.colorScheme.primary)};return}
     if(signed==false){AuthScreen(
         onLogin={e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.login(LoginRequest(e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Accesso non riuscito")}}},
         onRedeem={code,n,e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.redeem(RedeemInviteRequest(code,n,e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Invito non valido")}}}
@@ -136,10 +138,10 @@ class MainActivity:ComponentActivity() {
     val nav= rememberNavController(); val backStackEntry by nav.currentBackStackEntryAsState(); val currentRoute=backStackEntry?.destination?.route
     val pulseExpressiveFont = LocalExpressiveFontPulse.current
     LaunchedEffect(currentRoute) { pulseExpressiveFont() }
-    Scaffold(containerColor=Ink,topBar={MediumFlexibleTopAppBar(
+    Scaffold(containerColor=Color.Transparent,topBar={MediumFlexibleTopAppBar(
         title={Text("HaliMeo",fontWeight=FontWeight.ExtraBold,style=MaterialTheme.typography.headlineSmall,letterSpacing=(-0.6).sp)},
         subtitle={Text("IL VOSTRO SPAZIO PRIVATO",style=MaterialTheme.typography.labelSmall,color=Muted,letterSpacing=1.4.sp)},
-        colors=TopAppBarDefaults.topAppBarColors(containerColor=Ink,titleContentColor=TextPrimary,actionIconContentColor=Muted),
+        colors=TopAppBarDefaults.topAppBarColors(containerColor=Color(0xCC08080E),titleContentColor=TextPrimary,actionIconContentColor=Muted),
         actions={
             IconButton(onClick={activity.lifecycleScope.launch{runCatching{repo.syncNow()}.onSuccess{Toast.makeText(ctx,"Sincronizzazione completata",Toast.LENGTH_SHORT).show()}.onFailure{Toast.makeText(ctx,"Offline: dati conservati sul dispositivo",Toast.LENGTH_LONG).show()}}}){Icon(Icons.Default.CloudSync,"Sincronizza")}
             IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.Default.Logout,"Esci")}
@@ -165,9 +167,9 @@ class MainActivity:ComponentActivity() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(12.dp, RoundedCornerShape(28.dp), clip = false)
-                    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(28.dp)),
+                    .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(28.dp)),
                 shape = RoundedCornerShape(28.dp),
-                color = Color(0xF218181F),
+                color = Color(0xE61B1B25),
                 tonalElevation = 0.dp
             ) {
                 Row(
@@ -221,7 +223,8 @@ private fun FloatingNavItem(
         modifier = modifier
             .fillMaxHeight()
             .clip(RoundedCornerShape(22.dp))
-            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent)
+            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f) else Color.Transparent)
+            .animateContentSize(animationSpec = spring(dampingRatio = 0.82f, stiffness = 500f))
             .clickable(onClick = onClick)
             .padding(horizontal = 3.dp, vertical = 3.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -274,7 +277,7 @@ private fun SettingsScreen(
         Text("IMPOSTAZIONI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.headlineSmall)
         Text("Account: $displayName")
         Text("I ricordi vengono salvati localmente prima della sincronizzazione.", color = Muted)
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), modifier = Modifier.fillMaxWidth()) {
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.76f)), modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(20.dp)), shape = RoundedCornerShape(20.dp)) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(if (pendingSyncCount == 0) Icons.Default.CloudDone else Icons.Default.CloudUpload, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -365,7 +368,7 @@ private fun SettingsScreen(
                 }
 
                 if (inviteCode.isNotBlank()) {
-                    Card(colors = CardDefaults.cardColors(containerColor = Panel), modifier = Modifier.fillMaxWidth()) {
+                    Card(colors = CardDefaults.cardColors(containerColor = Panel), modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(22.dp)), shape = RoundedCornerShape(22.dp)) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text("IL TUO CODICE", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                             SelectionContainer { Text(inviteCode, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
@@ -647,7 +650,8 @@ private fun DiaryScreen(
                         ElevatedCard(
                             modifier = Modifier.fillMaxWidth().animateContentSize(),
                             shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.elevatedCardColors(containerColor = Panel)
+                            colors = CardDefaults.elevatedCardColors(containerColor = Panel),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.07f))
                         ) {
                             Column(
                                 modifier = Modifier.padding(14.dp),
