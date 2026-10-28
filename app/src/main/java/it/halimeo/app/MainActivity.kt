@@ -190,15 +190,70 @@ class MainActivity:ComponentActivity() {
             )
         }
     }){padding->
-        NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
-            composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
-            composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
-            composable("trips"){TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })}
-            composable("tripMonaco"){MissionScreen()}
-            composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,)}
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color.Black)
+        ) {
+            HaliMeoAmbientBackdrop(Modifier.fillMaxSize())
+            NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
+                composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
+                composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
+                composable("trips"){TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })}
+                composable("tripMonaco"){MissionScreen()}
+                composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,)}
+            }
         }
     }
 }
+/**
+ * Subtle Monet-tinted ambient light behind translucent surfaces.
+ * The actual content remains crisp; the glow is a separate, non-interactive layer.
+ */
+@Composable
+private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
+    val palette = MaterialTheme.colorScheme
+    Box(modifier = modifier.clipToBounds()) {
+        Box(
+            Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 110.dp, y = 18.dp)
+                .size(250.dp)
+                .blur(100.dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(palette.primary.copy(alpha = 0.20f), Color.Transparent)
+                    ),
+                    shape = RoundedCornerShape(50)
+                )
+        )
+        Box(
+            Modifier
+                .align(Alignment.CenterStart)
+                .offset(x = (-145).dp, y = 70.dp)
+                .size(260.dp)
+                .blur(110.dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(palette.tertiary.copy(alpha = 0.12f), Color.Transparent)
+                    ),
+                    shape = RoundedCornerShape(50)
+                )
+        )
+        Box(
+            Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = 70.dp, y = 100.dp)
+                .size(220.dp)
+                .blur(90.dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(palette.secondary.copy(alpha = 0.10f), Color.Transparent)
+                    ),
+                    shape = RoundedCornerShape(50)
+                )
+        )
+    }
+}
+
 @Composable
 private fun FloatingNavItem(
     modifier: Modifier = Modifier,
