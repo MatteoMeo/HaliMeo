@@ -3,12 +3,15 @@ package it.halimeo.app
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.ExperimentalTextApi
+
+internal val LocalExpressiveFontPulse = staticCompositionLocalOf<() -> Unit> { {} }
 
 /**
  * Google Sans Flex with animated width and roundness axes.
