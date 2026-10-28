@@ -167,14 +167,14 @@ class MainActivity:ComponentActivity() {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(12.dp, RoundedCornerShape(28.dp), clip = false)
-                    .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(28.dp)),
-                shape = RoundedCornerShape(28.dp),
+                    .shadow(16.dp, RoundedCornerShape(50), clip = false)
+                    .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(50)),
+                shape = RoundedCornerShape(50),
                 color = Color(0xE61B1B25),
                 tonalElevation = 0.dp
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 5.dp, vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().height(88.dp).padding(horizontal = 5.dp, vertical = 5.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -223,20 +223,21 @@ private fun FloatingNavItem(
     Column(
         modifier = modifier
             .fillMaxHeight()
-            .clip(RoundedCornerShape(22.dp))
-            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f) else Color.Transparent)
-            .animateContentSize(animationSpec = spring(dampingRatio = 0.82f, stiffness = 500f))
+            .clip(RoundedCornerShape(50))
+            .background(if (selected) Brush.linearGradient(listOf(Color(0xFF174D77), Color(0xFF082E4D))) else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)))
+            .then(if (selected) Modifier.border(1.5.dp, Color(0xFF8CC8FF).copy(alpha = 0.78f), RoundedCornerShape(50)) else Modifier)
+            .animateContentSize(animationSpec = spring(dampingRatio = 0.78f, stiffness = 420f))
             .clickable(onClick = onClick)
-            .padding(horizontal = 3.dp, vertical = 3.dp),
+            .padding(horizontal = 4.dp, vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(icon, contentDescription = label, modifier = Modifier.size(21.dp),
-            tint = if (selected) MaterialTheme.colorScheme.primary else Muted)
-        Spacer(Modifier.height(2.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall,
+        Icon(icon, contentDescription = label, modifier = Modifier.size(25.dp),
+            tint = if (selected) Color(0xFFD7ECFF) else Color(0xFFD1CED9))
+        Spacer(Modifier.height(5.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-            color = if (selected) MaterialTheme.colorScheme.primary else Muted,
+            color = if (selected) Color(0xFFF2F8FF) else Color(0xFFD1CED9),
             maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -649,7 +650,7 @@ private fun DiaryScreen(
                 ) {
                     items(filtered, key = { it.id }) { entry ->
                         ElevatedCard(
-                            modifier = Modifier.fillMaxWidth().animateContentSize(),
+                            modifier = Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(28.dp), clip = false).animateContentSize(),
                             shape = MaterialTheme.shapes.large,
                             colors = CardDefaults.elevatedCardColors(containerColor = Panel),
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.07f))
