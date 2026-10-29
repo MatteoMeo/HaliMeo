@@ -13,42 +13,67 @@ on:
       - '.github/workflows/android-debug-apk.yml'
   workflow_dispatch:
 
+# Non cancelliamo una build già avviata: deve poter salvare la chiave di firma
+# persistente nella cache. Le build successive verranno eseguite in coda.
 concurrency:
   group: halimeo-alpha-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
   build:
-    name: Compile and publish alpha APK
+    name: Compila e pubblica APK Alpha
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source
+      - name: Scarica il codice sorgente
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Java 17
+      - name: Configura Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      # Keep Android's debug signing key between CI runs. Without this cache,
-      # each fresh runner creates a different key and Android rejects updates
-      # over the previously installed APK as a signature mismatch.
-      - name: Restore stable debug signing key
+      # La cache da sola non bastava: il file non veniva creato prima della
+      # fine del job. Ora ripristiniamo la chiave e la generiamo solo se manca.
+      - name: Ripristina la chiave di firma persistente
         uses: actions/cache@v4
         with:
           path: ~/.android/debug.keystore
-          key: halimeo-debug-signing-key-v1
+          key: halimeo-debug-signing-key-v2
 
-      - name: Set up Gradle
+      - name: Verifica o crea la chiave di firma Alpha
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEYSTORE="$HOME/.android/debug.keystore"
+          mkdir -p "$HOME/.android"
+
+          if [ ! -f "$KEYSTORE" ]; then
+            echo "Cache della firma vuota: creo la chiave Alpha iniziale."
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+          # Fallisce subito se il file è corrotto o non usa l'alias previsto.
+          keytool -list -keystore "$KEYSTORE" -storepass android -alias androiddebugkey >/dev/null
+          FINGERPRINT="$(keytool -exportcert -alias androiddebugkey -keystore "$KEYSTORE" -storepass android | sha256sum | awk '{print $1}')"
+          echo "Impronta SHA-256 del certificato Alpha: $FINGERPRINT"
+          echo "HALIMEO_SIGNING_CERT_SHA256=$FINGERPRINT" >> "$GITHUB_ENV"
+
+      - name: Configura Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Restore Gradle task output cache
+      - name: Ripristina la cache di compilazione Gradle
         uses: actions/cache@v4
         with:
           path: ~/.gradle/caches/build-cache-1
@@ -56,52 +81,115 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-halimeo-gradle-build-cache-
 
-      - name: Build debug APK
+      - name: Compila APK debug
         env:
           HALIMEO_VERSION_CODE: ${{ github.run_number }}
           HALIMEO_VERSION_NAME: 1.0.${{ github.run_number }}
         run: chmod +x gradlew && ./gradlew --build-cache --parallel -PHALIMEO_VERSION_CODE="$HALIMEO_VERSION_CODE" -PHALIMEO_VERSION_NAME="$HALIMEO_VERSION_NAME" assembleDebug
 
-      - name: Prepare versioned APK
+      - name: Verifica la firma e prepara l'APK versionato
         env:
           HALIMEO_VERSION_NAME: 1.0.${{ github.run_number }}
           HALIMEO_VERSION_CODE: ${{ github.run_number }}
+        shell: bash
         run: |
+          set -euo pipefail
           APK="$(find app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' -print -quit)"
           test -n "$APK"
+          apksigner verify --verbose "$APK"
+          APK_CERT_SHA256="$(apksigner verify --print-certs "$APK" | awk '/Signer #1 certificate SHA-256 digest:/ {gsub(":", "", $NF); print tolower($NF); exit}')"
+          EXPECTED_SHA256="$(printf '%s' "$HALIMEO_SIGNING_CERT_SHA256" | tr '[:upper:]' '[:lower:]')"
+          if [ -z "$APK_CERT_SHA256" ] || [ "$APK_CERT_SHA256" != "$EXPECTED_SHA256" ]; then
+            echo "::error::La firma dell'APK non corrisponde alla chiave Alpha persistente. Pubblicazione annullata."
+            echo "Attesa: $EXPECTED_SHA256"
+            echo "APK:     $APK_CERT_SHA256"
+            exit 1
+          fi
           cp "$APK" "HaliMeo-${HALIMEO_VERSION_NAME}-build${HALIMEO_VERSION_CODE}-debug.apk"
+          echo "Firma verificata: l'APK usa la chiave Alpha persistente."
 
-      - name: Generate changelog
+      - name: Genera il changelog in italiano
         env:
           EVENT_NAME: ${{ github.event_name }}
           BEFORE_SHA: ${{ github.event.before }}
           CURRENT_SHA: ${{ github.sha }}
           BUILD_NUMBER: ${{ github.run_number }}
           VERSION_NAME: 1.0.${{ github.run_number }}
+        shell: bash
         run: |
+          set -euo pipefail
           {
-            echo "# HaliMeo Alpha ${VERSION_NAME} (build ${BUILD_NUMBER})"
+            echo "# 🌙 HaliMeo — Alpha ${VERSION_NAME}"
             echo
-            echo "- Branch: `feature/ui-ux-refresh`"
-            echo "- Commit: `${CURRENT_SHA:0:7}`"
+            echo "> **Build ${BUILD_NUMBER}** · Canale **Alpha** · Android"
             echo
-            echo "## Changelog"
+            echo "Una nuova tappa di HaliMeo, pronta per essere provata."
             echo
-            if [ "$EVENT_NAME" = "push" ] && [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
-              git log --format='- %s (`%h`)' "${BEFORE_SHA}..${CURRENT_SHA}"
+            echo "---"
+            echo
+            echo "## ✨ Modifiche incluse"
+            echo
+
+            if [ "$EVENT_NAME" = "push" ] && [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+              RANGE="${BEFORE_SHA}..${CURRENT_SHA}"
             else
-              git log -1 --format='- %s (`%h`)' "${CURRENT_SHA}"
+              RANGE="-1 ${CURRENT_SHA}"
             fi
+
+            git log --format='%h%x09%s' $RANGE | while IFS=$'\t' read -r hash subject; do
+              case "$subject" in
+                "Stabilize alpha signing key"*)
+                  description="Firma dell'app resa persistente e verifica automatica del certificato prima della pubblicazione." ;;
+                "Publish each alpha build as a separate release"*)
+                  description="Ogni build viene pubblicata in una release dedicata, con APK e changelog separati." ;;
+                "Cancel superseded alpha builds"*)
+                  description="Gestione delle build aggiornata per evitare che una compilazione interrompa il salvataggio della firma." ;;
+                "Refresh One UI-inspired surfaces"*)
+                  description="Rinnovate le superfici dell'interfaccia ispirate a One UI, con colori adattivi e schermate Diario, accesso e impostazioni migliorate." ;;
+                "Target Android 17"*)
+                  description="Aggiornato il target Android ad API 37." ;;
+                "Align launch window"*)
+                  description="Aggiornati i colori della schermata iniziale e le barre di sistema per il tema chiaro." ;;
+                "Add dark launch theme"*)
+                  description="Aggiunto un tema di avvio dedicato alla modalità scura." ;;
+                "Enable predictive back support"*)
+                  description="Abilitato il supporto alla navigazione Indietro predittiva." ;;
+                "Polish light/dark contrast"*)
+                  description="Migliorato il contrasto dei componenti nei temi chiaro e scuro." ;;
+                "Fix Kotlin DSL syntax"*)
+                  description="Corretto un problema di sintassi Gradle relativo all'URL API." ;;
+                "Fix alpha APK versioning"*)
+                  description="Corretto il versionamento degli APK Alpha e rafforzata la gestione della firma." ;;
+                "Increment version number"*)
+                  description="Aggiunto il numero di versione incrementale per distinguere gli aggiornamenti." ;;
+                "Cache Gradle build outputs"*)
+                  description="Ottimizzata la cache degli output Gradle per accelerare le compilazioni." ;;
+                "Enable parallel Gradle execution"*)
+                  description="Abilitata la compilazione parallela per ridurre i tempi di build." ;;
+                "Publish each successful alpha APK"*)
+                  description="Automatizzata la pubblicazione degli APK Alpha su GitHub Releases." ;;
+                *)
+                  description="Aggiornamento tecnico: ${subject}" ;;
+              esac
+              echo "- ${description} (`${hash}`)"
+            done
+
             echo
-            echo "## Download"
+            echo "---"
             echo
-            echo "- `HaliMeo-${VERSION_NAME}-build${BUILD_NUMBER}-debug.apk`"
+            echo "## 📦 Download"
             echo
-            echo "Pre-release alpha build for testing. It may contain bugs."
+            echo "**APK:** `HaliMeo-${VERSION_NAME}-build${BUILD_NUMBER}-debug.apk`"
+            echo
+            echo "## 🧪 Note"
+            echo
+            echo "Questa è una versione preliminare destinata ai test: potrebbero essere presenti bug."
+            echo
+            echo "🔐 **Firma:** certificato Alpha verificato prima della pubblicazione."
           } > CHANGELOG.md
           cat CHANGELOG.md
 
-      - name: Upload APK artifact
+      - name: Carica gli artefatti della build
         uses: actions/upload-artifact@v4
         with:
           name: halimeo-${{ github.run_number }}-debug-apk
@@ -111,11 +199,11 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Publish standalone alpha release
+      - name: Pubblica la release Alpha dedicata
         uses: softprops/action-gh-release@v2
         with:
           tag_name: alpha-build-${{ github.run_number }}
-          name: HaliMeo Alpha 1.0.${{ github.run_number }} (build ${{ github.run_number }})
+          name: HaliMeo Alpha ${{ github.run_number }} · v1.0.${{ github.run_number }}
           body_path: CHANGELOG.md
           prerelease: true
           make_latest: false
