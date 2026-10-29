@@ -203,6 +203,10 @@ jobs:
                   description="Corretto il collegamento tra il dito e la pillola: lo stato del trascinamento è ora condiviso con il rilevatore del gesto, così la selezione può seguire il movimento invece di scattare soltanto al rilascio." ;;
                 "Keep Settings title fixed while scrolling its options"*)
                   description="Il titolo Impostazioni resta in alto mentre scorri le opzioni. In questo modo sai sempre in quale sezione ti trovi, senza dover tornare all'inizio." ;;
+                "Expand accent palette and add appearance performance controls"*)
+                  description="Aggiunti nuovi colori per personalizzare l'accento dell'app, oltre a blu, lavanda, menta e rosa. Nella sezione Aspetto puoi scegliere 48, 60, 90 o 120 Hz, ridurre le animazioni e disattivare il blur live per privilegiare autonomia e fluidità. La frequenza effettiva dipende comunque dallo schermo e da Android." ;;
+                "Wire appearance performance settings to blur, animations and display refresh rate"*)
+                  description="Collegati i nuovi interruttori alle funzioni reali: riduci animazioni accorcia i passaggi tra pagine, disattiva blur nasconde il livello di sfocatura live, mentre la frequenza selezionata viene applicata alla finestra dell'app." ;;
                 "Align navigation drag calculations with actual touch coordinates"*)
                   description="Affinata la precisione del trascinamento della barra: il punto di partenza ora corrisponde alla posizione reale del tocco, riducendo gli spostamenti imprevisti." ;;
                 "Restore stable app structure and add live blur plus finger-tracking nav pill"*)
