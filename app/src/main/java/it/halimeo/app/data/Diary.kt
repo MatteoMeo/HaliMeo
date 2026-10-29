@@ -1,6 +1,8 @@
 package it.halimeo.app.data
 
 import androidx.room.*
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "diary_entries")
@@ -13,7 +15,8 @@ data class DiaryEntry(
     val createdAt: Long,
     val updatedAt: Long,
     val deletedAt: Long? = null,
-    val syncState: String = "PENDING"
+    val syncState: String = "PENDING",
+    val photoUri: String? = null
 )
 
 data class DiaryEntryDto(
@@ -40,13 +43,20 @@ interface DiaryDao {
     suspend fun allForBackup(): List<DiaryEntry>
 }
 
-@Database(entities=[DiaryEntry::class], version=1, exportSchema=true)
+@Database(entities=[DiaryEntry::class], version=2, exportSchema=true)
 abstract class HaliMeoDatabase : RoomDatabase() {
     abstract fun diaryDao(): DiaryDao
     companion object {
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE diary_entries ADD COLUMN photoUri TEXT")
+            }
+        }
         @Volatile private var instance: HaliMeoDatabase? = null
         fun get(context: android.content.Context) = instance ?: synchronized(this) {
-            instance ?: Room.databaseBuilder(context.applicationContext, HaliMeoDatabase::class.java, "halimeo.db").build().also { instance=it }
+            instance ?: Room.databaseBuilder(context.applicationContext, HaliMeoDatabase::class.java, "halimeo.db")
+                .addMigrations(MIGRATION_1_2)
+                .build().also { instance=it }
         }
     }
 }
