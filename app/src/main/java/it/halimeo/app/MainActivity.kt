@@ -326,11 +326,13 @@ class MainActivity:ComponentActivity() {
         }
     })
     val navigationBlurState = rememberBlurOverlayState(
-        initialConfig = BlurOverlayConfig(radius = 30f, downsampleFactor = 3f, isLive = true)
-            .withTint(Color(0xFF0B1220).copy(alpha = 0.12f))
+        initialConfig = BlurOverlayConfig(radius = 34f, downsampleFactor = 3f, isLive = true)
+            .withTint(Color(0xFF0B1220).copy(alpha = 0.055f))
     )
     var draggedTab by remember { mutableStateOf<Float?>(null) }
-    SideEffect { navigationBlurState.isEnabled = !liveBlurDisabledState.value }
+    LaunchedEffect(liveBlurDisabledState.value) {
+        navigationBlurState.isEnabled = !liveBlurDisabledState.value
+    }
     if (currentRoute != "edit") BlurOverlay(
         state = navigationBlurState,
         modifier = Modifier.align(Alignment.BottomStart)
@@ -346,12 +348,12 @@ class MainActivity:ComponentActivity() {
             modifier = Modifier.fillMaxSize()
                 .border(1.dp, Color.White.copy(alpha = 0.32f), RoundedCornerShape(50)),
             shape = RoundedCornerShape(50),
-            color = Color.Transparent,
+            color = if (liveBlurDisabledState.value) Color(0xD9101724) else Color.Transparent,
             tonalElevation = 0.dp
         ) {
             BoxWithConstraints(
                 Modifier.fillMaxSize()
-                    .background(Color(0xFF0B1220).copy(alpha = 0.10f))
+                    .background(if (liveBlurDisabledState.value) Color(0xFF101827).copy(alpha = 0.92f) else Color(0xFF0B1220).copy(alpha = 0.045f))
                     .padding(horizontal = 3.dp, vertical = 3.dp)
             ) {
                 val tabWidth = (maxWidth - 6.dp) / 3
@@ -616,17 +618,35 @@ private fun SettingsScreen(
         }
     }
 
+    val settingsScrollState = rememberScrollState()
+    val settingsHeaderCollapsed by remember { derivedStateOf { settingsScrollState.value > 48 } }
+    val settingsTitleScale by animateFloatAsState(
+        targetValue = if (settingsHeaderCollapsed) 0.76f else 1f,
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(220, easing = OneUiMotionEasing),
+        label = "settingsTitleScale"
+    )
     Column(Modifier.fillMaxSize().background(Color.Transparent)) {
-        // Keep the settings title pinned while only the options below it scroll.
+        // Keep the settings title pinned while it scales down as the options list scrolls.
         Column(
-            Modifier.fillMaxWidth().padding(start = 20.dp, top = 18.dp, end = 20.dp, bottom = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp)
+            Modifier.fillMaxWidth().padding(start = 20.dp, top = 8.dp, end = 20.dp, bottom = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
-            AnimatedPageTitle("Impostazioni", MaterialTheme.typography.headlineLarge)
+            Text(
+                "Impostazioni",
+                modifier = Modifier.graphicsLayer {
+                    scaleX = settingsTitleScale
+                    scaleY = settingsTitleScale
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                },
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.headlineLarge.copy(letterSpacing = (-0.65).sp),
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
             Text("Personalizza il vostro spazio.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
         }
         Column(
-            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, bottom = 116.dp),
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(settingsScrollState).padding(start = 20.dp, end = 20.dp, bottom = 116.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
         Card(
@@ -1638,6 +1658,13 @@ private fun DiaryScreen(
     var date by remember(existing?.id) { mutableStateOf(existing?.memoryDate?.let { displayHaliMeoDate(it) } ?: displayHaliMeoDate(java.time.LocalDate.now().toString())) }
     var photoUri by remember(existing?.id) { mutableStateOf(existing?.photoUri) }
     val context = LocalContext.current
+    val editScrollState = rememberScrollState()
+    val editHeaderCollapsed by remember { derivedStateOf { editScrollState.value > 48 } }
+    val editTitleScale by animateFloatAsState(
+        targetValue = if (editHeaderCollapsed) 0.76f else 1f,
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(220, easing = OneUiMotionEasing),
+        label = "editTitleScale"
+    )
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
@@ -1649,11 +1676,28 @@ private fun DiaryScreen(
     }
 
     Column(
-        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).imePadding().padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 150.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(editScrollState).imePadding().padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 150.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text(if (existing == null) "NUOVO RICORDO" else "MODIFICA RICORDO", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-        Text("I momenti importanti, custoditi in un posto vostro.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            if (existing == null) "Nuovo ricordo" else "Modifica ricordo",
+            modifier = Modifier.graphicsLayer {
+                scaleX = editTitleScale
+                scaleY = editTitleScale
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+            },
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.headlineMedium.copy(letterSpacing = (-0.7).sp),
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            "I momenti importanti, custoditi in un posto vostro.",
+            modifier = Modifier.height(if (editHeaderCollapsed) 0.dp else 24.dp).graphicsLayer { alpha = if (editHeaderCollapsed) 0f else 1f },
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium
+        )
         Card(
             modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(26.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(26.dp)),
             shape = RoundedCornerShape(26.dp),
@@ -1751,13 +1795,35 @@ private fun AnimatedPageTitle(
 
 @Composable
 private fun TripsScreen(onOpenMonaco: () -> Unit) {
+    val tripsScrollState = rememberScrollState()
+    val tripsHeaderCollapsed by remember { derivedStateOf { tripsScrollState.value > 48 } }
+    val tripsTitleScale by animateFloatAsState(
+        targetValue = if (tripsHeaderCollapsed) 0.76f else 1f,
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(220, easing = OneUiMotionEasing),
+        label = "tripsTitleScale"
+    )
     Column(
-        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 112.dp),
+        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(tripsScrollState).padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 112.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("I VOSTRI VIAGGI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, letterSpacing = 1.5.sp, fontWeight = FontWeight.SemiBold)
-        AnimatedPageTitle("Un archivio di avventure", MaterialTheme.typography.headlineSmall)
-        Text("Apri un viaggio per entrare nella sua pagina dedicata.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            "I vostri viaggi",
+            modifier = Modifier.graphicsLayer {
+                scaleX = tripsTitleScale
+                scaleY = tripsTitleScale
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+            },
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.headlineMedium.copy(letterSpacing = (-0.65).sp),
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
+        Text(
+            "Apri un viaggio per entrare nella sua pagina dedicata.",
+            modifier = Modifier.height(if (tripsHeaderCollapsed) 0.dp else 24.dp).graphicsLayer { alpha = if (tripsHeaderCollapsed) 0f else 1f },
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium
+        )
         val tripInteraction = remember { MutableInteractionSource() }
         val tripPressed by tripInteraction.collectIsPressedAsState()
         val tripScale by animateFloatAsState(
