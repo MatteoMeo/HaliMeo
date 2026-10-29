@@ -263,10 +263,11 @@ class MainActivity:ComponentActivity() {
             nav,
             startDestination = "diary",
             modifier = Modifier.padding(padding),
-            enterTransition = { fadeIn(tween(220, easing = OneUiMotionEasing)) + slideInHorizontally(tween(260, easing = OneUiMotionEasing)) { it / 18 } },
-            exitTransition = { fadeOut(tween(160, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(190, easing = OneUiMotionEasing)) { -it / 24 } },
-            popEnterTransition = { fadeIn(tween(240, easing = OneUiMotionEasing)) + slideInHorizontally(spring(dampingRatio = 0.88f, stiffness = 420f)) { -it / 18 } },
-            popExitTransition = { fadeOut(tween(160, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(200, easing = OneUiMotionEasing)) { it / 24 } }
+            // Page changes should feel like a deliberate Android page swipe, not a barely visible fade.
+            enterTransition = { fadeIn(tween(260, easing = OneUiMotionEasing)) + slideInHorizontally(tween(320, easing = OneUiMotionEasing)) { it / 7 } },
+            exitTransition = { fadeOut(tween(210, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(280, easing = OneUiMotionEasing)) { -it / 12 } },
+            popEnterTransition = { fadeIn(tween(280, easing = OneUiMotionEasing)) + slideInHorizontally(spring(dampingRatio = 0.9f, stiffness = 360f)) { -it / 7 } },
+            popExitTransition = { fadeOut(tween(210, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(280, easing = OneUiMotionEasing)) { it / 12 } }
         ) {
             composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,{t,b,c,d,photo->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id,photo);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
@@ -281,41 +282,48 @@ class MainActivity:ComponentActivity() {
     )
     BlurOverlay(
         state = navigationBlurState,
-        modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(76.dp)
-    ) {}
-    Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp)
+    ) {
+    Row(
+        Modifier.fillMaxWidth()
+            .pointerInput(primaryTab, currentRoute) {
+                var dragPosition = primaryTab.toFloat()
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        val navWidth = (size.width - 62.dp.toPx()).coerceAtLeast(1f)
+                        val step = ((navWidth - 6.dp.toPx()) / 3f + 3.dp.toPx()).coerceAtLeast(1f)
+                        dragPosition = ((offset.x - 12.dp.toPx() - 3.dp.toPx()) / step).coerceIn(0f, 2f)
+                        draggedTab = dragPosition
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        val navWidth = (size.width - 62.dp.toPx()).coerceAtLeast(1f)
+                        val step = ((navWidth - 6.dp.toPx()) / 3f + 3.dp.toPx()).coerceAtLeast(1f)
+                        dragPosition = (dragPosition + dragAmount.x / step).coerceIn(0f, 2f)
+                        draggedTab = dragPosition
+                    },
+                    onDragEnd = {
+                        val target = (draggedTab ?: dragPosition).roundToInt().coerceIn(0, 2)
+                        draggedTab = null
+                        val route = primaryRoutes[target]
+                        if (route != currentRoute) nav.navigate(route) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onDragCancel = { draggedTab = null }
+                )
+            },
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         var draggedTab by remember { mutableStateOf<Float?>(null) }
-        Surface(modifier = Modifier.weight(1f).shadow(8.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.34f), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = Color(0x700B1220), tonalElevation = 0.dp) {
+        Surface(modifier = Modifier.weight(1f).shadow(8.dp, RoundedCornerShape(50), clip = false).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.34f), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = Color(0x500B1220), tonalElevation = 0.dp) {
             BoxWithConstraints(
                 Modifier.fillMaxWidth().height(58.dp)
                     .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.07f), Color(0xFF0F1A2B).copy(alpha = 0.55f), Color(0xFF101827).copy(alpha = 0.66f))))
                     .padding(horizontal = 3.dp, vertical = 3.dp)
-                    .pointerInput(primaryTab) {
-                        var dragPosition = primaryTab.toFloat()
-                        detectDragGestures(
-                            onDragStart = { offset ->
-                                val step = ((size.width - 6.dp.toPx()) / 3f + 3.dp.toPx()).coerceAtLeast(1f)
-                                dragPosition = ((offset.x - 3.dp.toPx()) / step).coerceIn(0f, 2f)
-                                draggedTab = dragPosition
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                val step = ((size.width - 6.dp.toPx()) / 3f + 3.dp.toPx()).coerceAtLeast(1f)
-                                dragPosition = (dragPosition + dragAmount.x / step).coerceIn(0f, 2f)
-                                draggedTab = dragPosition
-                            },
-                            onDragEnd = {
-                                val target = (draggedTab ?: dragPosition).roundToInt().coerceIn(0, 2)
-                                draggedTab = null
-                                val route = primaryRoutes[target]
-                                if (route != currentRoute) nav.navigate(route) {
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            onDragCancel = { draggedTab = null }
-                        )
-                    }
+
             ) {
                 val tabWidth = (maxWidth - 6.dp) / 3
                 // Keep the pill in the graphics layer: no per-frame layout work.
@@ -356,6 +364,7 @@ class MainActivity:ComponentActivity() {
                 Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(25.dp))
             }
         }
+    }
     }
     }
 }
@@ -1064,7 +1073,7 @@ private fun DiaryScreen(
                 )
                 Text(
                     "I momenti che volete tenere vicini.",
-                    modifier = Modifier.height(22.dp).graphicsLayer {
+                    modifier = Modifier.height(if (headerCollapsed) 0.dp else 22.dp).graphicsLayer {
                         alpha = if (headerCollapsed) 0f else 1f
                         translationY = if (headerCollapsed) -4.dp.toPx() else 0f
                     },
