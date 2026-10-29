@@ -686,7 +686,14 @@ private fun SettingsScreen(
     }
 
     val settingsScrollState = rememberScrollState()
-    val settingsHeaderCollapsed by remember { derivedStateOf { settingsScrollState.value > 48 } }
+    var settingsHeaderCollapsed by remember { mutableStateOf(false) }
+    LaunchedEffect(settingsScrollState) {
+        androidx.compose.runtime.snapshotFlow { settingsScrollState.value }.collect { scrollY ->
+            // Hysteresis prevents compact-card height changes from toggling the header
+            // repeatedly around a single threshold while preserving the title animation.
+            settingsHeaderCollapsed = if (settingsHeaderCollapsed) scrollY > 24 else scrollY > 64
+        }
+    }
     val settingsTitleScale by animateFloatAsState(
         targetValue = if (settingsHeaderCollapsed) 0.76f else 1f,
         animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
