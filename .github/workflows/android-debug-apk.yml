@@ -30,8 +30,15 @@ jobs:
           java-version: '17'
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+      - name: Restore Gradle task output cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches/build-cache-1
+          key: ${{ runner.os }}-halimeo-gradle-build-cache-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-halimeo-gradle-build-cache-
       - name: Build debug APK
-        run: chmod +x gradlew && ./gradlew --no-daemon assembleDebug
+        run: chmod +x gradlew && ./gradlew --build-cache --parallel assembleDebug
       - name: Prepare APK
         run: cp app/build/outputs/apk/debug/*.apk HaliMeo-alpha-debug.apk
       - name: Upload APK artifact
