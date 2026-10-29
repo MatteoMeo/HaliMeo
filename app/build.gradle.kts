@@ -47,7 +47,7 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.10.0")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("com.github.skydoves:cloudy:0.5.0")
+    implementation("com.github.skydoves:cloudy:0.7.1")
     // Material 3 Expressive APIs are available in the 1.5 beta line.
     implementation("androidx.compose.material3:material3:1.5.0-beta02")
     implementation("androidx.compose.material:material-icons-extended")

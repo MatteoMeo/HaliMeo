@@ -1,21 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <!-- Simple, centered open book -->
-    <path
-        android:fillColor="#00FFFFFF"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="3.2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M54,73 C47,66 36,63 25,64 L25,35 C36,34 47,38 54,45 C61,38 72,34 83,35 L83,64 C72,63 61,66 54,73 Z" />
-    <path
-        android:fillColor="#00FFFFFF"
-        android:strokeColor="#FFF8FF"
-        android:strokeWidth="3.2"
-        android:strokeLineCap="round"
-        android:pathData="M54,45 L54,73" />
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M31,18 C26.6,18 23,21.6 23,26 L23,74 C23,78.4 26.6,82 31,82 L35,82 C39.4,82 43,78.4 43,74 L43,57 L65,57 L65,74 C65,78.4 68.6,82 73,82 L77,82 C81.4,82 85,78.4 85,74 L85,26 C85,21.6 81.4,18 77,18 L73,18 C68.6,18 65,21.6 65,26 L65,41 L43,41 L43,26 C43,21.6 39.4,18 35,18 Z" />
 </vector>

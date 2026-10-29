@@ -16,7 +16,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.expandVertically
@@ -24,6 +23,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.animateColorAsState
@@ -49,6 +49,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -58,6 +59,10 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.skydoves.cloudy.Sky
+import com.skydoves.cloudy.cloudy
+import com.skydoves.cloudy.rememberSky
+import com.skydoves.cloudy.sky
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -80,6 +85,8 @@ import it.halimeo.app.data.*
 import it.halimeo.app.network.*
 import it.halimeo.app.sync.SyncScheduler
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 
 private val Ink = Color.Black
@@ -90,6 +97,7 @@ private val Elevated = Color(0xFF101317)
 // Balanced One UI-inspired glass surfaces: translucent charcoal with a cool edge highlight.
 private val FrostedSurface = Color(0xB8101419)
 private val FrostedSurfaceStrong = Color(0xD9101419)
+private val OneUiMotionEasing = CubicBezierEasing(0.22f, 0.25f, 0f, 1f)
 @Composable private fun frostedEdgeColor(): Color = if (isHaliMeoDark()) Color.White.copy(alpha = 0.24f) else Color(0xFF526477).copy(alpha = 0.22f)
 @Composable private fun frostedGlassBrush(): Brush = Brush.linearGradient(listOf(Color.White.copy(alpha = if (isHaliMeoDark()) 0.065f else 0.42f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.075f else 0.13f)))
 @Composable private fun isHaliMeoDark(): Boolean = when (themeModeState.value) {
@@ -126,6 +134,22 @@ private fun displayHaliMeoDate(value: String): String {
 private val lastSyncAtState = mutableStateOf(0L)
 @Composable private fun haliMeoAuthBackdrop(): Brush = if (isHaliMeoDark()) Brush.verticalGradient(listOf(Color(0xFF050608), Color(0xFF0B1119), Color(0xFF080A0C))) else Brush.verticalGradient(listOf(Color(0xFFF4F8FC), Color(0xFFE7F0F8), Color(0xFFF5F0FA)))
 private val TextPrimary = Color(0xFFF5F7FA)
+
+
+
+// Decode user-selected images off the main thread and downsample them before Compose.
+private suspend fun decodeScaledBitmap(context: android.content.Context, uriString: String, maxDimension: Int): android.graphics.Bitmap? = withContext(Dispatchers.IO) {
+    val uri = Uri.parse(uriString)
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    runCatching {
+        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@withContext null
+        var sampleSize = 1
+        while (maxOf(bounds.outWidth / sampleSize, bounds.outHeight / sampleSize) > maxDimension) sampleSize *= 2
+        val options = BitmapFactory.Options().apply { inSampleSize = sampleSize; inPreferredConfig = Bitmap.Config.ARGB_8888 }
+        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+    }.getOrNull()
+}
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable private fun HaliMeoTheme(content: @Composable () -> Unit) {
@@ -252,8 +276,9 @@ class MainActivity:ComponentActivity() {
         favoritesPrefs.edit().putStringSet("ids", updated.toSet()).apply()
     }
     val nav= rememberNavController(); val backStackEntry by nav.currentBackStackEntryAsState(); val currentRoute=backStackEntry?.destination?.route
+    val glassSky = rememberSky()
     Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA))) {
-    HaliMeoAmbientBackdrop(Modifier.fillMaxSize())
+    HaliMeoAmbientBackdrop(Modifier.fillMaxSize().sky(glassSky))
     Scaffold(containerColor=Color.Transparent,topBar={TopAppBar(
         title={Text("HaliMeo", fontWeight=FontWeight.ExtraBold, style=MaterialTheme.typography.headlineSmall.copy(letterSpacing=(-1.1).sp, brush=Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.primary))))},
         modifier=Modifier.heightIn(min=56.dp),
@@ -263,8 +288,8 @@ class MainActivity:ComponentActivity() {
             IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.AutoMirrored.Filled.Logout,"Esci")}
         }
     )},bottomBar={}, floatingActionButton = {}, content = { padding ->
-        NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
-            composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
+        NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(220, easing = OneUiMotionEasing))+slideInHorizontally(tween(260, easing = OneUiMotionEasing)){it/18}},exitTransition={fadeOut(tween(160, easing = OneUiMotionEasing))+slideOutHorizontally(tween(190, easing = OneUiMotionEasing)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
+            composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}},glassSky)}
             composable("edit"){EditScreen(editing,{t,b,c,d,photo->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id,photo);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
             composable("trips"){TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })}
             composable("tripMonaco"){MissionScreen()}
@@ -272,7 +297,7 @@ class MainActivity:ComponentActivity() {
         }
     })
     Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Surface(modifier = Modifier.weight(1f).shadow(18.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = frostedSurfaceColor(), tonalElevation = 0.dp) {
+        Surface(modifier = Modifier.weight(1f).shadow(8.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).cloudy(sky = glassSky, radius = 22, tint = frostedSurfaceColor().copy(alpha = 0.30f)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = frostedSurfaceColor(), tonalElevation = 0.dp) {
             Row(Modifier.fillMaxWidth().height(68.dp).background(Brush.linearGradient(listOf(Color.White.copy(alpha = if (isHaliMeoDark()) 0.13f else 0.62f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.14f else 0.20f)))).padding(horizontal = 4.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
                 FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
@@ -305,8 +330,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
         "rose" -> if (isHaliMeoDark()) Color(0xFF210D16) else Color(0xFFF9E4EC)
         else -> if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA)
     }
-    val backgroundBitmap = remember(backgroundUri) {
-        backgroundUri?.let { value -> runCatching { context.contentResolver.openInputStream(Uri.parse(value))?.use { BitmapFactory.decodeStream(it) } }.getOrNull() }
+    val backgroundBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, backgroundUri, context) {
+        value = backgroundUri?.let { decodeScaledBitmap(context, it, maxDimension = 1600) }
     }
     Box(modifier = modifier.clipToBounds().background(customBase)) {
         if (backgroundBitmap != null && backgroundChoice == "photo") {
@@ -346,8 +371,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             )
         }
         Box(
-            Modifier.align(Alignment.TopCenter).offset(y = (-170).dp).size(560.dp)
-                .blur(150.dp)
+            Modifier.align(Alignment.TopCenter).offset(y = (-140).dp).size(460.dp)
+                .blur(104.dp)
                 .background(
                     Brush.radialGradient(
                         0.0f to palette.primary.copy(alpha = 0.12f),
@@ -357,8 +382,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
                 )
         )
         Box(
-            Modifier.align(Alignment.CenterStart).offset(x = (-250).dp, y = 40.dp).size(480.dp)
-                .blur(155.dp)
+            Modifier.align(Alignment.CenterStart).offset(x = (-210).dp, y = 40.dp).size(380.dp)
+                .blur(96.dp)
                 .background(
                     Brush.radialGradient(
                         0.0f to palette.tertiary.copy(alpha = 0.075f),
@@ -368,8 +393,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
                 )
         )
         Box(
-            Modifier.align(Alignment.BottomEnd).offset(x = 220.dp, y = 170.dp).size(500.dp)
-                .blur(165.dp)
+            Modifier.align(Alignment.BottomEnd).offset(x = 190.dp, y = 150.dp).size(400.dp)
+                .blur(104.dp)
                 .background(
                     Brush.radialGradient(
                         0.0f to palette.secondary.copy(alpha = 0.065f),
@@ -931,7 +956,8 @@ private fun DiaryScreen(
     favoriteIds: Set<String>,
     onEdit: (DiaryEntry) -> Unit,
     onToggleFavorite: (DiaryEntry) -> Unit,
-    onDelete: (DiaryEntry) -> Unit
+    onDelete: (DiaryEntry) -> Unit,
+    glassSky: Sky
 ) {
     var query by remember { mutableStateOf("") }
     var searchExpanded by remember { mutableStateOf(false) }
@@ -944,6 +970,7 @@ private fun DiaryScreen(
     var pendingDelete by remember { mutableStateOf<DiaryEntry?>(null) }
     var expandedEntryIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     val feedbackView = LocalView.current
+    val listState = rememberLazyListState()
     var headerCollapsed by remember { mutableStateOf(false) }
     val diaryNestedScroll = remember {
         object : NestedScrollConnection {
@@ -959,13 +986,18 @@ private fun DiaryScreen(
         animationSpec = tween(180),
         label = "diaryHeaderTitleSize"
     )
-    val categories = listOf("Tutte") + entries.map { it.category.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
-    val filtered = entries.filter {
-        (it.title.contains(query, true) || it.body.contains(query, true) || it.category.contains(query, true)) &&
-            (selectedDate == null || it.memoryDate == selectedDate) &&
-            (selectedCategory == "Tutte" || it.category.equals(selectedCategory, ignoreCase = true)) &&
-            (!favoritesOnly || it.id in favoriteIds)
-    }.let { matches -> if (newestFirst) matches.sortedByDescending { it.memoryDate } else matches.sortedBy { it.memoryDate } }
+    val categories = remember(entries) {
+        listOf("Tutte") + entries.asSequence().map { it.category.trim() }.filter { it.isNotEmpty() }.distinct().sorted().toList()
+    }
+    val filtered = remember(entries, query, selectedDate, selectedCategory, favoritesOnly, favoriteIds, newestFirst) {
+        val matches = entries.filter {
+            (it.title.contains(query, true) || it.body.contains(query, true) || it.category.contains(query, true)) &&
+                (selectedDate == null || it.memoryDate == selectedDate) &&
+                (selectedCategory == "Tutte" || it.category.equals(selectedCategory, ignoreCase = true)) &&
+                (!favoritesOnly || it.id in favoriteIds)
+        }
+        if (newestFirst) matches.sortedByDescending { it.memoryDate } else matches.sortedBy { it.memoryDate }
+    }
 
     if (showCalendar) {
         DatePickerDialog(
@@ -1038,7 +1070,7 @@ private fun DiaryScreen(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).cloudy(sky = glassSky, radius = 16, tint = frostedSurfaceColor().copy(alpha = 0.30f)),
                 singleLine = true,
                 shape = RoundedCornerShape(28.dp),
                 placeholder = { Text("Cerca un ricordo…") },
@@ -1165,6 +1197,7 @@ private fun DiaryScreen(
             }
             else -> {
                 LazyColumn(
+                    state = listState,
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(top = 4.dp, bottom = 100.dp)
                 ) {
@@ -1209,11 +1242,7 @@ private fun DiaryScreen(
                             }
                         }
                     }
-                    itemsIndexed(filtered, key = { _, entry -> entry.id }) { index, entry ->
-                        var itemVisible by remember(entry.id) { mutableStateOf(false) }
-                        LaunchedEffect(entry.id) { delay((index * 42L).coerceAtMost(280L)); itemVisible = true }
-                        val itemAlpha by animateFloatAsState(targetValue = if (itemVisible) 1f else 0f, animationSpec = tween(260), label = "memoryEntryFade")
-                        val itemOffset by animateFloatAsState(targetValue = if (itemVisible) 0f else 22f, animationSpec = spring(dampingRatio = 0.82f, stiffness = 300f), label = "memoryEntryRise")
+                    itemsIndexed(filtered, key = { _, entry -> entry.id }, contentType = { _, _ -> "diary_entry" }) { _, entry ->
                         val cardInteraction = remember(entry.id) { MutableInteractionSource() }
                         val cardPressed by cardInteraction.collectIsPressedAsState()
                         val cardScale by animateFloatAsState(
@@ -1224,12 +1253,12 @@ private fun DiaryScreen(
                         val expanded = entry.id in expandedEntryIds
                         val accent = categoryAccent(entry.category)
                         val photoContext = LocalContext.current
-                        val entryPhoto = remember(entry.photoUri) {
-                            entry.photoUri?.let { value -> runCatching { photoContext.contentResolver.openInputStream(Uri.parse(value))?.use { BitmapFactory.decodeStream(it) } }.getOrNull() }
+                        val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext) {
+                            value = entry.photoUri?.let { decodeScaledBitmap(photoContext, it, maxDimension = 1200) }
                         }
                         ElevatedCard(
                             modifier = Modifier.fillMaxWidth()
-                                .graphicsLayer { scaleX = cardScale; scaleY = cardScale; alpha = itemAlpha; translationY = itemOffset }
+                                .graphicsLayer { scaleX = cardScale; scaleY = cardScale }
                                 .clickable(
                                     interactionSource = cardInteraction,
                                     indication = null,
@@ -1238,9 +1267,8 @@ private fun DiaryScreen(
                                         expandedEntryIds = if (entry.id in expandedEntryIds) expandedEntryIds - entry.id else expandedEntryIds + entry.id
                                     }
                                 )
-                                .shadow(10.dp, RoundedCornerShape(28.dp), clip = false)
-                                .border(1.dp, frostedEdgeColor(), MaterialTheme.shapes.large)
-                                .animateContentSize(),
+                                .shadow(5.dp, RoundedCornerShape(28.dp), clip = false)
+                                .border(1.dp, frostedEdgeColor(), MaterialTheme.shapes.large),
                             shape = MaterialTheme.shapes.large,
                             colors = CardDefaults.elevatedCardColors(containerColor = frostedSurfaceColor())
                         ) {
@@ -1404,8 +1432,8 @@ private fun DiaryScreen(
             photoUri = uri.toString()
         }
     }
-    val photoBitmap = remember(photoUri) {
-        photoUri?.takeIf { it.isNotBlank() }?.let { value -> runCatching { context.contentResolver.openInputStream(Uri.parse(value))?.use { BitmapFactory.decodeStream(it) } }.getOrNull() }
+    val photoBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, photoUri, context) {
+        value = photoUri?.takeIf { it.isNotBlank() }?.let { decodeScaledBitmap(context, it, maxDimension = 1200) }
     }
 
     Column(
