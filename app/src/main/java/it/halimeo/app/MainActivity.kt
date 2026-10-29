@@ -280,13 +280,17 @@ class MainActivity:ComponentActivity() {
         favoriteIds = updated
         favoritesPrefs.edit().putStringSet("ids", updated.toSet()).apply()
     }
-    val nav= rememberNavController(); val backStackEntry by nav.currentBackStackEntryAsState(); val currentRoute=backStackEntry?.destination?.route
-    val primaryTab = when (currentRoute) {
-        "trips", "tripMonaco" -> 1
-        "settings" -> 2
-        else -> 0
+    val nav = rememberNavController()
+    val backStackEntry by nav.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { 3 })
+    val navigationScope = rememberCoroutineScope()
+    val primaryTab = pagerState.currentPage
+    val pagerPosition = (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 2f)
+    fun selectPrimaryTab(index: Int) {
+        if (currentRoute != "main") nav.popBackStack("main", inclusive = false)
+        navigationScope.launch { pagerState.animateScrollToPage(index) }
     }
-    val primaryRoutes = listOf("diary", "trips", "settings")
     Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA))) {
     HaliMeoAmbientBackdrop(Modifier.fillMaxSize())
     Scaffold(containerColor=Color.Transparent,topBar={TopAppBar(
@@ -299,17 +303,32 @@ class MainActivity:ComponentActivity() {
         }
     )},bottomBar={}, floatingActionButton = {}, content = { padding ->
         NavHost(
-            nav,
-            startDestination = "diary",
+            navController = nav,
+            startDestination = "main",
             modifier = Modifier.padding(padding),
-            // Primary navigation should respond immediately: keep only a very short fade,
-            // avoiding simultaneous full-screen slide + live-backdrop recapture on every tap.
             enterTransition = { androidx.compose.animation.EnterTransition.None },
             exitTransition = { androidx.compose.animation.ExitTransition.None },
             popEnterTransition = { androidx.compose.animation.EnterTransition.None },
             popExitTransition = { androidx.compose.animation.ExitTransition.None }
         ) {
-            composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
+            composable("main") {
+                androidx.compose.foundation.pager.HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    beyondViewportPageCount = 1,
+                    key = { it }
+                ) { page ->
+                    when (page) {
+                        0 -> DiaryScreen(entries, favoriteIds,
+                            { editing = it; nav.navigate("edit") },
+                            { toggleFavorite(it.id) },
+                            { entry -> activity.lifecycleScope.launch { repo.delete(entry.id) } }
+                        )
+                        1 -> TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })
+                        else -> SettingsScreen(displayName = displayName, session = session, repo = repo, activity = activity, ctx = ctx)
+                    }
+                }
+            }
             composable(
                 route = "edit",
                 enterTransition = {
@@ -332,19 +351,20 @@ class MainActivity:ComponentActivity() {
                     else fadeOut(tween(90, easing = OneUiMotionEasing)) +
                         scaleOut(targetScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(220, easing = OneUiMotionEasing))
                 }
-            ) { EditScreen(editing,{t,b,c,d,photo->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id,photo);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()}) }
-            composable("trips"){TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })}
-            composable("tripMonaco"){MissionScreen()}
-            composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,)}
+            ) { EditScreen(editing, { t, b, c, d, photo ->
+                activity.lifecycleScope.launch {
+                    repo.save(t, b, c, d, editing?.id, photo)
+                    editing = null
+                    nav.popBackStack()
+                    runCatching { repo.syncNow() }
+                }
+            }, { editing = null; nav.popBackStack() }) }
+            composable("tripMonaco") { MissionScreen() }
         }
     })
-    val animatedPillPosition by animateFloatAsState(
-        targetValue = primaryTab.toFloat(),
-        animationSpec = if (reduceAnimationsState.value) tween(0)
-        else spring(dampingRatio = 0.82f, stiffness = 950f),
-        label = "navigationPillPosition"
-    )
-    if (currentRoute != "edit") Surface(
+    // Pager offset is the single source of truth: the pill follows swipes and taps identically.
+    val animatedPillPosition = if (reduceAnimationsState.value) primaryTab.toFloat() else pagerPosition
+    if (currentRoute != "edit" && currentRoute != "tripMonaco") Surface(
         modifier = Modifier.align(Alignment.BottomStart)
             .padding(start = 12.dp, end = 78.dp)
             .fillMaxWidth()
@@ -387,27 +407,18 @@ class MainActivity:ComponentActivity() {
                 FloatingNavItem(
                     Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book
                 ) {
-                    nav.navigate("diary") {
-                        launchSingleTop = true
-                        popUpTo("diary") { saveState = true }
-                    }
+                    selectPrimaryTab(0)
                 }
                 FloatingNavItem(
                     Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco",
                     "Viaggi", Icons.Default.FlightTakeoff
                 ) {
-                    nav.navigate("trips") {
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                    selectPrimaryTab(1)
                 }
                 FloatingNavItem(
                     Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings
                 ) {
-                    nav.navigate("settings") {
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                    selectPrimaryTab(2)
                 }
             }
         }
