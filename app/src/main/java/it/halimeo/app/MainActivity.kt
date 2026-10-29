@@ -194,19 +194,50 @@ class MainActivity:ComponentActivity() {
 @Composable
 private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     val palette = MaterialTheme.colorScheme
+    // Keep the base nearly uniform: broad, low-opacity radial fields avoid visible gradient bands.
     Box(modifier = modifier.clipToBounds().background(Color.Black)) {
-        Box(Modifier.fillMaxSize().background(Brush.linearGradient(colorStops = arrayOf(
-            0.0f to Color.Black, 0.18f to Color(0xFF080D15), 0.42f to Color(0xFF090B11),
-            0.68f to Color(0xFF050A0D), 1.0f to Color.Black
-        ))))
-        Box(Modifier.align(Alignment.TopEnd).offset(x=80.dp,y=(-55).dp).size(300.dp).blur(115.dp)
-            .background(Brush.radialGradient(listOf(palette.primary.copy(alpha=0.25f),Color.Transparent)),RoundedCornerShape(50)))
-        Box(Modifier.align(Alignment.CenterStart).offset(x=(-165).dp,y=30.dp).size(300.dp).blur(120.dp)
-            .background(Brush.radialGradient(listOf(palette.tertiary.copy(alpha=0.17f),Color.Transparent)),RoundedCornerShape(50)))
-        Box(Modifier.align(Alignment.CenterEnd).offset(x=145.dp,y=180.dp).size(280.dp).blur(105.dp)
-            .background(Brush.radialGradient(listOf(palette.secondary.copy(alpha=0.14f),Color.Transparent)),RoundedCornerShape(50)))
-        Box(Modifier.align(Alignment.BottomStart).offset(x=(-80).dp,y=105.dp).size(260.dp).blur(100.dp)
-            .background(Brush.radialGradient(listOf(palette.primary.copy(alpha=0.10f),Color.Transparent)),RoundedCornerShape(50)))
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0.0f to Color(0xFF050608),
+                    0.48f to Color(0xFF08090C),
+                    1.0f to Color(0xFF030405)
+                )
+            )
+        )
+        Box(
+            Modifier.align(Alignment.TopCenter).offset(y = (-170).dp).size(560.dp)
+                .blur(150.dp)
+                .background(
+                    Brush.radialGradient(
+                        0.0f to palette.primary.copy(alpha = 0.12f),
+                        0.42f to palette.primary.copy(alpha = 0.055f),
+                        1.0f to Color.Transparent
+                    ), RoundedCornerShape(50)
+                )
+        )
+        Box(
+            Modifier.align(Alignment.CenterStart).offset(x = (-250).dp, y = 40.dp).size(480.dp)
+                .blur(155.dp)
+                .background(
+                    Brush.radialGradient(
+                        0.0f to palette.tertiary.copy(alpha = 0.075f),
+                        0.48f to palette.tertiary.copy(alpha = 0.028f),
+                        1.0f to Color.Transparent
+                    ), RoundedCornerShape(50)
+                )
+        )
+        Box(
+            Modifier.align(Alignment.BottomEnd).offset(x = 220.dp, y = 170.dp).size(500.dp)
+                .blur(165.dp)
+                .background(
+                    Brush.radialGradient(
+                        0.0f to palette.secondary.copy(alpha = 0.065f),
+                        0.45f to palette.secondary.copy(alpha = 0.022f),
+                        1.0f to Color.Transparent
+                    ), RoundedCornerShape(50)
+                )
+        )
     }
 }
 
