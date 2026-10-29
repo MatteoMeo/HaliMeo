@@ -1194,17 +1194,21 @@ private fun DiaryScreen(
                             // causes avoidable IO, allocations and frame drops while scrolling.
                             value = if (expanded) entry.photoUri?.let { decodeScaledBitmap(photoContext, it, maxDimension = 1000) } else null
                         }
-                        ElevatedCard(
+                        Card(
                             modifier = Modifier.fillMaxWidth()
+                                // Clip the whole card layer before drawing the outline. This prevents
+                                // the rectangular layer from leaking past rounded glass corners.
+                                .clip(MaterialTheme.shapes.large)
+                                .border(1.dp, frostedEdgeColor(), MaterialTheme.shapes.large)
                                 .clickable(
                                     onClick = {
                                         feedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                         expandedEntryIds = if (entry.id in expandedEntryIds) expandedEntryIds - entry.id else expandedEntryIds + entry.id
                                     }
-                                )
-                                .border(1.dp, frostedEdgeColor(), MaterialTheme.shapes.large),
+                                ),
                             shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.elevatedCardColors(containerColor = frostedSurfaceColor())
+                            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor()),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {
                             Box {
                                 Column(
@@ -1247,11 +1251,12 @@ private fun DiaryScreen(
                                         }
                                     }
                                     val isFavorite = entry.id in favoriteIds
-                                    val heartInteraction = remember(entry.id) { MutableInteractionSource() }
-                                    val heartPressed by heartInteraction.collectIsPressedAsState()
-                                    val heartScale by animateFloatAsState(targetValue = if (heartPressed) 1.32f else if (isFavorite) 1.08f else 1f, animationSpec = spring(dampingRatio = 0.38f, stiffness = 650f), label = "favoriteHeartPop")
-                                    IconButton(onClick = { feedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onToggleFavorite(entry) }, interactionSource = heartInteraction) {
-                                        Icon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = if (isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti", tint = if (isFavorite) accent else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.graphicsLayer { scaleX = heartScale; scaleY = heartScale })
+                                    IconButton(onClick = { feedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onToggleFavorite(entry) }) {
+                                        Icon(
+                                            if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                            contentDescription = if (isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti",
+                                            tint = if (isFavorite) accent else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                     if (entry.syncState != "SYNCED") {
                                         Surface(
