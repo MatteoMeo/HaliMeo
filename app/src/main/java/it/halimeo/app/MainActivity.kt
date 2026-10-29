@@ -90,14 +90,15 @@ private val Elevated = Color(0xFF101317)
 // Balanced One UI-inspired glass surfaces: translucent charcoal with a cool edge highlight.
 private val FrostedSurface = Color(0xE6101419)
 private val FrostedSurfaceStrong = Color(0xF2101419)
-private val FrostedEdge = Color.White.copy(alpha = 0.17f)
+private val FrostedEdge = Color.White.copy(alpha = 0.22f)
+@Composable private fun frostedGlassBrush(): Brush = Brush.linearGradient(listOf(Color.White.copy(alpha = if (isHaliMeoDark()) 0.065f else 0.42f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.075f else 0.13f)))
 @Composable private fun isHaliMeoDark(): Boolean = when (themeModeState.value) {
     "light" -> false
     "dark" -> true
     else -> isSystemInDarkTheme()
 }
-@Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) Color(0xD9101419) else Color(0xD9FFFFFF)
-@Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) Color(0xE60C0F12) else Color(0xE6FFFFFF)
+@Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) Color(0xB8101419) else Color(0xC9FFFFFF)
+@Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) Color(0xD90C0F12) else Color(0xE0FFFFFF)
 private val themeModeState = mutableStateOf("system")
 private val customBackgroundColorState = mutableStateOf("default")
 private val customBackgroundUriState = mutableStateOf<String?>(null)
@@ -271,8 +272,8 @@ class MainActivity:ComponentActivity() {
         }
     })
     Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Surface(modifier = Modifier.weight(1f).shadow(14.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = frostedSurfaceColor(), tonalElevation = 0.dp) {
-            Row(Modifier.fillMaxWidth().height(68.dp).background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.055f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.045f)))).padding(horizontal = 4.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Surface(modifier = Modifier.weight(1f).shadow(18.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, Color.White.copy(alpha = if (isHaliMeoDark()) 0.22f else 0.60f), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = frostedSurfaceColor(), tonalElevation = 0.dp) {
+            Row(Modifier.fillMaxWidth().height(68.dp).background(Brush.linearGradient(listOf(Color.White.copy(alpha = if (isHaliMeoDark()) 0.10f else 0.52f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.10f else 0.16f)))).padding(horizontal = 4.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
                 FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
                 FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) { nav.navigate("settings") { launchSingleTop = true; restoreState = true } }
