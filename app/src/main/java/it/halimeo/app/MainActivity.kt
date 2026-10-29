@@ -25,6 +25,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.ui.draw.blur
@@ -85,12 +86,12 @@ import kotlinx.coroutines.delay
 
 private val Ink = Color.Black
 private val Panel = Color(0xFF101114)
-private val Mint = Color(0xFFB9DDF5)
-private val Muted = Color(0xFFB4BAC5)
-private val Elevated = Color(0xFF101317)
+private val Mint = Color(0xFF3E91FF)
+private val Muted = Color(0xFFB8C4D6)
+private val Elevated = Color(0xFF111827)
 // Balanced One UI-inspired glass surfaces: translucent charcoal with a cool edge highlight.
-private val FrostedSurface = Color(0xB8101419)
-private val FrostedSurfaceStrong = Color(0xD9101419)
+private val FrostedSurface = Color(0xB80D1420)
+private val FrostedSurfaceStrong = Color(0xD90D1420)
 private val OneUiMotionEasing = CubicBezierEasing(0.22f, 0.25f, 0f, 1f)
 @Composable private fun frostedEdgeColor(): Color = Color.White.copy(alpha = 0.20f)
 @Composable private fun frostedGlassBrush(): Brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.065f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.075f)))
@@ -121,7 +122,7 @@ private fun displayHaliMeoDate(value: String): String {
     return date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yy"))
 }
 private val lastSyncAtState = mutableStateOf(0L)
-@Composable private fun haliMeoAuthBackdrop(): Brush = if (isHaliMeoDark()) Brush.verticalGradient(listOf(Color(0xFF050608), Color(0xFF0B1119), Color(0xFF080A0C))) else Brush.verticalGradient(listOf(Color(0xFFF4F8FC), Color(0xFFE7F0F8), Color(0xFFF5F0FA)))
+@Composable private fun haliMeoAuthBackdrop(): Brush = if (isHaliMeoDark()) Brush.verticalGradient(listOf(Color(0xFF050608), Color(0xFF0B1119), Color(0xFF080D16))) else Brush.verticalGradient(listOf(Color(0xFFF4F8FC), Color(0xFFE7F0F8), Color(0xFFF5F0FA)))
 private val TextPrimary = Color(0xFFF5F7FA)
 
 
@@ -160,15 +161,15 @@ private val TextPrimary = Color(0xFFF5F7FA)
         dynamicDarkColorScheme(context).copy(
             background = Color.Black,
             surface = Color(0xFF080A0C),
-            surfaceVariant = Color(0xFF111519),
+            surfaceVariant = Color(0xFF121B2A),
             onBackground = Color(0xFFF5F7FA),
             onSurface = Color(0xFFF5F7FA),
             onSurfaceVariant = Color(0xFFD0D4DC),
-            outline = Color(0xFF30383E)
+            outline = Color(0xFF334155)
         )
     } else {
         darkColorScheme(
-            primary = Mint, onPrimary = Color(0xFF102A3A), secondary = Color(0xFF72D9E8), onSecondary = Color(0xFF06272D),
+            primary = Mint, onPrimary = Color(0xFF102A3A), secondary = Color(0xFF61D9E8), onSecondary = Color(0xFF06272D),
             background = Ink, onBackground = TextPrimary, surface = Panel, onSurface = TextPrimary,
             surfaceVariant = Elevated, onSurfaceVariant = Muted, outline = Color(0xFF30383E)
         )
@@ -187,9 +188,9 @@ private val TextPrimary = Color(0xFFF5F7FA)
             typography = rememberHaliMeoTypography(staticFontWidth, staticFontRoundness),
             motionScheme = MotionScheme.expressive(),
             shapes = Shapes(
-                small = RoundedCornerShape(16.dp),
-                medium = RoundedCornerShape(24.dp),
-                large = RoundedCornerShape(32.dp)
+                small = RoundedCornerShape(14.dp),
+                medium = RoundedCornerShape(22.dp),
+                large = RoundedCornerShape(28.dp)
             ),
             content = content
         )
@@ -206,19 +207,11 @@ class MainActivity:ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
             window.isStatusBarContrastEnforced = false
         }
-        // Prefer the device's highest supported refresh rate; Android may still honor
-        // system power-saving and thermal policies and choose a lower rate when needed.
-        @Suppress("DEPRECATION")
-        val display = windowManager.defaultDisplay
-        val currentMode = display.mode
-        val highRefreshMode = display.supportedModes
-            .filter { it.physicalWidth == currentMode.physicalWidth && it.physicalHeight == currentMode.physicalHeight }
-            .maxByOrNull { it.refreshRate }
+        // Request a high interactive refresh rate, but do not pin a display mode:
+        // Samsung/Android can then adapt dynamically (e.g. 120/96/90Hz while active
+        // and 60/48Hz for quieter content), subject to device and system policy.
         window.attributes = window.attributes.apply {
-            preferredRefreshRate = highRefreshMode?.refreshRate ?: display.refreshRate
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && highRefreshMode != null) {
-                preferredDisplayModeId = highRefreshMode.modeId
-            }
+            preferredRefreshRate = 120f
         }
         lastSyncAtState.value = getSharedPreferences("halimeo_preferences", MODE_PRIVATE).getLong("last_sync_at", 0L)
         setContent { HaliMeoTheme { HaliMeoRoot() } }
@@ -366,9 +359,9 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             Box(
                 Modifier.fillMaxSize().background(
                     Brush.verticalGradient(
-                        0.0f to Color(0xFF050608),
-                        0.48f to Color(0xFF08090C),
-                        1.0f to Color(0xFF030405)
+                        0.0f to Color(0xFF0A1426),
+                        0.42f to Color(0xFF080D16),
+                        1.0f to Color(0xFF05070C)
                     )
                 )
             )
@@ -377,8 +370,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             Modifier.align(Alignment.TopCenter).offset(y = (-140).dp).size(460.dp)
                 .background(
                     Brush.radialGradient(
-                        0.0f to palette.primary.copy(alpha = 0.12f),
-                        0.42f to palette.primary.copy(alpha = 0.055f),
+                        0.0f to palette.primary.copy(alpha = 0.15f),
+                        0.42f to Color(0xFF8878FF).copy(alpha = 0.055f),
                         1.0f to Color.Transparent
                     ), RoundedCornerShape(50)
                 )
@@ -397,8 +390,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             Modifier.align(Alignment.BottomEnd).offset(x = 190.dp, y = 150.dp).size(400.dp)
                 .background(
                     Brush.radialGradient(
-                        0.0f to palette.secondary.copy(alpha = 0.065f),
-                        0.45f to palette.secondary.copy(alpha = 0.022f),
+                        0.0f to Color(0xFF55D8E8).copy(alpha = 0.075f),
+                        0.45f to palette.secondary.copy(alpha = 0.025f),
                         1.0f to Color.Transparent
                     ), RoundedCornerShape(50)
                 )
