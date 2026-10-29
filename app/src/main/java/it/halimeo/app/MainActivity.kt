@@ -429,7 +429,7 @@ class MainActivity:ComponentActivity() {
             Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(25.dp), tint = MaterialTheme.colorScheme.onPrimary)
         }
     }
-
+    }
 }
 /**
  * Subtle Monet-tinted ambient light behind translucent surfaces.
