@@ -307,10 +307,10 @@ class MainActivity:ComponentActivity() {
             modifier = Modifier.padding(padding),
             // Primary navigation should respond immediately: keep only a very short fade,
             // avoiding simultaneous full-screen slide + live-backdrop recapture on every tap.
-            enterTransition = { if (reduceAnimationsState.value) androidx.compose.animation.EnterTransition.None else fadeIn(tween(35)) },
-            exitTransition = { if (reduceAnimationsState.value) androidx.compose.animation.ExitTransition.None else fadeOut(tween(25)) },
-            popEnterTransition = { if (reduceAnimationsState.value) androidx.compose.animation.EnterTransition.None else fadeIn(tween(35)) },
-            popExitTransition = { if (reduceAnimationsState.value) androidx.compose.animation.ExitTransition.None else fadeOut(tween(25)) }
+            enterTransition = { androidx.compose.animation.EnterTransition.None },
+            exitTransition = { androidx.compose.animation.ExitTransition.None },
+            popEnterTransition = { androidx.compose.animation.EnterTransition.None },
+            popExitTransition = { androidx.compose.animation.ExitTransition.None }
         ) {
             composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable(
@@ -358,14 +358,9 @@ class MainActivity:ComponentActivity() {
         navigationBlurState.isEnabled = enabled
         fabBlurState.isEnabled = enabled
     }
-    LaunchedEffect(currentRoute, liveBlurDisabledState.value) {
-        if (liveBlurDisabledState.value) return@LaunchedEffect
-        navigationBlurState.config = navigationBlurState.config.copy(isLive = false)
-        fabBlurState.config = fabBlurState.config.copy(isLive = false)
-        kotlinx.coroutines.delay(70)
-        navigationBlurState.config = navigationBlurState.config.copy(isLive = true)
-        fabBlurState.config = fabBlurState.config.copy(isLive = true)
-    }
+    // Do not toggle live blur on navigation: changing its capture mode and waiting
+    // 70 ms on every route change introduced a visible touch-to-response delay.
+    // Keep the capture mode stable and only honor the user's explicit preference.
     if (currentRoute != "edit") BlurOverlay(
         state = navigationBlurState,
         modifier = Modifier.align(Alignment.BottomStart)
