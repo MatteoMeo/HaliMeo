@@ -11,10 +11,10 @@ class DiaryRepository(context: Context) {
     private val session = SessionStore(context)
     val entries: Flow<List<DiaryEntry>> = dao.observeAll()
 
-    suspend fun save(title:String, body:String, category:String, date:String, id:String?=null) {
+    suspend fun save(title:String, body:String, category:String, date:String, id:String?=null, photoUri:String?=null) {
         val now=System.currentTimeMillis()
         val old=id?.let { dao.get(it) }
-        dao.upsert(DiaryEntry(old?.id ?: UUID.randomUUID().toString(), title.trim(), body.trim(), category.trim().ifBlank{"Ricordo"}, date, old?.createdAt ?: now, now, null, "PENDING"))
+        dao.upsert(DiaryEntry(old?.id ?: UUID.randomUUID().toString(), title.trim(), body.trim(), category.trim().ifBlank{"Ricordo"}, date, old?.createdAt ?: now, now, null, "PENDING", photoUri?.takeIf { it.isNotBlank() } ?: old?.photoUri))
     }
     suspend fun delete(id:String) {
         val old=dao.get(id) ?: return
