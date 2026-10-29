@@ -122,6 +122,16 @@ private val TextPrimary = Color(0xFFF5F7FA)
             background=Ink, onBackground=TextPrimary, surface=Panel, onSurface=TextPrimary,
             surfaceVariant=Elevated, onSurfaceVariant=Muted, outline=Color(0xFF30383E)
         )
+    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        dynamicLightColorScheme(context).copy(
+            background = Color(0xFFF3F6FA),
+            surface = Color(0xFFF8FAFC),
+            surfaceVariant = Color(0xFFE5EBF0),
+            onBackground = Color(0xFF171B20),
+            onSurface = Color(0xFF171B20),
+            onSurfaceVariant = Color(0xFF46515B),
+            outline = Color(0xFF8996A1)
+        )
     } else {
         lightColorScheme(
             primary = Color(0xFF315D78), onPrimary = Color.White,
