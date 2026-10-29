@@ -627,7 +627,7 @@ private fun SettingsScreen(
     val primaryText = MaterialTheme.colorScheme.onSurface
     val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
     val accentText = MaterialTheme.colorScheme.primary
-    var expandedSettingsSections by remember { mutableStateOf(setOf("profile")) }
+    var expandedSettingsSections by remember { mutableStateOf(setOf("profile", "appearance")) }
     val profilePrefs = remember { ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE) }
     var profilePhotoUri by remember { mutableStateOf(profilePrefs.getString("profile_photo_uri", null)) }
     var profileNickname by remember { mutableStateOf(profilePrefs.getString("profile_nickname", displayName) ?: displayName) }
@@ -732,11 +732,11 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().clickable { expandedSettingsSections = if ("profile" in expandedSettingsSections) expandedSettingsSections - "profile" else expandedSettingsSections + "profile" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.AccountCircle, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
                     Text("PROFILO E ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.weight(1f))
-                    Icon(Icons.Default.ExpandLess, contentDescription = "Profilo sempre visibile", tint = accentText)
+                    Icon(if ("profile" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("profile" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
                 if ("profile" in expandedSettingsSections) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -744,7 +744,7 @@ private fun SettingsScreen(
                 Text("I ricordi vengono salvati sul dispositivo prima della sincronizzazione.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Surface(
-                        modifier = Modifier.size(76.dp).clickable { profilePhotoPicker.launch(arrayOf("image/*")) },
+                        modifier = Modifier.size(76.dp).clickable(enabled = isProfileEditing) { profilePhotoPicker.launch(arrayOf("image/*")) },
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
                         border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.55f))
@@ -759,7 +759,7 @@ private fun SettingsScreen(
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(if (profileNickname.isBlank()) displayName else profileNickname, color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("Tocca la foto per cambiarla", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                        Text(if (isProfileEditing) "Tocca la foto per cambiarla" else "Attiva Modifica profilo per cambiare la foto", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
                 }
                 if (isProfileEditing) {
@@ -803,10 +803,11 @@ private fun SettingsScreen(
                 Row(Modifier.fillMaxWidth().clickable { expandedSettingsSections = if ("appearance" in expandedSettingsSections) expandedSettingsSections - "appearance" else expandedSettingsSections + "appearance" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.Palette, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
                     Text("ASPETTO", color = accentText, style = MaterialTheme.typography.labelLarge)
+                    if ("appearance" !in expandedSettingsSections) Text("Tema, colori, sfondo e prestazioni", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.weight(1f))
                     Icon(if ("appearance" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("appearance" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "appearance" in expandedSettingsSections, enter = fadeIn(tween(55)) + expandVertically(tween(90)), exit = fadeOut(tween(35)) + shrinkVertically(tween(70))) {
+                AnimatedVisibility(visible = "appearance" in expandedSettingsSections, enter = fadeIn(tween(75)) + expandVertically(tween(110)), exit = fadeOut(tween(45)) + shrinkVertically(tween(85))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Tema scuro AMOLED sempre attivo, con accento dinamico.", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
                 Text("Anteprima in tempo reale", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -881,6 +882,35 @@ private fun SettingsScreen(
                     }
                 }
                 Text("Puoi scegliere un colore oppure una foto dalla galleria.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                AnimatedVisibility(visible = backgroundColor == "photo") {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("Sfocatura", color = primaryText, style = MaterialTheme.typography.labelLarge)
+                                            Spacer(Modifier.weight(1f))
+                                            Text("${backgroundBlur.toInt()} dp", color = secondaryText, style = MaterialTheme.typography.labelMedium)
+                                        }
+                                        Slider(value = backgroundBlur, onValueChange = { backgroundBlur = it; saveBackgroundTuning() }, valueRange = 0f..24f, colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary, inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant))
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("Intensità overlay", color = primaryText, style = MaterialTheme.typography.labelLarge)
+                                            Spacer(Modifier.weight(1f))
+                                            Text("${(backgroundOverlay * 100).toInt()}%", color = secondaryText, style = MaterialTheme.typography.labelMedium)
+                                        }
+                                        Slider(value = backgroundOverlay, onValueChange = { backgroundOverlay = it; saveBackgroundTuning() }, valueRange = 0.12f..0.82f, colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary, inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant))
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("Luminosità della foto", color = primaryText, style = MaterialTheme.typography.labelLarge)
+                                            Spacer(Modifier.weight(1f))
+                                            Text("${backgroundBrightness.toInt()}%", color = secondaryText, style = MaterialTheme.typography.labelMedium)
+                                        }
+                                        Slider(
+                                            value = backgroundBrightness,
+                                            onValueChange = { backgroundBrightness = it; saveBackgroundTuning() },
+                                            valueRange = 0f..100f,
+                                            steps = 0,
+                                            colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary, inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant)
+                                        )
+                                        Text("0% = nero puro · 50% = foto originale · 100% = quasi bianco.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
                 Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
                 Text("Prestazioni e movimento", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
@@ -939,52 +969,6 @@ private fun SettingsScreen(
                     ))
                 }
                 Text("Suggerimento: il blur e le animazioni possono aumentare il carico grafico. Disattivali se noti cali di fluidità o consumi elevati.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
-                Text("Anteprima in tempo reale", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Surface(
-                    modifier = Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(22.dp)),
-                    shape = RoundedCornerShape(22.dp), color = frostedSurfaceStrongColor()
-                ) {
-                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)) { Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp)) }
-                            Column(Modifier.weight(1f)) {
-                                Text("Un ricordo importante", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Text("29/10/26 · Ricordo", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                            }
-                            Icon(Icons.Default.FavoriteBorder, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Text("Questa è la leggibilità prevista per testi, icone e schede con le impostazioni correnti.", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
-                        Text("Accento e gradienti seguono lo sfondo selezionato.", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-                AnimatedVisibility(visible = backgroundColor == "photo") {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Sfocatura", color = primaryText, style = MaterialTheme.typography.labelLarge)
-                            Spacer(Modifier.weight(1f))
-                            Text("${backgroundBlur.toInt()} dp", color = secondaryText, style = MaterialTheme.typography.labelMedium)
-                        }
-                        Slider(value = backgroundBlur, onValueChange = { backgroundBlur = it; saveBackgroundTuning() }, valueRange = 0f..24f)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Intensità overlay", color = primaryText, style = MaterialTheme.typography.labelLarge)
-                            Spacer(Modifier.weight(1f))
-                            Text("${(backgroundOverlay * 100).toInt()}%", color = secondaryText, style = MaterialTheme.typography.labelMedium)
-                        }
-                        Slider(value = backgroundOverlay, onValueChange = { backgroundOverlay = it; saveBackgroundTuning() }, valueRange = 0.12f..0.82f)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Luminosità della foto", color = primaryText, style = MaterialTheme.typography.labelLarge)
-                            Spacer(Modifier.weight(1f))
-                            Text("${backgroundBrightness.toInt()}%", color = secondaryText, style = MaterialTheme.typography.labelMedium)
-                        }
-                        Slider(
-                            value = backgroundBrightness,
-                            onValueChange = { backgroundBrightness = it; saveBackgroundTuning() },
-                            valueRange = 0f..100f,
-                            steps = 99
-                        )
-                        Text("0% = nero puro · 50% = foto originale · 100% = quasi bianco.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
                     }
                 }
             }
@@ -1002,7 +986,7 @@ private fun SettingsScreen(
                     Spacer(Modifier.weight(1f))
                     Icon(if ("date" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("date" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "date" in expandedSettingsSections, enter = fadeIn(tween(55)) + expandVertically(tween(90)), exit = fadeOut(tween(35)) + shrinkVertically(tween(70))) {
+                AnimatedVisibility(visible = "date" in expandedSettingsSections, enter = fadeIn(tween(75)) + expandVertically(tween(110)), exit = fadeOut(tween(45)) + shrinkVertically(tween(85))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Tenete a portata di mano una data importante", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(value = specialDateLabel, onValueChange = { specialDateLabel = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Nome (es. compleanno)") })
@@ -1042,10 +1026,11 @@ private fun SettingsScreen(
                 Row(Modifier.fillMaxWidth().clickable { expandedSettingsSections = if ("sync" in expandedSettingsSections) expandedSettingsSections - "sync" else expandedSettingsSections + "sync" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.CloudSync, contentDescription = null, tint = accentText, modifier = Modifier.size(20.dp))
                     Text("SINCRONIZZAZIONE", color = accentText, style = MaterialTheme.typography.labelLarge)
+                    if ("sync" !in expandedSettingsSections) Text("Backup e stato dei tuoi ricordi", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.weight(1f))
                     Icon(if ("sync" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("sync" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "sync" in expandedSettingsSections, enter = fadeIn(tween(55)) + expandVertically(tween(90)), exit = fadeOut(tween(35)) + shrinkVertically(tween(70))) {
+                AnimatedVisibility(visible = "sync" in expandedSettingsSections, enter = fadeIn(tween(75)) + expandVertically(tween(110)), exit = fadeOut(tween(45)) + shrinkVertically(tween(85))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(if (pendingSyncCount == 0) Icons.Default.CloudDone else Icons.Default.CloudUpload, contentDescription = null, tint = accentText, modifier = Modifier.size(26.dp))
@@ -1106,18 +1091,19 @@ private fun SettingsScreen(
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
+            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth().clickable { expandedSettingsSections = if ("invites" in expandedSettingsSections) expandedSettingsSections - "invites" else expandedSettingsSections + "invites" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.MarkEmailRead, contentDescription = null, tint = accentText, modifier = Modifier.size(22.dp))
                     Text("INVITI", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                    if ("invites" !in expandedSettingsSections) Text("Crea e condividi un invito privato", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.weight(1f))
                     Icon(if ("invites" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("invites" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "invites" in expandedSettingsSections, enter = fadeIn(tween(55)) + expandVertically(tween(90)), exit = fadeOut(tween(35)) + shrinkVertically(tween(70))) {
+                AnimatedVisibility(visible = "invites" in expandedSettingsSections, enter = fadeIn(tween(75)) + expandVertically(tween(110)), exit = fadeOut(tween(45)) + shrinkVertically(tween(85))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Crea un codice monouso valido 7 giorni e condividilo direttamente dal telefono.", color = secondaryText)
 
