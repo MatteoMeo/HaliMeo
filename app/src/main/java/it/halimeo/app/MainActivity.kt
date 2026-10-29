@@ -325,7 +325,7 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF101114))
+            colors = CardDefaults.cardColors(containerColor = Color(0xB8101114))
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge)
@@ -337,7 +337,7 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xE6101115))
+            colors = CardDefaults.cardColors(containerColor = Color(0xC8101115))
         ) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -730,7 +730,7 @@ private fun DiaryScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(28.dp),
-                        colors = CardDefaults.cardColors(containerColor = Panel)
+                        colors = CardDefaults.cardColors(containerColor = Color(0xB8101114))
                     ) {
                         Column(
                             modifier = Modifier.padding(24.dp),
@@ -798,10 +798,10 @@ private fun DiaryScreen(
                                 .graphicsLayer { scaleX = cardScale; scaleY = cardScale; alpha = itemAlpha; translationY = itemOffset }
                                 .clickable(interactionSource = cardInteraction, indication = null, onClick = { onEdit(entry) })
                                 .shadow(10.dp, RoundedCornerShape(28.dp), clip = false)
-                                .border(1.dp, accent.copy(alpha = 0.28f), MaterialTheme.shapes.large)
+                                .border(1.dp, Color.White.copy(alpha = 0.19f), MaterialTheme.shapes.large)
                                 .animateContentSize(),
                             shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFF101114))
+                            colors = CardDefaults.elevatedCardColors(containerColor = Color(0xB8101114))
                         ) {
                             Column(
                                 modifier = Modifier.padding(15.dp),
