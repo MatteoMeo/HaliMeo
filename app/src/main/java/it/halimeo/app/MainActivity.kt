@@ -340,6 +340,12 @@ private fun SettingsScreen(
     var themeMode by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("theme_mode", "system") ?: "system") }
     var specialDateLabel by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date_label", "") ?: "") }
     var specialDate by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date", "") ?: "") }
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            val parsed = runCatching { java.time.LocalDate.parse(specialDate) }.getOrNull()
+            if (parsed != null && specialDateLabel.isNotBlank()) scheduleSpecialDateReminder(ctx, specialDateLabel.trim(), parsed)
+        }
+    }
 
     Column(
         Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(16.dp),
@@ -399,6 +405,11 @@ private fun SettingsScreen(
                         val parsed = runCatching { java.time.LocalDate.parse(specialDate) }.getOrNull()
                         if (specialDateLabel.isNotBlank() && parsed != null) {
                             ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putString("special_date_label", specialDateLabel.trim()).putString("special_date", specialDate).apply()
+                            if (Build.VERSION.SDK_INT >= 33 && ctx.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                scheduleSpecialDateReminder(ctx, specialDateLabel.trim(), parsed)
+                            }
                             Toast.makeText(ctx, "Data speciale salvata", Toast.LENGTH_SHORT).show()
                         } else Toast.makeText(ctx, "Inserisci un nome e una data valida", Toast.LENGTH_SHORT).show()
                     },
@@ -411,7 +422,7 @@ private fun SettingsScreen(
                     val days = java.time.temporal.ChronoUnit.DAYS.between(today, next)
                     Text(if (days == 0L) "È oggi: $specialDateLabel!" else "Mancano $days giorni a $specialDateLabel", color = accentText, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                 }
-                Text("Conto alla rovescia locale per compleanni e date importanti.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                Text("Promemoria locale alle 09:00 nel giorno scelto, se le notifiche sono abilitate.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
             }
         }
 
