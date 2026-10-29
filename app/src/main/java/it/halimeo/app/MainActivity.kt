@@ -875,16 +875,28 @@ private fun SettingsScreen(
     }
 }
 @Composable
-private fun categoryAccent(category: String): Color {
+private fun categoryAccent(category: String, memorySeed: String = category): Color {
     val normalized = category.trim().lowercase()
     val dark = isHaliMeoDark()
+    // Stable per-memory palette: cards keep their colour while recomposing/reordering,
+    // but new memories naturally spread across the accent palette.
+    val memoryPalette = if (dark) listOf(
+        Color(0xFF83C9FF), Color(0xFFFF9FBD), Color(0xFFFFC878),
+        Color(0xFFB9A5FF), Color(0xFF8DE0C1), Color(0xFF7FE1E8),
+        Color(0xFFFFA98F), Color(0xFFD5A6FF), Color(0xFFA9D77D)
+    ) else listOf(
+        Color(0xFF175E91), Color(0xFF9C3155), Color(0xFF855000),
+        Color(0xFF5D42A3), Color(0xFF17694F), Color(0xFF126B73),
+        Color(0xFF9A4933), Color(0xFF7545A0), Color(0xFF4B6F24)
+    )
+    val stableAccent = memoryPalette[(memorySeed.hashCode() and Int.MAX_VALUE) % memoryPalette.size]
     return when {
         listOf("viagg", "vacanz", "gita", "monaco", "avventura").any(normalized::contains) -> if (dark) Color(0xFF83C9FF) else Color(0xFF175E91)
         listOf("compleanno", "anniversario", "festa", "regalo").any(normalized::contains) -> if (dark) Color(0xFFFF9FBD) else Color(0xFF9C3155)
         listOf("cena", "ristorante", "cibo", "pranzo", "aperitivo").any(normalized::contains) -> if (dark) Color(0xFFFFC878) else Color(0xFF855000)
         listOf("momento", "ricordo", "giornata", "speciale").any(normalized::contains) -> if (dark) Color(0xFFB9A5FF) else Color(0xFF5D42A3)
         listOf("foto", "fotografia", "immagine").any(normalized::contains) -> if (dark) Color(0xFF8DE0C1) else Color(0xFF17694F)
-        else -> if (dark) Color(0xFFB9DDF5) else Color(0xFF315D78)
+        else -> stableAccent
     }
 }
 
@@ -937,13 +949,19 @@ private fun DiaryScreen(
         }.minByOrNull { it.third }
     }
     var headerCollapsed by remember { mutableStateOf(false) }
-    val diaryNestedScroll = remember {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (available.y < -8f) headerCollapsed = true
-                else if (available.y > 8f) headerCollapsed = false
-                return Offset.Zero
-            }
+    // Collapse only after the list has actually moved; expand only when returning
+    // close to the top. This hysteresis prevents tiny finger movements from toggling
+    // the large header repeatedly and keeps layout/visibility animations off the hot path.
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    LaunchedEffect(listState, density) {
+        snapshotFlow {
+            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        }.collect { (firstIndex, firstOffset) ->
+            val offsetDp = with(density) { firstOffset.toDp().value }
+            val shouldCollapse = firstIndex > 0 || offsetDp > 52f
+            val shouldExpand = firstIndex == 0 && offsetDp < 10f
+            if (shouldCollapse && !headerCollapsed) headerCollapsed = true
+            else if (shouldExpand && headerCollapsed) headerCollapsed = false
         }
     }
     val headerTitleSize by animateFloatAsState(
@@ -974,7 +992,6 @@ private fun DiaryScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .nestedScroll(diaryNestedScroll)
             .background(Color.Transparent)
             .padding(horizontal = 16.dp)
     ) {
@@ -1207,7 +1224,7 @@ private fun DiaryScreen(
                     }
                     itemsIndexed(filtered, key = { _, entry -> entry.id }, contentType = { _, _ -> "diary_entry" }) { _, entry ->
                         val expanded = entry.id in expandedEntryIds
-                        val accent = categoryAccent(entry.category)
+                        val accent = categoryAccent(entry.category, entry.id)
                         val photoContext = LocalContext.current
                         val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext, expanded) {
                             // Decode only after opening a card; eagerly decoding every visible photo
@@ -1219,7 +1236,7 @@ private fun DiaryScreen(
                                 // Clip the whole card layer before drawing the outline. This prevents
                                 // the rectangular layer from leaking past rounded glass corners.
                                 .clip(MaterialTheme.shapes.large)
-                                .border(1.dp, frostedEdgeColor(), MaterialTheme.shapes.large)
+                                .border(1.2.dp, accent.copy(alpha = 0.48f), MaterialTheme.shapes.large)
                                 .clickable(
                                     onClick = {
                                         feedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -1227,10 +1244,11 @@ private fun DiaryScreen(
                                     }
                                 ),
                             shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor()),
+                            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor().copy(alpha = 0.96f)),
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {
                             Box {
+                                Box(Modifier.matchParentSize().background(Brush.horizontalGradient(listOf(accent.copy(alpha = 0.075f), Color.Transparent, accent.copy(alpha = 0.025f)))));
                                 Column(
                                 modifier = Modifier.padding(15.dp),
                                 verticalArrangement = Arrangement.spacedBy(11.dp)
