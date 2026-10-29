@@ -345,8 +345,8 @@ class MainActivity:ComponentActivity() {
     // pill spring back to the old tab between gesture release and NavController update.
     LaunchedEffect(primaryTab) { draggedTab = Float.NaN }
     val navigationBlurState = rememberBlurOverlayState(
-        initialConfig = BlurOverlayConfig(radius = 18f, downsampleFactor = 6f, isLive = true)
-            .withTint(Color(0xFF0B1220).copy(alpha = 0.12f))
+        initialConfig = BlurOverlayConfig(radius = 18f, downsampleFactor = 6f, isLive = false)
+            .withTint(Color(0xFF0B1220).copy(alpha = 0.30f))
     )
     val fabBlurState = rememberBlurOverlayState(
         initialConfig = BlurOverlayConfig(radius = 18f, downsampleFactor = 6f, isLive = true)
@@ -394,8 +394,9 @@ class MainActivity:ComponentActivity() {
                     Modifier.fillMaxSize()
                         .pointerInput(Unit) {
                             detectDragGestures(
-                                onDragStart = { offset ->
-                                    draggedTab = ((offset.x - (size.width - 6.dp.toPx()) / 6f) / ((size.width + 3.dp.toPx()) / 3f)).coerceIn(0f, 2f)
+                                onDragStart = {
+                                    // Begin at the selected tab; the pill then follows the finger continuously.
+                                    draggedTab = primaryTab.toFloat()
                                 },
                                 onDrag = { change, dragAmount ->
                                     change.consume()
@@ -729,7 +730,7 @@ private fun SettingsScreen(
                     Spacer(Modifier.weight(1f))
                     Icon(if ("profile" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("profile" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "profile" in expandedSettingsSections, enter = fadeIn(tween(110)) + expandVertically(tween(150)), exit = fadeOut(tween(80)) + shrinkVertically(tween(120))) {
+                if ("profile" in expandedSettingsSections) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Account: $displayName", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
                 Text("I ricordi vengono salvati sul dispositivo prima della sincronizzazione.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
@@ -1996,10 +1997,36 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable private fun MissionScreen(){
-    AndroidView(modifier=Modifier.fillMaxSize(),factory={ctx->WebView(ctx).apply{
-        settings.javaScriptEnabled=true;settings.domStorageEnabled=true;settings.allowFileAccess=true;settings.allowContentAccess=true
-        webChromeClient=WebChromeClient()
-        webViewClient=object:WebViewClient(){override fun shouldOverrideUrlLoading(view:WebView,request:WebResourceRequest):Boolean{val u=request.url;return if(u.scheme=="https"||u.scheme=="http"){ctx.startActivity(Intent(Intent.ACTION_VIEW,u));true}else false}}
-        loadUrl("file:///android_asset/missione-monaco.html")
-    }})
+    AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = { ctx ->
+            WebView(ctx).apply {
+                // Keep WebView stable during Compose page transitions; this avoids black frames.
+                setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.allowFileAccess = true
+                settings.allowContentAccess = true
+                settings.loadsImagesAutomatically = true
+                settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                webChromeClient = WebChromeClient()
+                webViewClient = object : WebViewClient() {
+                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                        val uri = request.url
+                        if (uri.scheme == "file" || uri.scheme == "about") return false
+                        if ((uri.scheme == "https" || uri.scheme == "http") && request.isForMainFrame) {
+                            runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
+                            return true
+                        }
+                        return false
+                    }
+                }
+                loadUrl("file:///android_asset/missione-monaco.html")
+            }
+        },
+        update = { view ->
+            if (view.url.isNullOrBlank()) view.loadUrl("file:///android_asset/missione-monaco.html")
+        }
+    )
 }
