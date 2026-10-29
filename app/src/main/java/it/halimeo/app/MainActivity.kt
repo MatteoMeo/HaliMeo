@@ -1131,6 +1131,54 @@ private fun DiaryScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(top = 4.dp, bottom = 100.dp)
                 ) {
+                    if (!favoritesOnly && query.isBlank() && selectedCategory == "Tutte") {
+                        item(key = "featured_memories") {
+                            val featured = entries.filter { it.id in favoriteIds }.sortedByDescending { it.memoryDate }.take(2)
+                            val prefs = LocalContext.current.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+                            val specialLabel = prefs.getString("special_date_label", "").orEmpty()
+                            val specialDate = parseHaliMeoDate(prefs.getString("special_date", "").orEmpty())
+                            val daysUntil = specialDate?.let { date ->
+                                val today = java.time.LocalDate.now()
+                                var next = date.withYear(today.year)
+                                if (next.isBefore(today)) next = next.plusYears(1)
+                                java.time.temporal.ChronoUnit.DAYS.between(today, next)
+                            }
+                            if (featured.isNotEmpty() || (!specialLabel.isBlank() && specialDate != null)) {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 4.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                        Text("In evidenza", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                    }
+                                    featured.forEach { favorite ->
+                                        Surface(
+                                            modifier = Modifier.fillMaxWidth().clickable { expandedEntryIds = expandedEntryIds + favorite.id },
+                                            shape = RoundedCornerShape(18.dp), color = frostedSurfaceColor(),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, categoryAccent(favorite.category).copy(alpha = 0.30f))
+                                        ) {
+                                            Row(Modifier.padding(horizontal = 13.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                                Icon(Icons.Default.Favorite, contentDescription = null, tint = categoryAccent(favorite.category), modifier = Modifier.size(18.dp))
+                                                Column(Modifier.weight(1f)) {
+                                                    Text(favorite.title, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                    Text(displayHaliMeoDate(favorite.memoryDate), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if (!specialLabel.isBlank() && daysUntil != null) {
+                                        Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth()) {
+                                            Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                                Icon(Icons.Default.Event, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                                Column(Modifier.weight(1f)) {
+                                                    Text(specialLabel, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+                                                    Text(if (daysUntil == 0L) "È oggi!" else "Mancano " + daysUntil + " giorni · " + displayHaliMeoDate(specialDate.toString()), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     itemsIndexed(filtered, key = { _, entry -> entry.id }) { index, entry ->
                         var itemVisible by remember(entry.id) { mutableStateOf(false) }
                         LaunchedEffect(entry.id) { delay((index * 42L).coerceAtMost(280L)); itemVisible = true }
