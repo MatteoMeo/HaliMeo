@@ -718,6 +718,7 @@ private fun DiaryScreen(
     var favoritesOnly by remember { mutableStateOf(false) }
     var newestFirst by remember { mutableStateOf(true) }
     var pendingDelete by remember { mutableStateOf<DiaryEntry?>(null) }
+    var expandedEntryIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     val feedbackView = LocalView.current
     var headerCollapsed by remember { mutableStateOf(false) }
     val diaryNestedScroll = remember {
@@ -918,6 +919,7 @@ private fun DiaryScreen(
                             animationSpec = spring(dampingRatio = 0.62f, stiffness = 520f),
                             label = "memoryCardPress"
                         )
+                        val expanded = entry.id in expandedEntryIds
                         val accent = categoryAccent(entry.category)
                         val photoContext = LocalContext.current
                         val entryPhoto = remember(entry.photoUri) {
@@ -926,7 +928,14 @@ private fun DiaryScreen(
                         ElevatedCard(
                             modifier = Modifier.fillMaxWidth()
                                 .graphicsLayer { scaleX = cardScale; scaleY = cardScale; alpha = itemAlpha; translationY = itemOffset }
-                                .clickable(interactionSource = cardInteraction, indication = null, onClick = { onEdit(entry) })
+                                .clickable(
+                                    interactionSource = cardInteraction,
+                                    indication = null,
+                                    onClick = {
+                                        feedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                        expandedEntryIds = if (entry.id in expandedEntryIds) expandedEntryIds - entry.id else expandedEntryIds + entry.id
+                                    }
+                                )
                                 .shadow(10.dp, RoundedCornerShape(28.dp), clip = false)
                                 .border(1.dp, FrostedEdge, MaterialTheme.shapes.large)
                                 .animateContentSize(),
@@ -995,37 +1004,59 @@ private fun DiaryScreen(
                                         }
                                     }
                                 }
-                                if (entryPhoto != null) {
-                                    Image(
-                                        bitmap = entryPhoto!!.asImageBitmap(),
-                                        contentDescription = "Foto del ricordo: " + entry.title,
-                                        modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp).clip(RoundedCornerShape(18.dp)),
-                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                                    )
+                                AnimatedVisibility(
+                                    visible = expanded && entryPhoto != null,
+                                    enter = fadeIn(tween(180)) + expandVertically(animationSpec = tween(240)),
+                                    exit = fadeOut(tween(120)) + shrinkVertically(animationSpec = tween(180))
+                                ) {
+                                    if (entryPhoto != null) {
+                                        Image(
+                                            bitmap = entryPhoto!!.asImageBitmap(),
+                                            contentDescription = "Foto del ricordo: " + entry.title,
+                                            modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp).clip(RoundedCornerShape(18.dp)),
+                                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                        )
+                                    }
                                 }
                                 Text(
                                     entry.body,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
-                                    maxLines = 4,
+                                    maxLines = if (expanded) Int.MAX_VALUE else 3,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                HorizontalDivider(color = Muted.copy(alpha = 0.16f))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.End,
-                                    verticalAlignment = Alignment.CenterVertically
+                                AnimatedVisibility(
+                                    visible = expanded,
+                                    enter = fadeIn(tween(160)) + expandVertically(animationSpec = tween(220)),
+                                    exit = fadeOut(tween(100)) + shrinkVertically(animationSpec = tween(160))
                                 ) {
-                                    TextButton(onClick = { onEdit(entry) }) {
-                                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(17.dp))
-                                        Spacer(Modifier.width(6.dp))
-                                        Text("Modifica")
+                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        HorizontalDivider(color = Muted.copy(alpha = 0.16f))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.End,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            TextButton(onClick = { onEdit(entry) }) {
+                                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(17.dp))
+                                                Spacer(Modifier.width(6.dp))
+                                                Text("Modifica")
+                                            }
+                                            TextButton(onClick = { pendingDelete = entry }) {
+                                                Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = Color(0xFFFF879B), modifier = Modifier.size(17.dp))
+                                                Spacer(Modifier.width(6.dp))
+                                                Text("Elimina", color = Color(0xFFFF879B))
+                                            }
+                                        }
                                     }
-                                    TextButton(onClick = { pendingDelete = entry }) {
-                                        Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = Color(0xFFFF879B), modifier = Modifier.size(17.dp))
-                                        Spacer(Modifier.width(6.dp))
-                                        Text("Elimina", color = Color(0xFFFF879B))
-                                    }
+                                }
+                                if (!expanded && (entry.body.length > 140 || entryPhoto != null)) {
+                                    Text(
+                                        if (entryPhoto != null) "Apri ricordo e foto" else "Leggi tutto",
+                                        color = MaterialTheme.colorScheme.primary,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
                                 }
                             }
                         }
