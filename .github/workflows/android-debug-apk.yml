@@ -224,6 +224,10 @@ jobs:
                   description="Aggiunta in Impostazioni la scheda Il vostro profilo: permette di scegliere una foto, modificare nome/soprannome e scrivere una descrizione. Foto e dettagli vengono salvati sul dispositivo e non sono ancora sincronizzati online." ;;
                 "Fix malformed appearance switch callbacks blocking Kotlin compilation"*)
                   description="Corretta la sintassi dei due interruttori Aspetto: mancava la chiusura delle funzioni di modifica dello stato prima dei colori del componente. Questo errore Kotlin interrompeva la compilazione dell'APK." ;;
+                "Import animateFloat for the animated gradient backdrop"*)
+                  description="Aggiunto l'import mancante per l'animazione dei gradienti: senza questo riferimento Kotlin non riconosceva animateFloat e interrompeva la compilazione." ;;
+                "Respect reduced motion for ambient gradient animation"*)
+                  description="L'opzione Riduci animazioni ora ferma anche il movimento lento delle luci gradienti sullo sfondo, oltre a ridurre le animazioni di titoli, transizioni e schede." ;;
                 "Align navigation drag calculations with actual touch coordinates"*)
                   description="Affinata la precisione del trascinamento della barra: il punto di partenza ora corrisponde alla posizione reale del tocco, riducendo gli spostamenti imprevisti." ;;
                 "Restore stable app structure and add live blur plus finger-tracking nav pill"*)
