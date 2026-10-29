@@ -579,6 +579,24 @@ private fun SettingsScreen(
                     }
                 }
                 Text("Puoi scegliere un colore oppure una foto dalla galleria.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                Text("Anteprima in tempo reale", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Surface(
+                    modifier = Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(22.dp)),
+                    shape = RoundedCornerShape(22.dp), color = frostedSurfaceStrongColor()
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)) { Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp)) }
+                            Column(Modifier.weight(1f)) {
+                                Text("Un ricordo importante", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text("29/10/26 · Ricordo", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Icon(Icons.Default.FavoriteBorder, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text("Questa è la leggibilità prevista per testi, icone e schede con le impostazioni correnti.", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+                        Text("Accento e gradienti seguono lo sfondo selezionato.", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                    }
+                }
                 AnimatedVisibility(visible = backgroundColor == "photo") {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -913,6 +931,9 @@ private fun DiaryScreen(
     var selectedCategory by remember { mutableStateOf("Tutte") }
     var favoritesOnly by remember { mutableStateOf(false) }
     var newestFirst by remember { mutableStateOf(true) }
+    var selectedDate by remember { mutableStateOf<String?>(null) }
+    var showCalendar by remember { mutableStateOf(false) }
+    val calendarState = rememberDatePickerState()
     var pendingDelete by remember { mutableStateOf<DiaryEntry?>(null) }
     var expandedEntryIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     val feedbackView = LocalView.current
@@ -934,10 +955,18 @@ private fun DiaryScreen(
     val categories = listOf("Tutte") + entries.map { it.category.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
     val filtered = entries.filter {
         (it.title.contains(query, true) || it.body.contains(query, true) || it.category.contains(query, true)) &&
+            (selectedDate == null || it.memoryDate == selectedDate) &&
             (selectedCategory == "Tutte" || it.category.equals(selectedCategory, ignoreCase = true)) &&
             (!favoritesOnly || it.id in favoriteIds)
     }.let { matches -> if (newestFirst) matches.sortedByDescending { it.memoryDate } else matches.sortedBy { it.memoryDate } }
 
+    if (showCalendar) {
+        DatePickerDialog(
+            onDismissRequest = { showCalendar = false },
+            confirmButton = { TextButton(onClick = { selectedDate = calendarState.selectedDateMillis?.let { java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneOffset.UTC).toLocalDate().toString() }; showCalendar = false }) { Text("Filtra") } },
+            dismissButton = { TextButton(onClick = { showCalendar = false }) { Text("Annulla") } }
+        ) { DatePicker(state = calendarState) }
+    }
     Column(
         Modifier
             .fillMaxSize()
@@ -972,6 +1001,9 @@ private fun DiaryScreen(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
+                }
+                IconButton(onClick = { calendarState.selectedDateMillis = selectedDate?.let { runCatching { java.time.LocalDate.parse(it).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli() }.getOrNull() }; showCalendar = true }) {
+                    Icon(Icons.Default.CalendarMonth, contentDescription = "Filtra per data", tint = if (selectedDate != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 IconButton(
                     onClick = {
@@ -1024,6 +1056,11 @@ private fun DiaryScreen(
             )
         }
         Spacer(Modifier.height(12.dp))
+        AnimatedVisibility(visible = selectedDate != null) {
+            Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                AssistChip(onClick = { selectedDate = null }, label = { Text("Data: ${selectedDate?.let(::displayHaliMeoDate)} · Rimuovi filtro") }, leadingIcon = { Icon(Icons.Default.Event, contentDescription = null) }, trailingIcon = { Icon(Icons.Default.Close, contentDescription = null) })
+            }
+        }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
