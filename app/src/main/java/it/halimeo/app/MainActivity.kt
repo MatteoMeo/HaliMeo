@@ -117,6 +117,19 @@ private val customBackgroundUriState = mutableStateOf<String?>(null)
 private val backgroundBlurState = mutableStateOf(0f)
 private val backgroundOverlayState = mutableStateOf(0.48f)
 private val backgroundBrightnessState = mutableStateOf(50f)
+private fun readBackgroundBrightness(prefs: android.content.SharedPreferences): Float {
+    if (prefs.contains("background_brightness_percent")) {
+        return prefs.getFloat("background_brightness_percent", 50f).coerceIn(0f, 100f)
+    }
+    val legacy = prefs.getFloat("background_brightness", 0f)
+    return when {
+        legacy < 0f -> 0f
+        legacy == 0f -> 50f
+        legacy == 1f -> 100f
+        legacy in 0f..1f -> legacy * 100f
+        else -> legacy.coerceIn(0f, 100f)
+    }
+}
 private fun parseHaliMeoDate(value: String): java.time.LocalDate? {
     val trimmed = value.trim()
     return runCatching { java.time.LocalDate.parse(trimmed, java.time.format.DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull()
@@ -167,14 +180,7 @@ private val TextPrimary = Color(0xFFF5F7FA)
         customBackgroundUriState.value = prefs.getString("background_photo", null)
         backgroundBlurState.value = prefs.getFloat("background_blur", 0f)
         backgroundOverlayState.value = prefs.getFloat("background_overlay", 0.48f)
-        val storedBrightness = prefs.getFloat("background_brightness", 50f)
-        backgroundBrightnessState.value = when {
-            storedBrightness < 0f -> 0f
-            storedBrightness == 0f -> 50f
-            storedBrightness == 1f -> 100f
-            storedBrightness in 0f..1f -> storedBrightness * 100f
-            else -> storedBrightness.coerceIn(0f, 100f)
-        }
+        backgroundBrightnessState.value = readBackgroundBrightness(prefs)
         reduceAnimationsState.value = prefs.getBoolean("reduce_animations", false)
         liveBlurDisabledState.value = prefs.getBoolean("disable_live_blur", false)
         val preferredHz = prefs.getInt("preferred_refresh_rate", 120).coerceIn(48, 120)
@@ -455,9 +461,10 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     val photoBlur = backgroundBlurState.value
     val overlayStrength = backgroundOverlayState.value
     val brightnessAdjustment = backgroundBrightnessState.value
-    val motion = rememberInfiniteTransition(label = "ambientGradientMotion")
-    val driftX = if (reduceAnimationsState.value) 0f else motion.animateFloat(initialValue = -24f, targetValue = 24f, animationSpec = infiniteRepeatable(animation = tween(18000, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "ambientGradientDriftX").value
-    val driftY = if (reduceAnimationsState.value) 0f else motion.animateFloat(initialValue = 16f, targetValue = -16f, animationSpec = infiniteRepeatable(animation = tween(23000, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "ambientGradientDriftY").value
+    // Keep the backdrop static. A frame-by-frame animated layer underneath a live blur
+    // continuously invalidates the captured surface and can look like navbar flicker.
+    val driftX = 0f
+    val driftY = 0f
     val customBase = when (backgroundChoice) {
         "blue" -> Color(0xFF071522)
         "lavender" -> Color(0xFF120E20)
@@ -630,22 +637,9 @@ private fun SettingsScreen(
     var backgroundPhoto by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("background_photo", null)) }
     var backgroundBlur by remember { mutableFloatStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getFloat("background_blur", 0f)) }
     var backgroundOverlay by remember { mutableFloatStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getFloat("background_overlay", 0.48f)) }
-    var backgroundBrightness by remember {
-        mutableFloatStateOf(
-            ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
-                .getFloat("background_brightness", 50f).let { saved ->
-                    when {
-                        saved < 0f -> 0f
-                        saved == 0f -> 50f
-                        saved == 1f -> 100f
-                        saved in 0f..1f -> saved * 100f
-                        else -> saved.coerceIn(0f, 100f)
-                    }
-                }
-        )
-    }
+    var backgroundBrightness by remember { mutableFloatStateOf(readBackgroundBrightness(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE))) }
     fun saveBackgroundTuning() {
-        ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putFloat("background_blur", backgroundBlur).putFloat("background_overlay", backgroundOverlay).putFloat("background_brightness", backgroundBrightness).apply()
+        ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putFloat("background_blur", backgroundBlur).putFloat("background_overlay", backgroundOverlay).putFloat("background_brightness_percent", backgroundBrightness).apply()
         backgroundBlurState.value = backgroundBlur
         backgroundOverlayState.value = backgroundOverlay
         backgroundBrightnessState.value = backgroundBrightness
