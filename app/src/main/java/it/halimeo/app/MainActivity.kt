@@ -600,6 +600,7 @@ private fun SettingsScreen(
     val primaryText = MaterialTheme.colorScheme.onSurface
     val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
     val accentText = MaterialTheme.colorScheme.primary
+    var expandedSettingsSections by remember { mutableStateOf(setOf("profile")) }
     val profilePrefs = remember { ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE) }
     var profilePhotoUri by remember { mutableStateOf(profilePrefs.getString("profile_photo_uri", null)) }
     var profileNickname by remember { mutableStateOf(profilePrefs.getString("profile_nickname", displayName) ?: displayName) }
@@ -717,10 +718,14 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().clickable { expandedSettingsSections = if ("profile" in expandedSettingsSections) expandedSettingsSections - "profile" else expandedSettingsSections + "profile" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.AccountCircle, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
                     Text("PROFILO E ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge)
+                    Spacer(Modifier.weight(1f))
+                    Icon(if ("profile" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("profile" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
+                AnimatedVisibility(visible = "profile" in expandedSettingsSections) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Account: $displayName", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
                 Text("I ricordi vengono salvati sul dispositivo prima della sincronizzazione.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -770,6 +775,8 @@ private fun SettingsScreen(
                         Text("Modifica profilo")
                     }
                 }
+                    }
+                }
             }
         }
 
@@ -779,10 +786,14 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().clickable { expandedSettingsSections = if ("appearance" in expandedSettingsSections) expandedSettingsSections - "appearance" else expandedSettingsSections + "appearance" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.Palette, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
                     Text("ASPETTO", color = accentText, style = MaterialTheme.typography.labelLarge)
+                    Spacer(Modifier.weight(1f))
+                    Icon(if ("appearance" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("appearance" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
+                AnimatedVisibility(visible = "appearance" in expandedSettingsSections) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Tema scuro AMOLED sempre attivo, con accento dinamico.", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
                 Text("Anteprima in tempo reale", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Surface(
@@ -976,6 +987,8 @@ private fun SettingsScreen(
                         Text("0% = nero puro · 50% = foto originale · 100% = quasi bianco.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
                 }
+                    }
+                }
             }
         }
 
@@ -985,10 +998,14 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().clickable { expandedSettingsSections = if ("date" in expandedSettingsSections) expandedSettingsSections - "date" else expandedSettingsSections + "date" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.Event, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
                     Text("DATA SPECIALE", color = accentText, style = MaterialTheme.typography.labelLarge)
+                    Spacer(Modifier.weight(1f))
+                    Icon(if ("date" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("date" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
+                AnimatedVisibility(visible = "date" in expandedSettingsSections) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Tenete a portata di mano una data importante", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(value = specialDateLabel, onValueChange = { specialDateLabel = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Nome (es. compleanno)") })
                 OutlinedTextField(value = specialDate, onValueChange = { specialDate = it.take(10) }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(24.dp), label = { Text("Data (gg/mm/aa)") }, placeholder = { Text("26/12/26") })
@@ -1013,6 +1030,8 @@ private fun SettingsScreen(
                     } }
                 }
                 Text("Promemoria locale alle 09:00 nel giorno scelto, se le notifiche sono abilitate.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
             }
         }
 
@@ -1022,10 +1041,14 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().clickable { expandedSettingsSections = if ("sync" in expandedSettingsSections) expandedSettingsSections - "sync" else expandedSettingsSections + "sync" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.CloudSync, contentDescription = null, tint = accentText, modifier = Modifier.size(20.dp))
                     Text("SINCRONIZZAZIONE", color = accentText, style = MaterialTheme.typography.labelLarge)
+                    Spacer(Modifier.weight(1f))
+                    Icon(if ("sync" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("sync" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
+                AnimatedVisibility(visible = "sync" in expandedSettingsSections) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(if (pendingSyncCount == 0) Icons.Default.CloudDone else Icons.Default.CloudUpload, contentDescription = null, tint = accentText, modifier = Modifier.size(26.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -1079,6 +1102,8 @@ private fun SettingsScreen(
                     Spacer(Modifier.width(8.dp))
                     Text("Esporta backup dei ricordi", color = accentText)
                 }
+                    }
+                }
             }
         }
 
@@ -1088,10 +1113,14 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().clickable { expandedSettingsSections = if ("invites" in expandedSettingsSections) expandedSettingsSections - "invites" else expandedSettingsSections + "invites" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.MarkEmailRead, contentDescription = null, tint = accentText, modifier = Modifier.size(22.dp))
                     Text("INVITI", color = accentText, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.weight(1f))
+                    Icon(if ("invites" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("invites" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
+                AnimatedVisibility(visible = "invites" in expandedSettingsSections) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Crea un codice monouso valido 7 giorni e condividilo direttamente dal telefono.", color = secondaryText)
 
                 when (isOwner) {
@@ -1969,7 +1998,10 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
                         Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                     }
                 }
+                        }
+                }
             }
+        }
         }
     }
 }
