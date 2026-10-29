@@ -36,6 +36,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.clickable
@@ -80,6 +82,7 @@ import it.halimeo.app.network.*
 import it.halimeo.app.sync.SyncScheduler
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 private val Ink = Color.Black
 private val Panel = Color(0xFF0D1420)
@@ -268,17 +271,17 @@ class MainActivity:ComponentActivity() {
         }
     })
     Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Surface(modifier = Modifier.weight(1f).shadow(6.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = frostedSurfaceColor(), tonalElevation = 0.dp) {
+        Surface(modifier = Modifier.weight(1f).shadow(8.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = Color(0xF20B1220), tonalElevation = 0.dp) {
             BoxWithConstraints(
                 Modifier.fillMaxWidth().height(58.dp)
-                    .background(Brush.linearGradient(listOf(Color.White.copy(alpha = if (isHaliMeoDark()) 0.13f else 0.62f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.14f else 0.20f))))
+                    .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.12f), Color(0xFF0F1A2B).copy(alpha = 0.96f), Color(0xFF101827).copy(alpha = 0.98f))))
                     .padding(horizontal = 3.dp, vertical = 3.dp)
             ) {
                 val tabWidth = (maxWidth - 6.dp) / 3
-                // Animate the selection in the draw phase so the pill can glide without
-                // triggering a fresh layout pass on every animation frame.
+                var draggedTab by remember { mutableStateOf<Float?>(null) }
+                // Keep the pill in the graphics layer: no per-frame layout work.
                 val pillPosition by animateFloatAsState(
-                    targetValue = primaryTab.toFloat(),
+                    targetValue = draggedTab ?: primaryTab.toFloat(),
                     animationSpec = spring(dampingRatio = 0.84f, stiffness = 520f),
                     label = "navigationPillPosition"
                 )
@@ -287,8 +290,32 @@ class MainActivity:ComponentActivity() {
                         translationX = (tabWidth + 3.dp).toPx() * pillPosition
                     }.width(tabWidth).fillMaxHeight()
                         .clip(RoundedCornerShape(50))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f))
-                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.58f), RoundedCornerShape(50))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.18f), MaterialTheme.colorScheme.primary.copy(alpha = 0.22f), MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                            )
+                        )
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50))
+                        .pointerInput(primaryTab, tabWidth) {
+                            detectDragGestures(
+                                onDragStart = { draggedTab = primaryTab.toFloat() },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    val stepPx = (tabWidth + 3.dp).toPx().coerceAtLeast(1f)
+                                    draggedTab = ((draggedTab ?: primaryTab.toFloat()) + dragAmount.x / stepPx).coerceIn(0f, 2f)
+                                },
+                                onDragEnd = {
+                                    val target = (draggedTab ?: primaryTab.toFloat()).roundToInt().coerceIn(0, 2)
+                                    draggedTab = null
+                                    val route = primaryRoutes[target]
+                                    if (route != currentRoute) nav.navigate(route) {
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                onDragCancel = { draggedTab = null }
+                            )
+                        }
                 )
                 Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
                     FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
@@ -297,8 +324,17 @@ class MainActivity:ComponentActivity() {
                 }
             }
         }
-        AnimatedVisibility(visible = currentRoute == "diary", enter = fadeIn(tween(180)) + slideInHorizontally(tween(220)) { it / 3 }, exit = fadeOut(tween(120)) + slideOutHorizontally(tween(160)) { it / 3 }) {
-            Surface(modifier = Modifier.size(54.dp).clickable { editing = null; nav.navigate("edit") }, shape = RoundedCornerShape(23.dp), color = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary, shadowElevation = 6.dp) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(25.dp)) } }
+        Surface(
+            modifier = Modifier.size(54.dp).shadow(7.dp, RoundedCornerShape(23.dp))
+                .clickable { editing = null; nav.navigate("edit") },
+            shape = RoundedCornerShape(23.dp),
+            color = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            shadowElevation = 0.dp
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(25.dp))
+            }
         }
     }
     }
@@ -486,7 +522,7 @@ private fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.padding(bottom = 2.dp)) {
-            Text("Impostazioni", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, letterSpacing = (-0.8).sp)
+            AnimatedPageTitle("Impostazioni", MaterialTheme.typography.headlineLarge)
             Text("Personalizza il vostro spazio.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
         }
         Card(
@@ -954,10 +990,12 @@ private fun DiaryScreen(
             else if (shouldExpand && headerCollapsed) headerCollapsed = false
         }
     }
-    val headerTitleSize by animateFloatAsState(
-        targetValue = if (headerCollapsed) 23f else 31f,
-        animationSpec = tween(180),
-        label = "diaryHeaderTitleSize"
+    // Scale the title in the draw phase rather than animating fontSize, which
+    // repeatedly measures the header while the diary is scrolling.
+    val headerTitleScale by animateFloatAsState(
+        targetValue = if (headerCollapsed) 0.76f else 1f,
+        animationSpec = tween(220, easing = OneUiMotionEasing),
+        label = "diaryHeaderTitleScale"
     )
     val categories = remember(entries) {
         listOf("Tutte") + entries.asSequence().map { it.category.trim() }.filter { it.isNotEmpty() }.distinct().sorted().toList()
@@ -993,15 +1031,28 @@ private fun DiaryScreen(
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     "Il vostro diario",
-                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = headerTitleSize.sp, letterSpacing = (-0.65).sp),
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = headerTitleScale
+                        scaleY = headerTitleScale
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                    },
+                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = 31.sp, letterSpacing = (-0.65).sp),
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                AnimatedVisibility(visible = !headerCollapsed, enter = fadeIn(tween(160)), exit = fadeOut(tween(100))) {
-                    Text("I momenti che volete tenere vicini.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                }
+                Text(
+                    "I momenti che volete tenere vicini.",
+                    modifier = Modifier.height(22.dp).graphicsLayer {
+                        alpha = if (headerCollapsed) 0f else 1f
+                        translationY = if (headerCollapsed) -4.dp.toPx() else 0f
+                    },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip
+                )
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Surface(
@@ -1461,13 +1512,46 @@ private fun DiaryScreen(
     }
 }
 @Composable
+private fun AnimatedPageTitle(
+    title: String,
+    style: androidx.compose.ui.text.TextStyle
+) {
+    var entered by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { entered = true }
+    val progress by animateFloatAsState(
+        targetValue = if (entered) 1f else 0.94f,
+        animationSpec = spring(dampingRatio = 0.88f, stiffness = 420f),
+        label = "pageTitleEntrance"
+    )
+    val alpha by animateFloatAsState(
+        targetValue = if (entered) 1f else 0.55f,
+        animationSpec = tween(180),
+        label = "pageTitleAlpha"
+    )
+    Text(
+        title,
+        modifier = Modifier.graphicsLayer {
+            scaleX = progress
+            scaleY = progress
+            this.alpha = alpha
+            translationY = (1f - progress) * 12.dp.toPx()
+            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+        },
+        color = MaterialTheme.colorScheme.onSurface,
+        style = style,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = (-0.6).sp
+    )
+}
+
+@Composable
 private fun TripsScreen(onOpenMonaco: () -> Unit) {
     Column(
         Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 112.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text("I VOSTRI VIAGGI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, letterSpacing = 1.5.sp, fontWeight = FontWeight.SemiBold)
-        Text("Un archivio di avventure", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        AnimatedPageTitle("Un archivio di avventure", MaterialTheme.typography.headlineSmall)
         Text("Apri un viaggio per entrare nella sua pagina dedicata.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         val tripInteraction = remember { MutableInteractionSource() }
         val tripPressed by tripInteraction.collectIsPressedAsState()
