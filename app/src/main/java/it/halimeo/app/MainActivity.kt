@@ -746,7 +746,7 @@ private fun DiaryScreen(
                 Text(
                     "Il vostro diario",
                     style = MaterialTheme.typography.headlineMedium.copy(fontSize = headerTitleSize.sp, letterSpacing = (-0.65).sp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -760,7 +760,7 @@ private fun DiaryScreen(
                     Text(
                         entries.size.toString(),
                         modifier = Modifier.padding(horizontal = 13.dp, vertical = 9.dp),
-                        color = Color(0xFFF5F7FA),
+                        color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -885,7 +885,7 @@ private fun DiaryScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(Icons.Default.SearchOff, contentDescription = null, tint = Muted, modifier = Modifier.size(36.dp))
-                        Text("Nessun ricordo trovato", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                        Text("Nessun ricordo trovato", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium)
                         Text("Prova con un'altra parola.", color = Muted, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
@@ -945,7 +945,7 @@ private fun DiaryScreen(
                                         Text(
                                             entry.title,
                                             style = MaterialTheme.typography.titleLarge.copy(letterSpacing = (-0.35).sp),
-                                            color = Color.White,
+                                            color = MaterialTheme.colorScheme.onSurface,
                                             fontWeight = FontWeight.Bold,
                                             maxLines = 2,
                                             overflow = TextOverflow.Ellipsis
@@ -1055,7 +1055,7 @@ private fun DiaryScreen(
         Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(if (existing == null) "NUOVO RICORDO" else "MODIFICA RICORDO", color = Color(0xFFF5F7FA), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+        Text(if (existing == null) "NUOVO RICORDO" else "MODIFICA RICORDO", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Text("I momenti importanti, custoditi in un posto vostro.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         Card(
             modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(26.dp)).border(1.dp, FrostedEdge, RoundedCornerShape(26.dp)),
@@ -1122,7 +1122,7 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text("I VOSTRI VIAGGI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, letterSpacing = 1.5.sp, fontWeight = FontWeight.SemiBold)
-        Text("Un archivio di avventure", color = TextPrimary, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text("Un archivio di avventure", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text("Apri un viaggio per entrare nella sua pagina dedicata.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         val tripInteraction = remember { MutableInteractionSource() }
         val tripPressed by tripInteraction.collectIsPressedAsState()
@@ -1145,7 +1145,7 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
                     Icon(Icons.Default.LocationCity, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(36.dp))
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text("Monaco di Baviera", color = TextPrimary, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Monaco di Baviera", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text("Il vostro prossimo capitolo", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text("Apri viaggio", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
