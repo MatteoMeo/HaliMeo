@@ -85,6 +85,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.HazeColorEffect
+import dev.chrisbanes.haze.blur.hazeBlur
+import androidx.compose.ui.graphics.compositeOver
 import io.github.ezoushen.blur.cmp.withTint
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.*
@@ -284,6 +292,16 @@ class MainActivity:ComponentActivity() {
     val backStackEntry by nav.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { 3 })
+    val navigationHaze = rememberHazeState()
+    val navigationGlassTint = frostedSurfaceColor()
+    val navigationGlassBackground = if (isHaliMeoDark()) Color(0xFF101419) else Color(0xFFF3F6FA)
+    val navigationGlassStyle = remember(navigationGlassTint, navigationGlassBackground) {
+        HazeBlurStyle {
+            backgroundColor(navigationGlassBackground)
+            colorEffects(listOf(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.55f))))
+            fallbackColorEffect(HazeColorEffect.tint(navigationGlassTint))
+        }
+    }
     val navigationScope = rememberCoroutineScope()
     val primaryTab = pagerState.currentPage
     val pagerPosition = (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 2f)
@@ -314,7 +332,7 @@ class MainActivity:ComponentActivity() {
             composable("main") {
                 androidx.compose.foundation.pager.HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().hazeSource(navigationHaze),
                     beyondViewportPageCount = 1,
                     key = { it }
                 ) { page ->
@@ -371,9 +389,12 @@ class MainActivity:ComponentActivity() {
             .navigationBarsPadding()
             .padding(vertical = 4.dp)
             .height(68.dp)
-            .clip(RoundedCornerShape(50)),
+            .then(
+                if (reduceStaticEffectsState.value) Modifier.background(navigationGlassTint, RoundedCornerShape(50))
+                else Modifier.clip(RoundedCornerShape(50)).hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)
+            ),
         shape = RoundedCornerShape(50),
-        color = frostedSurfaceColor(),
+        color = Color.Transparent,
         border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor()),
         tonalElevation = 0.dp
     ) {
