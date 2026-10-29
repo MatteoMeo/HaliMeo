@@ -69,6 +69,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.Image
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
@@ -333,17 +334,18 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     val backgroundBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, backgroundUri, context) {
         value = backgroundUri?.let { decodeScaledBitmap(context, it, maxDimension = 1600) }
     }
+    val bitmap = backgroundBitmap
     Box(modifier = modifier.clipToBounds().background(customBase)) {
-        if (backgroundBitmap != null && backgroundChoice == "photo") {
-            Image(bitmap = backgroundBitmap.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.12f; scaleY = 1.12f }.blur(photoBlur.dp), contentScale = ContentScale.Crop)
-            val averageLuminance = remember(backgroundBitmap) {
+        if (bitmap != null && backgroundChoice == "photo") {
+            Image(bitmap = bitmap.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.12f; scaleY = 1.12f }.blur(photoBlur.dp), contentScale = ContentScale.Crop)
+            val averageLuminance = remember(bitmap) {
                 runCatching {
                     var total = 0L
                     var samples = 0
-                    val stepX = (backgroundBitmap.width / 24).coerceAtLeast(1)
-                    val stepY = (backgroundBitmap.height / 24).coerceAtLeast(1)
-                    for (y in 0 until backgroundBitmap.height step stepY) for (x in 0 until backgroundBitmap.width step stepX) {
-                        val pixel = backgroundBitmap.getPixel(x, y)
+                    val stepX = (bitmap.width / 24).coerceAtLeast(1)
+                    val stepY = (bitmap.height / 24).coerceAtLeast(1)
+                    for (y in 0 until bitmap.height step stepY) for (x in 0 until bitmap.width step stepX) {
+                        val pixel = bitmap.getPixel(x, y)
                         total += (0.2126 * android.graphics.Color.red(pixel) + 0.7152 * android.graphics.Color.green(pixel) + 0.0722 * android.graphics.Color.blue(pixel)).toLong()
                         samples++
                     }
