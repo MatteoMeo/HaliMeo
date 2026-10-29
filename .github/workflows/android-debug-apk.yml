@@ -32,11 +32,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Configura Java 17
+      - name: Configura Java 25 LTS
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '25'
 
       # La cache da sola non bastava: il file non veniva creato prima della
       # fine del job. Ora ripristiniamo la chiave e la generiamo solo se manca.
