@@ -388,25 +388,22 @@ class MainActivity:ComponentActivity() {
                     label = "navigationPillPosition"
                 )
                 val pillPosition = if (draggedTab.isNaN()) animatedPillPosition else draggedTab
+                // Gesture handling stays on a stable parent while the pill moves beneath it.
+                // This avoids cancelling the drag when the pill crosses a tab boundary.
                 Box(
-                    Modifier.graphicsLayer { translationX = (tabWidth + 3.dp).toPx() * pillPosition }
-                        .width(tabWidth).fillMaxHeight()
-                        .clip(RoundedCornerShape(50))
-                        .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.18f), MaterialTheme.colorScheme.primary.copy(alpha = 0.22f), MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))))
-                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50))
-                        // Dragging belongs to the pill itself. Keeping the gesture detector
-                        // off the whole Row prevents it from competing with tab click targets.
-                        .pointerInput(primaryTab) {
+                    Modifier.fillMaxSize()
+                        .pointerInput(Unit) {
                             detectDragGestures(
-                                onDragStart = { draggedTab = primaryTab.toFloat() },
+                                onDragStart = { offset ->
+                                    draggedTab = (offset.x / (size.width / 3f)).coerceIn(0f, 2f)
+                                },
                                 onDrag = { change, dragAmount ->
                                     change.consume()
-                                    val stride = (size.width + 3.dp.toPx())
+                                    val stride = size.width / 3f
                                     draggedTab = ((if (draggedTab.isNaN()) primaryTab.toFloat() else draggedTab) + dragAmount.x / stride).coerceIn(0f, 2f)
                                 },
                                 onDragEnd = {
                                     val destination = draggedTab.roundToInt().coerceIn(0, 2)
-                                    // Hold the pill at the chosen slot until navigation confirms it.
                                     draggedTab = destination.toFloat()
                                     when (destination) {
                                         0 -> nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } }
@@ -417,7 +414,15 @@ class MainActivity:ComponentActivity() {
                                 onDragCancel = { draggedTab = Float.NaN }
                             )
                         }
-                )
+                ) {
+                    Box(
+                        Modifier.graphicsLayer { translationX = (tabWidth + 3.dp).toPx() * pillPosition }
+                            .width(tabWidth).fillMaxHeight()
+                            .clip(RoundedCornerShape(50))
+                            .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.18f), MaterialTheme.colorScheme.primary.copy(alpha = 0.22f), MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))))
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50))
+                    )
+                }
                 Row(
                     Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
