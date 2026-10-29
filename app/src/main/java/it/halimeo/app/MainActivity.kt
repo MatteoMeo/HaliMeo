@@ -329,7 +329,6 @@ class MainActivity:ComponentActivity() {
         initialConfig = BlurOverlayConfig(radius = 34f, downsampleFactor = 3f, isLive = true)
             .withTint(Color(0xFF0B1220).copy(alpha = 0.055f))
     )
-    var draggedTab by remember { mutableStateOf<Float?>(null) }
     if (currentRoute != "edit" && !liveBlurDisabledState.value) BlurOverlay(
         state = navigationBlurState,
         modifier = Modifier.align(Alignment.BottomStart)
@@ -355,7 +354,7 @@ class MainActivity:ComponentActivity() {
             ) {
                 val tabWidth = (maxWidth - 6.dp) / 3
                 val pillPosition by animateFloatAsState(
-                    targetValue = draggedTab ?: primaryTab.toFloat(),
+                    targetValue = primaryTab.toFloat(),
                     animationSpec = spring(dampingRatio = 0.84f, stiffness = 520f),
                     label = "navigationPillPosition"
                 )
@@ -367,31 +366,7 @@ class MainActivity:ComponentActivity() {
                         .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50))
                 )
                 Row(
-                    Modifier.fillMaxSize()
-                        var dragPosition = primaryTab.toFloat()
-                        detectDragGestures(
-                            onDragStart = { offset ->
-                                val step = (size.width / 3f).coerceAtLeast(1f)
-                                dragPosition = (offset.x / step).coerceIn(0f, 2f)
-                                draggedTab = dragPosition
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                val step = (size.width / 3f).coerceAtLeast(1f)
-                                dragPosition = (dragPosition + dragAmount.x / step).coerceIn(0f, 2f)
-                                draggedTab = dragPosition
-                            },
-                            onDragEnd = {
-                                val target = (draggedTab ?: dragPosition).roundToInt().coerceIn(0, 2)
-                                draggedTab = null
-                                val route = primaryRoutes[target]
-                                if (route != currentRoute) nav.navigate(route) {
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            onDragCancel = { draggedTab = null }
-                        )
+                    Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -524,23 +499,20 @@ private fun FloatingNavItem(
         animationSpec = tween(durationMillis = 180),
         label = "navItemIcon"
     )
-    val animatedLabel by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(durationMillis = 180),
-        label = "navItemLabel"
+    val itemScale by animateFloatAsState(
+        targetValue = if (selected) 1.04f else 0.96f,
+        animationSpec = spring(dampingRatio = 0.78f, stiffness = 420f),
+        label = "navItemScale"
     )
-    val itemScale by animateFloatAsState(targetValue = if (selected) 1f else 0.94f, animationSpec = spring(dampingRatio = 0.72f, stiffness = 420f), label = "navItemScale")
-    Column(
-        modifier = modifier.fillMaxHeight().graphicsLayer { scaleX = itemScale; scaleY = itemScale }
+    Box(
+        modifier = modifier.fillMaxHeight()
+            .graphicsLayer { scaleX = itemScale; scaleY = itemScale }
             .clip(RoundedCornerShape(50))
-            .clickable(onClick = onClick).padding(horizontal = 2.dp, vertical = 2.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
+            .clickable(onClick = onClick)
+            .padding(4.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = label, modifier = Modifier.size(19.dp), tint = animatedIcon)
-        }
-        Spacer(Modifier.height(1.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, color = animatedLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Icon(icon, contentDescription = label, modifier = Modifier.size(25.dp), tint = animatedIcon)
     }
 }
 
