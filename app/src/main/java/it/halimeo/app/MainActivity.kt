@@ -201,7 +201,7 @@ class MainActivity:ComponentActivity() {
     }, floatingActionButton = {}, content = { padding ->
         NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
             composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
-            composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
+            composable("edit"){EditScreen(editing,{t,b,c,d,photo->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id,photo);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
             composable("trips"){TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })}
             composable("tripMonaco"){MissionScreen()}
             composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,)}
@@ -988,11 +988,22 @@ private fun DiaryScreen(
     }
 }
 
-@Composable private fun EditScreen(existing: DiaryEntry?, onSave: (String,String,String,String)->Unit, onCancel:()->Unit) {
+@Composable private fun EditScreen(existing: DiaryEntry?, onSave: (String,String,String,String,String?)->Unit, onCancel:()->Unit) {
     var title by remember(existing?.id) { mutableStateOf(existing?.title.orEmpty()) }
     var body by remember(existing?.id) { mutableStateOf(existing?.body.orEmpty()) }
     var cat by remember(existing?.id) { mutableStateOf(existing?.category ?: "Ricordo") }
     var date by remember(existing?.id) { mutableStateOf(existing?.memoryDate ?: java.time.LocalDate.now().toString()) }
+    var photoUri by remember(existing?.id) { mutableStateOf(existing?.photoUri) }
+    val context = LocalContext.current
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            photoUri = uri.toString()
+        }
+    }
+    val photoBitmap = remember(photoUri) {
+        photoUri?.takeIf { it.isNotBlank() }?.let { value -> runCatching { context.contentResolver.openInputStream(Uri.parse(value))?.use { BitmapFactory.decodeStream(it) } }.getOrNull() }
+    }
 
     Column(
         Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(16.dp),
@@ -1010,9 +1021,45 @@ private fun DiaryScreen(
                 OutlinedTextField(date, { date = it }, label = { Text("Data AAAA-MM-GG") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(cat, { cat = it }, label = { Text("Categoria") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(body, { body = it }, label = { Text("Ricordo") }, modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp), minLines = 5)
+                Text("FOTO DEL RICORDO", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                if (photoBitmap != null) {
+                    Image(
+                        bitmap = photoBitmap!!.asImageBitmap(),
+                        contentDescription = "Foto allegata al ricordo",
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp).clip(RoundedCornerShape(20.dp)),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
+                } else {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().height(92.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color.White.copy(alpha = 0.045f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, FrostedEdge)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                            Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
+                            Spacer(Modifier.height(5.dp))
+                            Text("Aggiungi una foto dalla galleria", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { photoPicker.launch(arrayOf("image/*")) }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Default.PhotoLibrary, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text(if (photoUri == null) "Scegli foto" else "Cambia foto", maxLines = 1)
+                    }
+                    if (photoUri != null) {
+                        OutlinedButton(onClick = { photoUri = "" }, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Default.DeleteOutline, contentDescription = null)
+                            Spacer(Modifier.width(4.dp))
+                            Text("Rimuovi")
+                        }
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) { Text("Annulla") }
-                    Button(onClick = { if (title.isNotBlank() && body.isNotBlank()) onSave(title, body, cat, date) }, modifier = Modifier.weight(1f), enabled = title.isNotBlank() && body.isNotBlank()) {
+                    Button(onClick = { if (title.isNotBlank() && body.isNotBlank()) onSave(title, body, cat, date, photoUri) }, modifier = Modifier.weight(1f), enabled = title.isNotBlank() && body.isNotBlank()) {
                         Icon(Icons.Default.Check, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
                         Text("Salva")
