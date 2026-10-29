@@ -293,7 +293,7 @@ class MainActivity:ComponentActivity() {
                     onDragStart = { offset ->
                         val navWidth = (size.width - 62.dp.toPx()).coerceAtLeast(1f)
                         val step = ((navWidth - 6.dp.toPx()) / 3f + 3.dp.toPx()).coerceAtLeast(1f)
-                        dragPosition = ((offset.x - 12.dp.toPx() - 3.dp.toPx()) / step).coerceIn(0f, 2f)
+                        dragPosition = ((offset.x - 3.dp.toPx()) / step).coerceIn(0f, 2f)
                         draggedTab = dragPosition
                     },
                     onDrag = { change, dragAmount ->
