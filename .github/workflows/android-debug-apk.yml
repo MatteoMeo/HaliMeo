@@ -159,131 +159,13 @@ jobs:
             echo "## ✨ Modifiche incluse"
             echo
 
-            # Include every change since the last successfully published Alpha.
-            LATEST_ALPHA_TAG="$(git tag --list 'alpha-build-*' | sort -V | tail -n 1)"
-            if [ -n "$LATEST_ALPHA_TAG" ]; then
-              RANGE="${LATEST_ALPHA_TAG}..${CURRENT_SHA}"
-            elif [ "$EVENT_NAME" = "push" ] && [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            if [ "$EVENT_NAME" = "push" ] && [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
               RANGE="${BEFORE_SHA}..${CURRENT_SHA}"
             else
               RANGE="-1 ${CURRENT_SHA}"
             fi
 
-            git log --reverse --format='%h|%s' $RANGE | while IFS='|' read -r hash subject; do
-              case "$subject" in
-                "Stabilize alpha signing key"*)
-                  description="Firma dell'app resa persistente e verifica automatica del certificato prima della pubblicazione." ;;
-                "Publish each alpha build as a separate release"*)
-                  description="Ogni build viene pubblicata in una release dedicata, con APK e changelog separati." ;;
-                "Cancel superseded alpha builds"*)
-                  description="Gestione delle build aggiornata per evitare che una compilazione interrompa il salvataggio della firma." ;;
-                "Refresh One UI-inspired surfaces"*)
-                  description="Rinnovate le superfici dell'interfaccia ispirate a One UI, con colori adattivi e schermate Diario, accesso e impostazioni migliorate." ;;
-                "Target Android 17"*)
-                  description="Aggiornato il target Android ad API 37." ;;
-                "Align launch window"*)
-                  description="Aggiornati i colori della schermata iniziale e le barre di sistema per il tema chiaro." ;;
-                "Add dark launch theme"*)
-                  description="Aggiunto un tema di avvio dedicato alla modalità scura." ;;
-                "Enable predictive back support"*)
-                  description="Abilitato il supporto alla navigazione Indietro predittiva." ;;
-                "Polish light/dark contrast"*)
-                  description="Migliorato il contrasto dei componenti nei temi chiaro e scuro." ;;
-                "Fix Kotlin DSL syntax"*)
-                  description="Corretto un problema di sintassi Gradle relativo all'URL API." ;;
-                "Fix alpha APK versioning"*)
-                  description="Corretto il versionamento degli APK Alpha e rafforzata la gestione della firma." ;;
-                "Increment version number"*)
-                  description="Aggiunto il numero di versione incrementale per distinguere gli aggiornamenti." ;;
-                "Cache Gradle build outputs"*)
-                  description="Ottimizzata la cache degli output Gradle per accelerare le compilazioni." ;;
-                "Enable parallel Gradle execution"*)
-                  description="Abilitata la compilazione parallela per ridurre i tempi di build." ;;
-                "Publish each successful alpha APK"*)
-                  description="Automatizzata la pubblicazione degli APK Alpha su GitHub Releases." ;;
-                "Improve live glass navbar, precise drag, page transitions and adaptive diary header"*)
-                  description="La barra inferiore usa il blur live direttamente dietro ai controlli, per evitare la fascia bianca che compariva sotto la navigazione. Il trascinamento della pillola viene calcolato sulle coordinate reali del dito; le animazioni tra schermate sono più visibili e il sottotitolo del Diario libera spazio quando la pagina scorre." ;;
-                "Share navigation drag state with the gesture detector"*)
-                  description="Corretto il collegamento tra il dito e la pillola: lo stato del trascinamento è ora condiviso con il rilevatore del gesto, così la selezione può seguire il movimento invece di scattare soltanto al rilascio." ;;
-                "Keep Settings title fixed while scrolling its options"*)
-                  description="Il titolo Impostazioni resta in alto mentre scorri le opzioni. In questo modo sai sempre in quale sezione ti trovi, senza dover tornare all'inizio." ;;
-                "Expand accent palette and add appearance performance controls"*)
-                  description="Aggiunti nuovi colori per personalizzare l'accento dell'app, oltre a blu, lavanda, menta e rosa. Nella sezione Aspetto puoi scegliere 48, 60, 90 o 120 Hz, ridurre le animazioni e disattivare il blur live per privilegiare autonomia e fluidità. La frequenza effettiva dipende comunque dallo schermo e da Android." ;;
-                "Wire appearance performance settings to blur, animations and display refresh rate"*)
-                  description="Collegati i nuovi interruttori alle funzioni reali: riduci animazioni accorcia i passaggi tra pagine, disattiva blur nasconde il livello di sfocatura live, mentre la frequenza selezionata viene applicata alla finestra dell'app." ;;
-                "Keep live blur aligned to navbar content and use the library's native enable toggle"*)
-                  description="Corretto il posizionamento del vetro: il blur ora segue l'area effettiva della barra invece di creare una fascia larga separata. Il comando Disattiva blur usa il controllo nativo della libreria per spegnere davvero l'effetto." ;;
-                "Expand accent palette and add appearance performance controls"*)
-                  description="Aggiunti 16 colori di accento. In Aspetto si possono scegliere 48/60/90/120 Hz, ridurre le animazioni e disattivare il blur; la frequenza reale dipende dallo schermo e da Android." ;;
-                "Wire appearance performance settings to blur, animations and display refresh rate"*)
-                  description="Collegati gli interruttori Aspetto: le animazioni ridotte velocizzano i passaggi tra pagine e la scelta del blur aggiorna l'effetto live. La frequenza selezionata viene applicata alla finestra dell'app." ;;
-                "Stabilize live blur state and unify frosted card styling"*)
-                  description="Separata la sfocatura della navbar dal pulsante + per evitare che il blur si estenda sotto di esso. Aggiornati bordo e ombra della scheda Viaggi e della scheda vuota del Diario." ;;
-                "Restore balanced navbar structure and fix reduced motion and switch contrast"*)
-                  description="Ripristinata la struttura delle schermate dopo un errore di parentesi che impediva la compilazione. Riduci animazioni interviene anche su titoli e pressione delle schede; gli interruttori OFF hanno più contrasto." ;;
-                "Add subtle motion to ambient gradient background"*)
-                  description="Aggiunto un movimento lento alle tre luci gradienti dello sfondo, con cicli di 18–23 secondi per rendere l'interfaccia meno statica senza animazioni rapide." ;;
-                "Add profile photo and editable local profile details"*)
-                  description="Aggiunta in Impostazioni la scheda profilo: si può scegliere una foto, modificare nome/soprannome e scrivere una descrizione. I dati restano sul dispositivo e non sono ancora sincronizzati online." ;;
-                "Fix malformed appearance switch callbacks blocking Kotlin compilation"*)
-                  description="Corretta la sintassi dei due interruttori Aspetto: mancava la chiusura delle funzioni di modifica dello stato prima dei colori del componente, impedendo la compilazione Kotlin." ;;
-                "Import animateFloat for the animated gradient backdrop"*)
-                  description="Aggiunto l'import mancante per l'animazione dei gradienti: senza di esso Kotlin non riconosceva animateFloat e interrompeva la compilazione." ;;
-                "Respect reduced motion for ambient gradient animation"*)
-                  description="Riduci animazioni ferma ora anche il movimento delle luci gradienti sullo sfondo, oltre a ridurre le animazioni di titoli, transizioni e schede." ;;
-                "Align navigation drag calculations with actual touch coordinates"*)
-                  description="Affinata la precisione del trascinamento della barra: il punto di partenza ora corrisponde alla posizione reale del tocco, riducendo gli spostamenti imprevisti." ;;
-                "Restore stable app structure and add live blur plus finger-tracking nav pill"*)
-                  description="Ripristinata la struttura delle schermate e reintrodotto il blur live. Lo scopo è mantenere visibili i controlli e permettere alla pillola di seguire il dito." ;;
-                "Fix draggable pill gesture scope and refine One UI control shapes"*)
-                  description="Resi i pulsanti più compatti e vicini allo stile One UI, riducendo le forme troppo tonde. Sistemata anche la gestione del gesto di trascinamento." ;;
-                "Restore navigation bar after blur prototype regression"*)
-                  description="Ripristinati la barra di navigazione e il pulsante + che erano scomparsi durante la prova del blur." ;;
-                "Remove blur prototype dependency until overlay integration is fixed"*)
-                  description="Rimossa temporaneamente la libreria di sfocatura dopo un problema d'integrazione, per evitare di distribuire una versione instabile." ;;
-                *)
-                  description="Modifica inclusa nel commit: ${subject}. Per questa voce manca ancora una descrizione specifica." ;;
-              esac
-              echo "- ${description} (`${hash}`)"
-            done
-
-            echo
-            echo "---"
-            echo
-            echo "## 📦 Download"
-            echo
-            echo "**APK:** `HaliMeo-${VERSION_NAME}-build${BUILD_NUMBER}-debug.apk`"
-            echo
-            echo "## 🧪 Note"
-            echo
-            echo "Questa è una versione preliminare destinata ai test: potrebbero essere presenti bug."
-            echo
-            echo "🔐 **Firma:** certificato Alpha verificato prima della pubblicazione."
-          } > CHANGELOG.md
-          cat CHANGELOG.md
-
-      - name: Carica gli artefatti della build
-        uses: actions/upload-artifact@v4
-        with:
-          name: halimeo-${{ github.run_number }}-debug-apk
-          path: |
-            HaliMeo-*-build*-debug.apk
-            CHANGELOG.md
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Pubblica la release Alpha dedicata
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: alpha-build-${{ github.run_number }}
-          name: HaliMeo Alpha ${{ github.run_number }} · v1.0.${{ github.run_number }}
-          body_path: CHANGELOG.md
-          prerelease: true
-          make_latest: false
-          files: |
-            HaliMeo-*-build*-debug.apk
-            CHANGELOG.md
-\t' read -r hash subject; do
+            git log --format='%h%x09%s' $RANGE | while IFS=$'\t' read -r hash subject; do
               case "$subject" in
                 "Stabilize alpha signing key"*)
                   description="Firma dell'app resa persistente e verifica automatica del certificato prima della pubblicazione." ;;
