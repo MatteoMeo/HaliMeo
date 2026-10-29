@@ -895,15 +895,17 @@ private fun SettingsScreen(
         TextButton(onClick={redeem=!redeem;error=""}){Text(if(redeem)"Ho già un account" else "Ho un codice invito")}
     }
 }
+@Composable
 private fun categoryAccent(category: String): Color {
     val normalized = category.trim().lowercase()
+    val dark = isHaliMeoDark()
     return when {
-        listOf("viagg", "vacanz", "gita", "monaco", "avventura").any(normalized::contains) -> Color(0xFF83C9FF)
-        listOf("compleanno", "anniversario", "festa", "regalo").any(normalized::contains) -> Color(0xFFFF9FBD)
-        listOf("cena", "ristorante", "cibo", "pranzo", "aperitivo").any(normalized::contains) -> Color(0xFFFFC878)
-        listOf("momento", "ricordo", "giornata", "speciale").any(normalized::contains) -> Color(0xFFB9A5FF)
-        listOf("foto", "fotografia", "immagine").any(normalized::contains) -> Color(0xFF8DE0C1)
-        else -> Color(0xFFB9DDF5)
+        listOf("viagg", "vacanz", "gita", "monaco", "avventura").any(normalized::contains) -> if (dark) Color(0xFF83C9FF) else Color(0xFF175E91)
+        listOf("compleanno", "anniversario", "festa", "regalo").any(normalized::contains) -> if (dark) Color(0xFFFF9FBD) else Color(0xFF9C3155)
+        listOf("cena", "ristorante", "cibo", "pranzo", "aperitivo").any(normalized::contains) -> if (dark) Color(0xFFFFC878) else Color(0xFF855000)
+        listOf("momento", "ricordo", "giornata", "speciale").any(normalized::contains) -> if (dark) Color(0xFFB9A5FF) else Color(0xFF5D42A3)
+        listOf("foto", "fotografia", "immagine").any(normalized::contains) -> if (dark) Color(0xFF8DE0C1) else Color(0xFF17694F)
+        else -> if (dark) Color(0xFFB9DDF5) else Color(0xFF315D78)
     }
 }
 
