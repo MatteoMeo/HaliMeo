@@ -90,7 +90,7 @@ private val Elevated = Color(0xFF101317)
 // Balanced One UI-inspired glass surfaces: translucent charcoal with a cool edge highlight.
 private val FrostedSurface = Color(0xB8101419)
 private val FrostedSurfaceStrong = Color(0xD9101419)
-private val FrostedEdge = Color.White.copy(alpha = 0.26f)
+@Composable private fun frostedEdgeColor(): Color = if (isHaliMeoDark()) Color.White.copy(alpha = 0.24f) else Color(0xFF526477).copy(alpha = 0.22f)
 @Composable private fun frostedGlassBrush(): Brush = Brush.linearGradient(listOf(Color.White.copy(alpha = if (isHaliMeoDark()) 0.065f else 0.42f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.075f else 0.13f)))
 @Composable private fun isHaliMeoDark(): Boolean = when (themeModeState.value) {
     "light" -> false
@@ -124,7 +124,7 @@ private fun displayHaliMeoDate(value: String): String {
     return date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yy"))
 }
 private val lastSyncAtState = mutableStateOf(0L)
-private val HaliMeoBackdrop = Brush.verticalGradient(listOf(Color.Black, Color.Black, Color.Black))
+@Composable private fun haliMeoAuthBackdrop(): Brush = if (isHaliMeoDark()) Brush.verticalGradient(listOf(Color(0xFF050608), Color(0xFF0B1119), Color(0xFF080A0C))) else Brush.verticalGradient(listOf(Color(0xFFF4F8FC), Color(0xFFE7F0F8), Color(0xFFF5F0FA)))
 private val TextPrimary = Color(0xFFF5F7FA)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -395,7 +395,7 @@ private fun FloatingNavItem(
         label = "navItemContainer"
     )
     val animatedIcon by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primary else Color(0xFFD1D5D9),
+        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = tween(durationMillis = 180),
         label = "navItemIcon"
     )
@@ -494,11 +494,15 @@ private fun SettingsScreen(
     }
 
     Column(
-        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 112.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(start = 20.dp, top = 18.dp, end = 20.dp, bottom = 116.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-                Card(
-            modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(24.dp)).border(1.dp, FrostedEdge, RoundedCornerShape(24.dp)),
+        Column(verticalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.padding(bottom = 2.dp)) {
+            Text("Impostazioni", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, letterSpacing = (-0.8).sp)
+            Text("Personalizza il vostro spazio.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
@@ -513,7 +517,7 @@ private fun SettingsScreen(
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth().border(1.dp, FrostedEdge, RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
@@ -625,7 +629,7 @@ private fun SettingsScreen(
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth().border(1.dp, FrostedEdge, RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
@@ -650,7 +654,7 @@ private fun SettingsScreen(
                 }, modifier = Modifier.fillMaxWidth()) { Text("Aggiungi data") }
                 if (specialDates.isNotEmpty()) {
                     Text("Le tue date", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                    specialDates.forEach { item -> Surface(shape = RoundedCornerShape(16.dp), color = frostedSurfaceStrongColor(), border = androidx.compose.foundation.BorderStroke(1.dp, FrostedEdge)) {
+                    specialDates.forEach { item -> Surface(shape = RoundedCornerShape(16.dp), color = frostedSurfaceStrongColor(), border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor())) {
                         Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) { Text(item.label, color = primaryText, fontWeight = FontWeight.SemiBold); Text(displayHaliMeoDate(item.date), color = secondaryText, style = MaterialTheme.typography.bodySmall) }
                             IconButton(onClick = { specialDates = specialDates.filterNot { it == item }; val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE); saveHaliMeoSpecialDates(prefs, specialDates); val next = specialDates.firstOrNull(); prefs.edit().putString("special_date_label", next?.label.orEmpty()).putString("special_date", next?.date.orEmpty()).apply(); Toast.makeText(ctx, "Data speciale eliminata", Toast.LENGTH_SHORT).show() }) { Icon(Icons.Default.DeleteOutline, contentDescription = "Elimina ${item.label}", tint = MaterialTheme.colorScheme.error) }
@@ -857,8 +861,8 @@ private fun SettingsScreen(
             delay(15000)
         }
     }
-    Column(Modifier.fillMaxSize().background(HaliMeoBackdrop).padding(20.dp),verticalArrangement=Arrangement.Center){Text("HaliMeo",style=MaterialTheme.typography.displayMedium,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black);Text("Un posto solo vostro.",color=Muted);Spacer(Modifier.height(16.dp))
-        Card(colors=CardDefaults.cardColors(containerColor=frostedSurfaceStrongColor()), modifier=Modifier.fillMaxWidth().border(1.dp, FrostedEdge, RoundedCornerShape(24.dp)), shape=RoundedCornerShape(24.dp)) {
+    Column(Modifier.fillMaxSize().background(haliMeoAuthBackdrop()).verticalScroll(rememberScrollState()).imePadding().padding(20.dp),verticalArrangement=Arrangement.Center){Text("HaliMeo",style=MaterialTheme.typography.displayMedium,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black);Text("Un posto solo vostro.",color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.height(16.dp))
+        Card(colors=CardDefaults.cardColors(containerColor=frostedSurfaceStrongColor()), modifier=Modifier.fillMaxWidth().border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)), shape=RoundedCornerShape(24.dp)) {
             Column(Modifier.padding(12.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     val dotColor = when (serverOnline) { true -> Color(0xFF86E3B0); false -> Color(0xFFFF8E9B); null -> Color(0xFFFFD18A) }
@@ -991,11 +995,14 @@ private fun DiaryScreen(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                AnimatedVisibility(visible = !headerCollapsed, enter = fadeIn(tween(160)), exit = fadeOut(tween(100))) {
+                    Text("I momenti che volete tenere vicini.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = Color.White.copy(alpha = 0.07f)
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isHaliMeoDark()) 0.56f else 0.72f)
                 ) {
                     Text(
                         entries.size.toString(),
@@ -1138,7 +1145,7 @@ private fun DiaryScreen(
                             Text(
                                 "Salvate il primo momento speciale. I ricordi vengono conservati sul dispositivo e sincronizzati quando possibile.",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Muted
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -1150,9 +1157,9 @@ private fun DiaryScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Default.SearchOff, contentDescription = null, tint = Muted, modifier = Modifier.size(36.dp))
+                        Icon(Icons.Default.SearchOff, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(36.dp))
                         Text("Nessun ricordo trovato", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium)
-                        Text("Prova con un'altra parola.", color = Muted, style = MaterialTheme.typography.bodyMedium)
+                        Text("Prova con un'altra parola.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
@@ -1232,7 +1239,7 @@ private fun DiaryScreen(
                                     }
                                 )
                                 .shadow(10.dp, RoundedCornerShape(28.dp), clip = false)
-                                .border(1.dp, FrostedEdge, MaterialTheme.shapes.large)
+                                .border(1.dp, frostedEdgeColor(), MaterialTheme.shapes.large)
                                 .animateContentSize(),
                             shape = MaterialTheme.shapes.large,
                             colors = CardDefaults.elevatedCardColors(containerColor = frostedSurfaceColor())
@@ -1293,7 +1300,7 @@ private fun DiaryScreen(
                                     val heartPressed by heartInteraction.collectIsPressedAsState()
                                     val heartScale by animateFloatAsState(targetValue = if (heartPressed) 1.32f else if (isFavorite) 1.08f else 1f, animationSpec = spring(dampingRatio = 0.38f, stiffness = 650f), label = "favoriteHeartPop")
                                     IconButton(onClick = { feedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onToggleFavorite(entry) }, interactionSource = heartInteraction) {
-                                        Icon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = if (isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti", tint = if (isFavorite) accent else Muted, modifier = Modifier.graphicsLayer { scaleX = heartScale; scaleY = heartScale })
+                                        Icon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = if (isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti", tint = if (isFavorite) accent else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.graphicsLayer { scaleX = heartScale; scaleY = heartScale })
                                     }
                                     if (entry.syncState != "SYNCED") {
                                         Surface(
@@ -1338,7 +1345,7 @@ private fun DiaryScreen(
                                     exit = fadeOut(tween(100)) + shrinkVertically(animationSpec = tween(160))
                                 ) {
                                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        HorizontalDivider(color = Muted.copy(alpha = 0.16f))
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.24f))
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.End,
@@ -1408,7 +1415,7 @@ private fun DiaryScreen(
         Text(if (existing == null) "NUOVO RICORDO" else "MODIFICA RICORDO", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Text("I momenti importanti, custoditi in un posto vostro.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         Card(
-            modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(26.dp)).border(1.dp, FrostedEdge, RoundedCornerShape(26.dp)),
+            modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(26.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(26.dp)),
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
         ) {
@@ -1430,7 +1437,7 @@ private fun DiaryScreen(
                         modifier = Modifier.fillMaxWidth().height(92.dp),
                         shape = RoundedCornerShape(20.dp),
                         color = Color.White.copy(alpha = 0.045f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, FrostedEdge)
+                        border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor())
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                             Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
@@ -1491,7 +1498,7 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
                 .clickable(interactionSource = tripInteraction, indication = null, onClick = onOpenMonaco),
             shape = RoundedCornerShape(26.dp),
             color = frostedSurfaceColor(),
-            border = androidx.compose.foundation.BorderStroke(1.dp, FrostedEdge),
+            border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor()),
             tonalElevation = 0.dp
         ) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
