@@ -110,6 +110,14 @@ private fun parseHaliMeoDate(value: String): java.time.LocalDate? {
         ?: runCatching { java.time.LocalDate.parse(trimmed, java.time.format.DateTimeFormatter.ofPattern("dd/MM/yy")) }.getOrNull()
         ?: runCatching { java.time.LocalDate.parse(trimmed, java.time.format.DateTimeFormatter.ofPattern("dd/MM/uuuu")) }.getOrNull()
 }
+private data class HaliMeoSpecialDate(val label: String, val date: String)
+private fun readHaliMeoSpecialDates(prefs: android.content.SharedPreferences): List<HaliMeoSpecialDate> {
+    val raw = prefs.getString("special_dates_json", null)
+    if (!raw.isNullOrBlank()) return runCatching { val a = org.json.JSONArray(raw); (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let { o -> val l=o.optString("label").trim(); val d=o.optString("date").trim(); if(l.isNotBlank() && parseHaliMeoDate(d)!=null) HaliMeoSpecialDate(l,d) else null } } }.getOrDefault(emptyList())
+    val l=prefs.getString("special_date_label", "").orEmpty(); val d=prefs.getString("special_date", "").orEmpty()
+    return if(l.isNotBlank() && parseHaliMeoDate(d)!=null) listOf(HaliMeoSpecialDate(l,d)) else emptyList()
+}
+private fun saveHaliMeoSpecialDates(prefs: android.content.SharedPreferences, dates: List<HaliMeoSpecialDate>) { val a=org.json.JSONArray(); dates.forEach { a.put(org.json.JSONObject().put("label",it.label).put("date",it.date)) }; prefs.edit().putString("special_dates_json",a.toString()).apply() }
 private fun displayHaliMeoDate(value: String): String {
     val date = runCatching { java.time.LocalDate.parse(value) }.getOrNull() ?: return value
     return date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yy"))
@@ -461,6 +469,7 @@ private fun SettingsScreen(
     var themeMode by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("theme_mode", "system") ?: "system") }
     var specialDateLabel by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date_label", "") ?: "") }
     var specialDate by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date", "")?.let { displayHaliMeoDate(it) } ?: "") }
+    var specialDates by remember { mutableStateOf(readHaliMeoSpecialDates(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE))) }
     var backgroundColor by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("background_color", "default") ?: "default") }
     var backgroundPhoto by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("background_photo", null)) }
     var backgroundBlur by remember { mutableFloatStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getFloat("background_blur", 0f)) }
@@ -621,28 +630,25 @@ private fun SettingsScreen(
                 Text("Tenete a portata di mano una data importante", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(value = specialDateLabel, onValueChange = { specialDateLabel = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Nome (es. compleanno)") })
                 OutlinedTextField(value = specialDate, onValueChange = { specialDate = it.take(10) }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(24.dp), label = { Text("Data (gg/mm/aa)") }, placeholder = { Text("26/12/26") })
-                Button(
-                    onClick = {
-                        val parsed = parseHaliMeoDate(specialDate)
-                        if (specialDateLabel.isNotBlank() && parsed != null) {
-                            ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putString("special_date_label", specialDateLabel.trim()).putString("special_date", parsed.toString()).apply()
-                            specialDate = displayHaliMeoDate(parsed.toString())
-                            if (Build.VERSION.SDK_INT >= 33 && ctx.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                                notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                            } else {
-                                scheduleSpecialDateReminder(ctx, specialDateLabel.trim(), parsed)
-                            }
-                            Toast.makeText(ctx, "Data speciale salvata", Toast.LENGTH_SHORT).show()
-                        } else Toast.makeText(ctx, "Inserisci un nome e una data valida", Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Salva data") }
-                val parsedDate = parseHaliMeoDate(specialDate)
-                if (parsedDate != null && specialDateLabel.isNotBlank()) {
-                    val today = java.time.LocalDate.now()
-                    val next = if (parsedDate.isBefore(today)) parsedDate.withYear(today.year + 1) else parsedDate
-                    val days = java.time.temporal.ChronoUnit.DAYS.between(today, next)
-                    Text(if (days == 0L) "È oggi: $specialDateLabel!" else "Mancano $days giorni a $specialDateLabel", color = accentText, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                Button(onClick = {
+                    val parsed = parseHaliMeoDate(specialDate)
+                    if (specialDateLabel.isNotBlank() && parsed != null) {
+                        val item = HaliMeoSpecialDate(specialDateLabel.trim(), parsed.toString())
+                        specialDates = (specialDates.filterNot { it.label.equals(item.label, true) && it.date == item.date } + item).sortedBy { it.date }
+                        val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+                        saveHaliMeoSpecialDates(prefs, specialDates); prefs.edit().putString("special_date_label", item.label).putString("special_date", item.date).apply()
+                        if (Build.VERSION.SDK_INT >= 33 && ctx.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS) else scheduleSpecialDateReminder(ctx, item.label, parsed)
+                        specialDateLabel = ""; specialDate = ""; Toast.makeText(ctx, "Data speciale aggiunta", Toast.LENGTH_SHORT).show()
+                    } else Toast.makeText(ctx, "Inserisci un nome e una data valida", Toast.LENGTH_SHORT).show()
+                }, modifier = Modifier.fillMaxWidth()) { Text("Aggiungi data") }
+                if (specialDates.isNotEmpty()) {
+                    Text("Le tue date", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    specialDates.forEach { item -> Surface(shape = RoundedCornerShape(16.dp), color = frostedSurfaceStrongColor(), border = androidx.compose.foundation.BorderStroke(1.dp, FrostedEdge)) {
+                        Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) { Text(item.label, color = primaryText, fontWeight = FontWeight.SemiBold); Text(displayHaliMeoDate(item.date), color = secondaryText, style = MaterialTheme.typography.bodySmall) }
+                            IconButton(onClick = { specialDates = specialDates.filterNot { it == item }; val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE); saveHaliMeoSpecialDates(prefs, specialDates); val next = specialDates.firstOrNull(); prefs.edit().putString("special_date_label", next?.label.orEmpty()).putString("special_date", next?.date.orEmpty()).apply(); Toast.makeText(ctx, "Data speciale eliminata", Toast.LENGTH_SHORT).show() }) { Icon(Icons.Default.DeleteOutline, contentDescription = "Elimina ${item.label}", tint = MaterialTheme.colorScheme.error) }
+                        }
+                    } }
                 }
                 Text("Promemoria locale alle 09:00 nel giorno scelto, se le notifiche sono abilitate.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
             }
@@ -1139,15 +1145,8 @@ private fun DiaryScreen(
                         item(key = "featured_memories") {
                             val featured = entries.filter { it.id in favoriteIds }.sortedByDescending { it.memoryDate }.take(2)
                             val prefs = LocalContext.current.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
-                            val specialLabel = prefs.getString("special_date_label", "").orEmpty()
-                            val specialDate = parseHaliMeoDate(prefs.getString("special_date", "").orEmpty())
-                            val daysUntil = specialDate?.let { date ->
-                                val today = java.time.LocalDate.now()
-                                var next = date.withYear(today.year)
-                                if (next.isBefore(today)) next = next.plusYears(1)
-                                java.time.temporal.ChronoUnit.DAYS.between(today, next)
-                            }
-                            if (featured.isNotEmpty() || (!specialLabel.isBlank() && specialDate != null)) {
+                            val upcomingSpecial = readHaliMeoSpecialDates(prefs).mapNotNull { item -> parseHaliMeoDate(item.date)?.let { date -> val today=java.time.LocalDate.now(); var next=date.withYear(today.year); if(next.isBefore(today)) next=next.plusYears(1); Triple(item,next,java.time.temporal.ChronoUnit.DAYS.between(today,next)) } }.minByOrNull { it.third }
+                            if (featured.isNotEmpty() || upcomingSpecial != null) {
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 4.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                                         Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
