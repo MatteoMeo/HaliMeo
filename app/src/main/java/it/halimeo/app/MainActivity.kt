@@ -341,6 +341,9 @@ class MainActivity:ComponentActivity() {
         }
     })
     var draggedTab by remember { mutableFloatStateOf(Float.NaN) }
+    // Reset only after the selected destination has actually changed; never let the
+    // pill spring back to the old tab between gesture release and NavController update.
+    LaunchedEffect(primaryTab) { draggedTab = Float.NaN }
     val navigationBlurState = rememberBlurOverlayState(
         initialConfig = BlurOverlayConfig(radius = 18f, downsampleFactor = 6f, isLive = true)
             .withTint(Color(0xFF0B1220).copy(alpha = 0.12f))
@@ -391,33 +394,32 @@ class MainActivity:ComponentActivity() {
                         .clip(RoundedCornerShape(50))
                         .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.18f), MaterialTheme.colorScheme.primary.copy(alpha = 0.22f), MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))))
                         .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50))
+                        // Dragging belongs to the pill itself. Keeping the gesture detector
+                        // off the whole Row prevents it from competing with tab click targets.
+                        .pointerInput(primaryTab) {
+                            detectDragGestures(
+                                onDragStart = { draggedTab = primaryTab.toFloat() },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    val stride = (size.width + 3.dp.toPx())
+                                    draggedTab = ((if (draggedTab.isNaN()) primaryTab.toFloat() else draggedTab) + dragAmount.x / stride).coerceIn(0f, 2f)
+                                },
+                                onDragEnd = {
+                                    val destination = draggedTab.roundToInt().coerceIn(0, 2)
+                                    // Hold the pill at the chosen slot until navigation confirms it.
+                                    draggedTab = destination.toFloat()
+                                    when (destination) {
+                                        0 -> nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } }
+                                        1 -> nav.navigate("trips") { launchSingleTop = true; restoreState = true }
+                                        else -> nav.navigate("settings") { launchSingleTop = true; restoreState = true }
+                                    }
+                                },
+                                onDragCancel = { draggedTab = Float.NaN }
+                            )
+                        }
                 )
                 Row(
-                    Modifier.fillMaxSize().pointerInput(currentRoute, primaryTab) {
-                        detectDragGestures(
-                            onDragStart = { offset ->
-                                // Include the 3 dp inter-tab gaps in the stride so the
-                                // drag target matches the visible tab/pill geometry.
-                                val stride = (size.width - 6.dp.toPx()) / 3f + 3.dp.toPx()
-                                draggedTab = (offset.x / stride).coerceIn(0f, 2f)
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                val stride = (size.width - 6.dp.toPx()) / 3f + 3.dp.toPx()
-                                draggedTab = ((if (draggedTab.isNaN()) primaryTab.toFloat() else draggedTab) + dragAmount.x / stride).coerceIn(0f, 2f)
-                            },
-                            onDragEnd = {
-                                val destination = draggedTab.roundToInt().coerceIn(0, 2)
-                                draggedTab = Float.NaN
-                                when (destination) {
-                                    0 -> nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } }
-                                    1 -> nav.navigate("trips") { launchSingleTop = true; restoreState = true }
-                                    else -> nav.navigate("settings") { launchSingleTop = true; restoreState = true }
-                                }
-                            },
-                            onDragCancel = { draggedTab = Float.NaN }
-                        )
-                    },
+                    Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
