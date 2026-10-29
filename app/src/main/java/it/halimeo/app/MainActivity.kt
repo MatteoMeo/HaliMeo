@@ -85,9 +85,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import io.github.ezoushen.blur.cmp.BlurOverlay
-import io.github.ezoushen.blur.cmp.BlurOverlayConfig
-import io.github.ezoushen.blur.cmp.rememberBlurOverlayState
 import io.github.ezoushen.blur.cmp.withTint
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.*
@@ -110,8 +107,8 @@ private val OneUiMotionEasing = CubicBezierEasing(0.22f, 0.25f, 0f, 1f)
 @Composable private fun frostedEdgeColor(): Color = Color.White.copy(alpha = 0.20f)
 @Composable private fun frostedGlassBrush(): Brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.065f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.075f)))
 @Composable private fun isHaliMeoDark(): Boolean = true
-@Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) Color(0x99101419) else Color(0xB8FFFFFF)
-@Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) Color(0xCC0C0F12) else Color(0xD6FFFFFF)
+@Composable private fun frostedSurfaceColor(): Color = when { reduceStaticEffectsState.value && isHaliMeoDark() -> Color(0xF0141921); reduceStaticEffectsState.value -> Color(0xF2FFFFFF); isHaliMeoDark() -> Color(0x99101419); else -> Color(0xB8FFFFFF) }
+@Composable private fun frostedSurfaceStrongColor(): Color = when { reduceStaticEffectsState.value && isHaliMeoDark() -> Color(0xF51A2029); reduceStaticEffectsState.value -> Color(0xF8FFFFFF); isHaliMeoDark() -> Color(0xCC0C0F12); else -> Color(0xD6FFFFFF) }
 private val customBackgroundColorState = mutableStateOf("default")
 private val customBackgroundUriState = mutableStateOf<String?>(null)
 private val backgroundBlurState = mutableStateOf(0f)
@@ -150,7 +147,7 @@ private fun displayHaliMeoDate(value: String): String {
 }
 private val lastSyncAtState = mutableStateOf(0L)
 private val reduceAnimationsState = mutableStateOf(false)
-private val liveBlurDisabledState = mutableStateOf(false)
+private val reduceStaticEffectsState = mutableStateOf(false)
 @Composable private fun haliMeoAuthBackdrop(): Brush = if (isHaliMeoDark()) Brush.verticalGradient(listOf(Color(0xFF0A1426), Color(0xFF0B1220), Color(0xFF080D16))) else Brush.verticalGradient(listOf(Color(0xFFF4F8FC), Color(0xFFE7F0F8), Color(0xFFF5F0FA)))
 private val TextPrimary = Color(0xFFF5F7FA)
 
@@ -182,7 +179,7 @@ private val TextPrimary = Color(0xFFF5F7FA)
         backgroundOverlayState.value = prefs.getFloat("background_overlay", 0.48f)
         backgroundBrightnessState.value = readBackgroundBrightness(prefs)
         reduceAnimationsState.value = prefs.getBoolean("reduce_animations", false)
-        liveBlurDisabledState.value = prefs.getBoolean("disable_live_blur", false)
+        reduceStaticEffectsState.value = prefs.getBoolean("reduce_static_effects", false)
         val preferredHz = prefs.getInt("preferred_refresh_rate", 120).coerceIn(48, 120)
         (context as? ComponentActivity)?.window?.let { window ->
             window.attributes = window.attributes.apply { preferredRefreshRate = preferredHz.toFloat() }
@@ -344,46 +341,20 @@ class MainActivity:ComponentActivity() {
     var draggedTab by remember { mutableFloatStateOf(Float.NaN) }
     var settledTab by remember { mutableFloatStateOf(primaryTab.toFloat()) }
     LaunchedEffect(primaryTab) { settledTab = primaryTab.toFloat(); draggedTab = Float.NaN }
-    val navigationBlurState = rememberBlurOverlayState(
-        initialConfig = BlurOverlayConfig(radius = 16f, downsampleFactor = 8f, isLive = true)
-            .withTint(Color(0xFF0B1220).copy(alpha = 0.24f))
-    )
-    val fabBlurState = rememberBlurOverlayState(
-        initialConfig = BlurOverlayConfig(radius = 16f, downsampleFactor = 8f, isLive = true)
-            .withTint(Color(0xFF0B1220).copy(alpha = 0.24f))
-    )
-    // Update the capture only when the preference changes, not on every recomposition.
-    LaunchedEffect(liveBlurDisabledState.value) {
-        val enabled = !liveBlurDisabledState.value
-        navigationBlurState.isEnabled = enabled
-        fabBlurState.isEnabled = enabled
-    }
-    // Do not toggle live blur on navigation: changing its capture mode and waiting
-    // 70 ms on every route change introduced a visible touch-to-response delay.
-    // Keep the capture mode stable and only honor the user's explicit preference.
-    if (currentRoute != "edit") BlurOverlay(
-        state = navigationBlurState,
+    if (currentRoute != "edit") Surface(
         modifier = Modifier.align(Alignment.BottomStart)
             .padding(start = 12.dp, end = 78.dp)
             .fillMaxWidth()
             .navigationBarsPadding()
             .padding(vertical = 4.dp)
             .height(68.dp)
-            .clip(RoundedCornerShape(50))
-            .clipToBounds()
+            .clip(RoundedCornerShape(50)),
+        shape = RoundedCornerShape(50),
+        color = frostedSurfaceColor(),
+        border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor()),
+        tonalElevation = 0.dp
     ) {
-        Surface(
-            modifier = Modifier.fillMaxSize()
-                .border(1.dp, Color.White.copy(alpha = 0.32f), RoundedCornerShape(50)),
-            shape = RoundedCornerShape(50),
-            color = if (liveBlurDisabledState.value) Color(0xE6101724) else Color.Transparent,
-            tonalElevation = 0.dp
-        ) {
-            BoxWithConstraints(
-                Modifier.fillMaxSize()
-                    .background(if (liveBlurDisabledState.value) Color(0xFF101827).copy(alpha = 0.98f) else Color(0xFF0B1220).copy(alpha = 0.025f))
-                    .padding(horizontal = 3.dp, vertical = 3.dp)
-            ) {
+        BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp)) {
                 val tabWidth = (maxWidth - 6.dp) / 3
                 val animatedPillPosition by animateFloatAsState(
                     targetValue = settledTab,
@@ -440,24 +411,20 @@ class MainActivity:ComponentActivity() {
             }
         }
     }
-    BlurOverlay(
-        state = fabBlurState,
+
+    Surface(
         modifier = Modifier.align(Alignment.BottomEnd)
             .padding(end = 12.dp)
             .navigationBarsPadding()
             .padding(bottom = 11.dp)
             .size(58.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp),
+        color = if (reduceStaticEffectsState.value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.80f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor()),
+        shadowElevation = 7.dp
     ) {
-        Box(
-            Modifier.fillMaxSize()
-                .border(1.dp, Color.White.copy(alpha = 0.32f), RoundedCornerShape(24.dp))
-                .shadow(7.dp, RoundedCornerShape(24.dp))
-                .clip(RoundedCornerShape(24.dp))
-                .background(if (liveBlurDisabledState.value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.80f))
-                .clickable { editing = null; nav.navigate("edit") },
-            contentAlignment = Alignment.Center
-        ) {
+        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)).clickable { editing = null; nav.navigate("edit") }, contentAlignment = Alignment.Center) {
             Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(25.dp), tint = MaterialTheme.colorScheme.onPrimary)
         }
     }
@@ -904,7 +871,7 @@ private fun SettingsScreen(
                 val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
                 var selectedRefreshRate by remember { mutableIntStateOf(prefs.getInt("preferred_refresh_rate", 120)) }
                 var reduceAnimations by remember { mutableStateOf(prefs.getBoolean("reduce_animations", false)) }
-                var disableLiveBlur by remember { mutableStateOf(prefs.getBoolean("disable_live_blur", false)) }
+                var reduceStaticEffects by remember { mutableStateOf(prefs.getBoolean("reduce_static_effects", false)) }
                 Text("Frequenza schermo", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                     listOf(48, 60, 90, 120).forEachIndexed { index, hz ->
@@ -940,13 +907,13 @@ private fun SettingsScreen(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Disattiva blur live", color = primaryText, style = MaterialTheme.typography.bodyLarge)
-                        Text("Utile per risparmiare batteria o migliorare la fluidità.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                        Text("Riduci sfocatura e trasparenze", color = primaryText, style = MaterialTheme.typography.bodyLarge)
+                        Text("Usa superfici più opache e leggere per migliorare la fluidità.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
-                    Switch(checked = disableLiveBlur, onCheckedChange = {
-                        disableLiveBlur = it
-                        prefs.edit().putBoolean("disable_live_blur", it).apply()
-                        liveBlurDisabledState.value = it
+                    Switch(checked = reduceStaticEffects, onCheckedChange = {
+                        reduceStaticEffects = it
+                        prefs.edit().putBoolean("reduce_static_effects", it).apply()
+                        reduceStaticEffectsState.value = it
                     }, colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
                         checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f),
@@ -956,7 +923,7 @@ private fun SettingsScreen(
                         uncheckedBorderColor = Color(0xFF94A3B8)
                     ))
                 }
-                Text("Suggerimento: il blur e le animazioni possono aumentare il carico grafico. Disattivali se noti cali di fluidità o consumi elevati.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                Text("Il blur live è stato rimosso; questa opzione rende le superfici più opache.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -1301,7 +1268,6 @@ private fun DiaryScreen(
     var searchExpanded by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf("Tutte") }
     var favoritesOnly by remember { mutableStateOf(false) }
-    var newestFirst by remember { mutableStateOf(true) }
     var selectedDate by remember { mutableStateOf<String?>(null) }
     var showCalendar by remember { mutableStateOf(false) }
     val calendarState = rememberDatePickerState()
@@ -1352,14 +1318,14 @@ private fun DiaryScreen(
     val categories = remember(entries) {
         listOf("Tutte") + entries.asSequence().map { it.category.trim() }.filter { it.isNotEmpty() }.distinct().sorted().toList()
     }
-    val filtered = remember(entries, query, selectedDate, selectedCategory, favoritesOnly, favoriteIds, newestFirst) {
+    val filtered = remember(entries, query, selectedDate, selectedCategory, favoritesOnly, favoriteIds) {
         val matches = entries.filter {
             (it.title.contains(query, true) || it.body.contains(query, true) || it.category.contains(query, true)) &&
                 (selectedDate == null || it.memoryDate == selectedDate) &&
                 (selectedCategory == "Tutte" || it.category.equals(selectedCategory, ignoreCase = true)) &&
                 (!favoritesOnly || it.id in favoriteIds)
         }
-        if (newestFirst) matches.sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN } else matches.sortedBy { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }
+        matches.sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }
     }
 
     if (showCalendar) {
@@ -1510,18 +1476,7 @@ private fun DiaryScreen(
                     )
                 }
             }
-            Surface(
-                modifier = Modifier.clip(RoundedCornerShape(50)).clickable { newestFirst = !newestFirst },
-                shape = RoundedCornerShape(50),
-                color = frostedSurfaceColor(),
-                border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor())
-            ) {
-                Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-                    Text(if (newestFirst) "Recenti" else "Vecchie", maxLines = 1, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
-                }
-            }
-        }
+
         Spacer(Modifier.height(4.dp))
 
         when {
