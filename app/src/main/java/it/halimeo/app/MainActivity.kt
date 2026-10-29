@@ -100,9 +100,9 @@ private val customBackgroundColorState = mutableStateOf("default")
 private val customBackgroundUriState = mutableStateOf<String?>(null)
 private fun parseHaliMeoDate(value: String): java.time.LocalDate? {
     val trimmed = value.trim()
-    return runCatching { java.time.LocalDate.parse(trimmed, java.time.format.DateTimeFormatter.ofPattern("dd/MM/uuuu")) }.getOrNull()
-        ?: runCatching { java.time.LocalDate.parse(trimmed, java.time.format.DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull()
+    return runCatching { java.time.LocalDate.parse(trimmed, java.time.format.DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull()
         ?: runCatching { java.time.LocalDate.parse(trimmed, java.time.format.DateTimeFormatter.ofPattern("dd/MM/yy")) }.getOrNull()
+        ?: runCatching { java.time.LocalDate.parse(trimmed, java.time.format.DateTimeFormatter.ofPattern("dd/MM/uuuu")) }.getOrNull()
 }
 private fun displayHaliMeoDate(value: String): String {
     val date = runCatching { java.time.LocalDate.parse(value) }.getOrNull() ?: return value
