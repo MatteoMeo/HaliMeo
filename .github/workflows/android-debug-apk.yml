@@ -41,7 +41,8 @@ jobs:
       # La cache da sola non bastava: il file non veniva creato prima della
       # fine del job. Ora ripristiniamo la chiave e la generiamo solo se manca.
       - name: Ripristina la chiave di firma persistente
-        uses: actions/cache@v4
+        id: signing-cache
+        uses: actions/cache/restore@v4
         with:
           path: ~/.android/debug.keystore
           key: halimeo-debug-signing-key-v2
@@ -70,6 +71,15 @@ jobs:
           echo "Impronta SHA-256 del certificato Alpha: $FINGERPRINT"
           echo "HALIMEO_SIGNING_CERT_SHA256=$FINGERPRINT" >> "$GITHUB_ENV"
 
+      # Salva la chiave subito, prima della compilazione: anche se Gradle fallisce,
+      # la chiave non viene rigenerata alla build successiva.
+      - name: Salva la chiave di firma persistente
+        if: steps.signing-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: halimeo-debug-signing-key-v2
+
       - name: Configura Gradle
         uses: gradle/actions/setup-gradle@v4
 
@@ -96,8 +106,18 @@ jobs:
           set -euo pipefail
           APK="$(find app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' -print -quit)"
           test -n "$APK"
-          apksigner verify --verbose "$APK"
-          APK_CERT_SHA256="$(apksigner verify --print-certs "$APK" | awk '/Signer #1 certificate SHA-256 digest:/ {gsub(":", "", $NF); print tolower($NF); exit}')"
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          if [ -z "$SDK_ROOT" ] || [ ! -d "$SDK_ROOT/build-tools" ]; then
+            echo "::error::Android SDK/build-tools non trovato."
+            exit 1
+          fi
+          APKSIGNER="$(find "$SDK_ROOT/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          if [ -z "$APKSIGNER" ]; then
+            echo "::error::apksigner non trovato negli Android Build Tools."
+            exit 1
+          fi
+          "$APKSIGNER" verify --verbose "$APK"
+          APK_CERT_SHA256="$("$APKSIGNER" verify --print-certs "$APK" | awk '/Signer #1 certificate SHA-256 digest:/ {gsub(":", "", $NF); print tolower($NF); exit}')"
           EXPECTED_SHA256="$(printf '%s' "$HALIMEO_SIGNING_CERT_SHA256" | tr '[:upper:]' '[:lower:]')"
           if [ -z "$APK_CERT_SHA256" ] || [ "$APK_CERT_SHA256" != "$EXPECTED_SHA256" ]; then
             echo "::error::La firma dell'APK non corrisponde alla chiave Alpha persistente. Pubblicazione annullata."
