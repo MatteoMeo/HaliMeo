@@ -405,18 +405,17 @@ class MainActivity:ComponentActivity() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 FloatingNavItem(
-                    Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book
+                    Modifier.weight(1f), primaryTab == 0, "Diario", Icons.Default.Book
                 ) {
                     selectPrimaryTab(0)
                 }
                 FloatingNavItem(
-                    Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco",
-                    "Viaggi", Icons.Default.FlightTakeoff
+                    Modifier.weight(1f), primaryTab == 1, "Viaggi", Icons.Default.FlightTakeoff
                 ) {
                     selectPrimaryTab(1)
                 }
                 FloatingNavItem(
-                    Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings
+                    Modifier.weight(1f), primaryTab == 2, "Impostazioni", Icons.Default.Settings
                 ) {
                     selectPrimaryTab(2)
                 }
