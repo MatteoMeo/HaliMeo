@@ -252,6 +252,12 @@ class MainActivity:ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
             window.isStatusBarContrastEnforced = false
         }
+        // Prefer the device's highest supported refresh rate; Android may still honor
+        // system power-saving and thermal policies and choose a lower rate when needed.
+        @Suppress("DEPRECATION")
+        val preferredHz = windowManager.defaultDisplay.supportedModes.maxOfOrNull { it.refreshRate }
+            ?: windowManager.defaultDisplay.refreshRate
+        window.attributes = window.attributes.apply { preferredRefreshRate = preferredHz }
         themeModeState.value = getSharedPreferences("halimeo_preferences", MODE_PRIVATE).getString("theme_mode", "system") ?: "system"
         lastSyncAtState.value = getSharedPreferences("halimeo_preferences", MODE_PRIVATE).getLong("last_sync_at", 0L)
         setContent { HaliMeoTheme { HaliMeoRoot() } }
@@ -1275,17 +1281,6 @@ private fun DiaryScreen(
                             colors = CardDefaults.elevatedCardColors(containerColor = frostedSurfaceColor())
                         ) {
                             Box {
-                                Box(
-                                    Modifier.matchParentSize().clip(MaterialTheme.shapes.large).background(
-                                        Brush.linearGradient(
-                                            listOf(
-                                                Color.White.copy(alpha = if (isHaliMeoDark()) 0.055f else 0.30f),
-                                                Color.Transparent,
-                                                MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.045f else 0.10f)
-                                            )
-                                        )
-                                    )
-                                )
                                 Column(
                                 modifier = Modifier.padding(15.dp),
                                 verticalArrangement = Arrangement.spacedBy(11.dp)
