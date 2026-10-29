@@ -23,6 +23,10 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -406,6 +410,9 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     val photoBlur = backgroundBlurState.value
     val overlayStrength = backgroundOverlayState.value
     val brightnessAdjustment = backgroundBrightnessState.value
+    val motion = rememberInfiniteTransition(label = "ambientGradientMotion")
+    val driftX by motion.animateFloat(initialValue = -24f, targetValue = 24f, animationSpec = infiniteRepeatable(animation = tween(18000, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "ambientGradientDriftX")
+    val driftY by motion.animateFloat(initialValue = 16f, targetValue = -16f, animationSpec = infiniteRepeatable(animation = tween(23000, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "ambientGradientDriftY")
     val customBase = when (backgroundChoice) {
         "blue" -> Color(0xFF071522)
         "lavender" -> Color(0xFF120E20)
@@ -436,7 +443,7 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             )
         }
         Box(
-            Modifier.align(Alignment.TopCenter).offset(y = (-140).dp).size(460.dp)
+            Modifier.align(Alignment.TopCenter).offset(x = driftX.dp, y = (-140).dp + driftY.dp).size(460.dp)
                 .background(
                     Brush.radialGradient(
                         0.0f to palette.primary.copy(alpha = 0.15f),
@@ -446,7 +453,7 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
                 )
         )
         Box(
-            Modifier.align(Alignment.CenterStart).offset(x = (-210).dp, y = 40.dp).size(380.dp)
+            Modifier.align(Alignment.CenterStart).offset(x = (-210).dp - driftX.dp * 0.55f, y = 40.dp + driftY.dp).size(380.dp)
                 .background(
                     Brush.radialGradient(
                         0.0f to palette.tertiary.copy(alpha = 0.075f),
@@ -456,7 +463,7 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
                 )
         )
         Box(
-            Modifier.align(Alignment.BottomEnd).offset(x = 190.dp, y = 150.dp).size(400.dp)
+            Modifier.align(Alignment.BottomEnd).offset(x = 190.dp - driftX.dp * 0.45f, y = 150.dp - driftY.dp).size(400.dp)
                 .background(
                     Brush.radialGradient(
                         0.0f to Color(0xFF55D8E8).copy(alpha = 0.075f),
