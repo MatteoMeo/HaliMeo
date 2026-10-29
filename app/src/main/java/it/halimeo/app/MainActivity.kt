@@ -88,16 +88,16 @@ private val Mint = Color(0xFFB9DDF5)
 private val Muted = Color(0xFFB4BAC5)
 private val Elevated = Color(0xFF101317)
 // Balanced One UI-inspired glass surfaces: translucent charcoal with a cool edge highlight.
-private val FrostedSurface = Color(0xC8101419)
-private val FrostedSurfaceStrong = Color(0xD9101419)
+private val FrostedSurface = Color(0xE6101419)
+private val FrostedSurfaceStrong = Color(0xF2101419)
 private val FrostedEdge = Color.White.copy(alpha = 0.17f)
 @Composable private fun isHaliMeoDark(): Boolean = when (themeModeState.value) {
     "light" -> false
     "dark" -> true
     else -> isSystemInDarkTheme()
 }
-@Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) FrostedSurface else Color(0xDDF8FBFF)
-@Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) FrostedSurfaceStrong else Color(0xF2FFFFFF)
+@Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) FrostedSurface else Color(0xF5FFFFFF)
+@Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) FrostedSurfaceStrong else Color(0xFCFFFFFF)
 private val themeModeState = mutableStateOf("system")
 private val customBackgroundColorState = mutableStateOf("default")
 private val customBackgroundUriState = mutableStateOf<String?>(null)
@@ -300,10 +300,10 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     val overlayStrength = backgroundOverlayState.value
     val brightnessAdjustment = backgroundBrightnessState.value
     val customBase = when (backgroundChoice) {
-        "blue" -> Color(0xFFDFEEFA)
-        "lavender" -> Color(0xFFECE7FA)
-        "mint" -> Color(0xFFE0F3EB)
-        "rose" -> Color(0xFFF9E4EC)
+        "blue" -> if (isHaliMeoDark()) Color(0xFF071522) else Color(0xFFDFEEFA)
+        "lavender" -> if (isHaliMeoDark()) Color(0xFF120E20) else Color(0xFFECE7FA)
+        "mint" -> if (isHaliMeoDark()) Color(0xFF071A14) else Color(0xFFE0F3EB)
+        "rose" -> if (isHaliMeoDark()) Color(0xFF210D16) else Color(0xFFF9E4EC)
         else -> if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA)
     }
     val backgroundBitmap = remember(backgroundUri) {
@@ -311,7 +311,7 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     }
     Box(modifier = modifier.clipToBounds().background(customBase)) {
         if (backgroundBitmap != null && backgroundChoice == "photo") {
-            Image(bitmap = backgroundBitmap.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize().blur(photoBlur.dp), contentScale = ContentScale.Crop)
+            Image(bitmap = backgroundBitmap.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.12f; scaleY = 1.12f }.blur(photoBlur.dp), contentScale = ContentScale.Crop)
             val averageLuminance = remember(backgroundBitmap) {
                 runCatching {
                     var total = 0L
@@ -328,7 +328,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             }
             val useDarkOverlay = if (brightnessAdjustment == 0f) averageLuminance >= 128f else brightnessAdjustment < 0f
             val overlayColor = if (useDarkOverlay) Color.Black else Color.White
-            Box(Modifier.fillMaxSize().background(overlayColor.copy(alpha = overlayStrength)))
+            val effectiveOverlay = if (isHaliMeoDark()) maxOf(overlayStrength, 0.58f) else maxOf(overlayStrength, 0.46f)
+            Box(Modifier.fillMaxSize().background(overlayColor.copy(alpha = effectiveOverlay)))
         } else if (backgroundChoice == "default") {
             Box(
                 Modifier.fillMaxSize().background(
@@ -337,9 +338,10 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
                         0.48f to Color(0xFF08090C),
                         1.0f to Color(0xFF030405)
                     ) else Brush.verticalGradient(
-                        0.0f to Color(0xFFF8FAFC),
-                        0.5f to Color(0xFFEAF0F5),
-                        1.0f to Color(0xFFF4F7FA)
+                        0.0f to Color(0xFFF5F8FC),
+                        0.38f to Color(0xFFE6EEF7),
+                        0.72f to Color(0xFFF0EAF8),
+                        1.0f to Color(0xFFE8F2F1)
                     )
                 )
             )
@@ -542,10 +544,10 @@ private fun SettingsScreen(
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     backgroundOptions.forEach { option ->
                         val swatch = when (option.first) {
-                            "blue" -> Color(0xFF8CCFFF)
-                            "lavender" -> Color(0xFFC2B2FF)
-                            "mint" -> Color(0xFF8EDFC3)
-                            "rose" -> Color(0xFFFFAFC8)
+                            "blue" -> if (isHaliMeoDark()) Color(0xFF397CA6) else Color(0xFF8CCFFF)
+                            "lavender" -> if (isHaliMeoDark()) Color(0xFF7961B5) else Color(0xFFC2B2FF)
+                            "mint" -> if (isHaliMeoDark()) Color(0xFF287D65) else Color(0xFF8EDFC3)
+                            "rose" -> if (isHaliMeoDark()) Color(0xFFB34F75) else Color(0xFFFFAFC8)
                             else -> MaterialTheme.colorScheme.primary
                         }
                         FilterChip(
