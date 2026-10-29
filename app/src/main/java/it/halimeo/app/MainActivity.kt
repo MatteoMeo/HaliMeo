@@ -325,7 +325,7 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
                     if (samples == 0) 128f else total.toFloat() / samples
                 }.getOrDefault(128f)
             }
-            val useDarkOverlay = if (brightnessAdjustment == 0f) averageLuminance < 128f else brightnessAdjustment < 0f
+            val useDarkOverlay = if (brightnessAdjustment == 0f) averageLuminance >= 128f else brightnessAdjustment < 0f
             val overlayColor = if (useDarkOverlay) Color.Black else Color.White
             Box(Modifier.fillMaxSize().background(overlayColor.copy(alpha = overlayStrength)))
         } else if (backgroundChoice == "default") {
