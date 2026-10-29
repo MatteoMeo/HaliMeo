@@ -4,24 +4,18 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="#00FFFFFF"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="3.4"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M54,77 C47,70 36,67 25,68 L25,39 C36,38 47,42 54,49 C61,42 72,38 83,39 L83,68 C72,67 61,70 54,77 Z" />
-    <path
-        android:fillColor="#00FFFFFF"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="3.4"
-        android:strokeLineCap="round"
-        android:pathData="M54,49 L54,77" />
+    <!-- Simple, centered open book -->
     <path
         android:fillColor="#00FFFFFF"
         android:strokeColor="#FFFFFFFF"
         android:strokeWidth="3.2"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M54,37 C50,33 42,27 42,21 C42,14 51,12 54,19 C57,12 66,14 66,21 C66,27 58,33 54,37 Z" />
+        android:pathData="M54,73 C47,66 36,63 25,64 L25,35 C36,34 47,38 54,45 C61,38 72,34 83,35 L83,64 C72,63 61,66 54,73 Z" />
+    <path
+        android:fillColor="#00FFFFFF"
+        android:strokeColor="#FFF8FF"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:pathData="M54,45 L54,73" />
 </vector>
