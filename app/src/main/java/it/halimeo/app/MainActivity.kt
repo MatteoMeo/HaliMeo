@@ -96,8 +96,8 @@ private val FrostedEdge = Color.White.copy(alpha = 0.17f)
     "dark" -> true
     else -> isSystemInDarkTheme()
 }
-@Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) FrostedSurface else Color(0xF5FFFFFF)
-@Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) FrostedSurfaceStrong else Color(0xFCFFFFFF)
+@Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) Color(0xFF101419) else Color(0xFFFFFFFF)
+@Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) Color(0xFF0C0F12) else Color(0xFFFFFFFF)
 private val themeModeState = mutableStateOf("system")
 private val customBackgroundColorState = mutableStateOf("default")
 private val customBackgroundUriState = mutableStateOf<String?>(null)
@@ -326,7 +326,7 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             }
             val useDarkOverlay = if (brightnessAdjustment == 0f) averageLuminance >= 128f else brightnessAdjustment < 0f
             val overlayColor = if (useDarkOverlay) Color.Black else Color.White
-            val effectiveOverlay = if (isHaliMeoDark()) maxOf(overlayStrength, 0.58f) else maxOf(overlayStrength, 0.46f)
+            val effectiveOverlay = if (isHaliMeoDark()) maxOf(overlayStrength, 0.68f) else maxOf(overlayStrength, 0.58f)
             Box(Modifier.fillMaxSize().background(overlayColor.copy(alpha = effectiveOverlay)))
         } else if (backgroundChoice == "default") {
             Box(
@@ -496,9 +496,7 @@ private fun SettingsScreen(
         Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 112.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("IMPOSTAZIONI", color = primaryText, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-
-        Card(
+                Card(
             modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(24.dp)).border(1.dp, FrostedEdge, RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
@@ -1026,48 +1024,40 @@ private fun DiaryScreen(
             )
         }
         Spacer(Modifier.height(12.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            FilterChip(
-                selected = favoritesOnly,
-                onClick = { favoritesOnly = !favoritesOnly },
-                label = { Text("Preferiti") },
-                leadingIcon = { Icon(if (favoritesOnly) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = categoryAccent("momento").copy(alpha = if (isHaliMeoDark()) 0.28f else 0.20f),
-                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
-                    selectedLeadingIconColor = categoryAccent("momento"),
-                    containerColor = frostedSurfaceColor(),
-                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    iconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-            categories.forEach { category ->
-                val categoryColor = if (category == "Tutte") MaterialTheme.colorScheme.primary else categoryAccent(category)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically
+            ) {
                 FilterChip(
-                    selected = selectedCategory == category,
-                    onClick = { selectedCategory = category },
-                    label = { Text(category) },
-                    leadingIcon = if (selectedCategory == category) ({ Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }) else ({ Icon(categoryIcon(category), contentDescription = null, modifier = Modifier.size(16.dp)) }),
+                    selected = favoritesOnly, onClick = { favoritesOnly = !favoritesOnly },
+                    label = { Text("Preferiti", maxLines = 1) },
+                    leadingIcon = { Icon(if (favoritesOnly) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, modifier = Modifier.size(16.dp)) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = categoryColor.copy(alpha = if (isHaliMeoDark()) 0.28f else 0.20f),
-                        selectedLabelColor = MaterialTheme.colorScheme.onSurface,
-                        selectedLeadingIconColor = categoryColor,
-                        containerColor = frostedSurfaceColor(),
-                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        iconColor = categoryColor.copy(alpha = 0.85f)
+                        selectedContainerColor = categoryAccent("momento").copy(alpha = if (isHaliMeoDark()) 0.28f else 0.16f),
+                        selectedLabelColor = MaterialTheme.colorScheme.onSurface, selectedLeadingIconColor = categoryAccent("momento"),
+                        containerColor = frostedSurfaceColor(), labelColor = MaterialTheme.colorScheme.onSurfaceVariant, iconColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
+                categories.forEach { category ->
+                    val categoryColor = if (category == "Tutte") MaterialTheme.colorScheme.primary else categoryAccent(category)
+                    FilterChip(
+                        selected = selectedCategory == category, onClick = { selectedCategory = category },
+                        label = { Text(category, maxLines = 1) },
+                        leadingIcon = if (selectedCategory == category) ({ Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }) else ({ Icon(categoryIcon(category), contentDescription = null, modifier = Modifier.size(16.dp)) }),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = categoryColor.copy(alpha = if (isHaliMeoDark()) 0.28f else 0.16f),
+                            selectedLabelColor = MaterialTheme.colorScheme.onSurface, selectedLeadingIconColor = categoryColor,
+                            containerColor = frostedSurfaceColor(), labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            iconColor = if (isHaliMeoDark()) categoryColor else categoryColor.copy(alpha = 0.9f)
+                        )
+                    )
+                }
             }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = { newestFirst = !newestFirst }) {
+            TextButton(onClick = { newestFirst = !newestFirst }, contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)) {
                 Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(if (newestFirst) "Più recenti" else "Più vecchi")
+                Spacer(Modifier.width(3.dp))
+                Text(if (newestFirst) "Recenti" else "Vecchi", maxLines = 1, style = MaterialTheme.typography.labelLarge)
             }
         }
         Spacer(Modifier.height(4.dp))
@@ -1359,7 +1349,7 @@ private fun DiaryScreen(
     }
 
     Column(
-        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(16.dp),
+        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).imePadding().padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 150.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(if (existing == null) "NUOVO RICORDO" else "MODIFICA RICORDO", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
