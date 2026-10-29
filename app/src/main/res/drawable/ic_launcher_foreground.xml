@@ -1,11 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <group android:scaleX="0.82" android:scaleY="0.82" android:pivotX="54" android:pivotY="54">
-    <path android:fillColor="#071324" android:pathData="M32,22 C27.6,22 24,25.6 24,30 L24,78 C24,82.4 27.6,86 32,86 L36,86 C40.4,86 44,82.4 44,78 L44,60 L64,60 L64,78 C64,82.4 67.6,86 72,86 L76,86 C80.4,86 84,82.4 84,78 L84,30 C84,25.6 80.4,22 76,22 L72,22 C67.6,22 64,25.6 64,30 L64,44 L44,44 L44,30 C44,25.6 40.4,22 36,22 Z" />
-    <path android:pathData="M31,18 C26.6,18 23,21.6 23,26 L23,74 C23,78.4 26.6,82 31,82 L35,82 C39.4,82 43,78.4 43,74 L43,57 L65,57 L65,74 C65,78.4 68.6,82 73,82 L77,82 C81.4,82 85,78.4 85,74 L85,26 C85,21.6 81.4,18 77,18 L73,18 C68.6,18 65,21.6 65,26 L65,41 L43,41 L43,26 C43,21.6 39.4,18 35,18 Z" android:strokeColor="#BFFFFFFF" android:strokeWidth="1.2" android:strokeLineJoin="round">
-        <aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="25" android:startY="18" android:endX="84" android:endY="82"><item android:offset="0" android:color="#E5FBFF" /><item android:offset="0.36" android:color="#75C9F7" /><item android:offset="0.72" android:color="#8C9DF4" /><item android:offset="1" android:color="#6257B6" /></gradient></aapt:attr>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Keep the foreground art fixed inside Android's 66dp adaptive-icon safe zone. -->
+    <!-- Layered cover gives the notebook a restrained, glass-like 3D edge. -->
+    <path android:fillColor="#07111E"
+        android:pathData="M31,23 C31,19.7 33.7,17 37,17 L72,17 C76.4,17 80,20.6 80,25 L80,81 C80,84.3 77.3,87 74,87 L38,87 C34.1,87 31,83.9 31,80 Z" />
+    <path android:pathData="M28,21 C28,17.7 30.7,15 34,15 L69,15 C73.4,15 77,18.6 77,23 L77,79 C77,82.3 74.3,85 71,85 L35,85 C31.1,85 28,81.9 28,78 Z"
+        android:strokeColor="#DDF5FF" android:strokeWidth="1.25">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="28" android:startY="15" android:endX="77" android:endY="85">
+                <item android:offset="0" android:color="#F0FFFFFF" />
+                <item android:offset="0.24" android:color="#A9E4FF" />
+                <item android:offset="0.58" android:color="#478CCB" />
+                <item android:offset="1" android:color="#253E7D" />
+            </gradient>
+        </aapt:attr>
     </path>
-    <path android:fillColor="#00FFFFFF" android:strokeColor="#BFFFFFFF" android:strokeWidth="1.6" android:strokeLineCap="round" android:pathData="M29,28 L29,69" />
-    <path android:fillColor="#00FFFFFF" android:strokeColor="#8FFFFFFF" android:strokeWidth="1.4" android:strokeLineCap="round" android:pathData="M78,28 L78,69" />
-    </group>
+    <!-- Spine and beveled reflection -->
+    <path android:fillColor="#163D69" android:pathData="M35,19 L40,19 L40,81 L35,81 Z" />
+    <path android:fillColor="#BFEFFF" android:pathData="M41,20 L42.5,20 L42.5,78 L41,78 Z" />
+    <!-- Inset page panel -->
+    <path android:pathData="M47,30 C47,28.9 47.9,28 49,28 L67,28 C68.1,28 69,28.9 69,30 L69,70 C69,71.1 68.1,72 67,72 L49,72 C47.9,72 47,71.1 47,70 Z"
+        android:strokeColor="#C4EBFF" android:strokeWidth="0.8">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="47" android:startY="28" android:endX="69" android:endY="72">
+                <item android:offset="0" android:color="#EFFFFFFF" />
+                <item android:offset="1" android:color="#A4D8F5" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Three subtle ruled lines: clearly a diary, not a monogram. -->
+    <path android:fillColor="#3476A8" android:pathData="M51,39 L64,39 C65.1,39 66,39.9 66,41 C66,42.1 65.1,43 64,43 L51,43 C49.9,43 49,42.1 49,41 C49,39.9 49.9,39 51,39 Z" />
+    <path android:fillColor="#4F8FB9" android:pathData="M51,48 L62,48 C63.1,48 64,48.9 64,50 C64,51.1 63.1,52 62,52 L51,52 C49.9,52 49,51.1 49,50 C49,48.9 49.9,48 51,48 Z" />
+    <path android:fillColor="#4F8FB9" android:pathData="M51,57 L64,57 C65.1,57 66,57.9 66,59 C66,60.1 65.1,61 64,61 L51,61 C49.9,61 49,60.1 49,59 C49,57.9 49.9,57 51,57 Z" />
+    <!-- Glass bookmark tab -->
+    <path android:pathData="M62,27 L69,27 L69,43 L65.5,40.5 L62,43 Z"
+        android:strokeColor="#F0FCFF" android:strokeWidth="0.8">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="62" android:startY="27" android:endX="69" android:endY="43">
+                <item android:offset="0" android:color="#E9FFFFFF" />
+                <item android:offset="1" android:color="#78C9F6" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Specular top edge and tiny glints -->
+    <path android:fillColor="#DFFFFFFF" android:pathData="M35,18 L67,18 C69,18 70,19 71,20 L36,20 C34.5,20 33,21 33,23 L33,73 C31.8,73 31,72 31,70 L31,23 C31,20.2 32.8,18 35,18 Z" />
+    <path android:fillColor="#00FFFFFF" android:strokeColor="#E8FFFFFF" android:strokeWidth="1.1" android:strokeLineCap="round" android:pathData="M72,26 L72,63" />
 </vector>
