@@ -59,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.Image
 import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.Brush
@@ -95,6 +96,18 @@ private val FrostedEdge = Color.White.copy(alpha = 0.17f)
 @Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) FrostedSurface else Color(0xDDF8FBFF)
 @Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) FrostedSurfaceStrong else Color(0xF2FFFFFF)
 private val themeModeState = mutableStateOf("system")
+private val customBackgroundColorState = mutableStateOf("default")
+private val customBackgroundUriState = mutableStateOf<String?>(null)
+private fun parseHaliMeoDate(value: String): java.time.LocalDate? {
+    val trimmed = value.trim()
+    return runCatching { java.time.LocalDate.parse(trimmed, java.time.format.DateTimeFormatter.ofPattern("dd/MM/uuuu")) }.getOrNull()
+        ?: runCatching { java.time.LocalDate.parse(trimmed, java.time.format.DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull()
+        ?: runCatching { java.time.LocalDate.parse(trimmed, java.time.format.DateTimeFormatter.ofPattern("dd/MM/yy")) }.getOrNull()
+}
+private fun displayHaliMeoDate(value: String): String {
+    val date = runCatching { java.time.LocalDate.parse(value) }.getOrNull() ?: return value
+    return date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yy"))
+}
 private val lastSyncAtState = mutableStateOf(0L)
 private val HaliMeoBackdrop = Brush.verticalGradient(listOf(Color.Black, Color.Black, Color.Black))
 private val TextPrimary = Color(0xFFF5F7FA)
@@ -239,21 +252,37 @@ class MainActivity:ComponentActivity() {
 @Composable
 private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     val palette = MaterialTheme.colorScheme
-    // Keep the base nearly uniform: broad, low-opacity radial fields avoid visible gradient bands.
-    Box(modifier = modifier.clipToBounds().background(if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA))) {
-        Box(
-            Modifier.fillMaxSize().background(
-                if (isHaliMeoDark()) Brush.verticalGradient(
-                    0.0f to Color(0xFF050608),
-                    0.48f to Color(0xFF08090C),
-                    1.0f to Color(0xFF030405)
-                ) else Brush.verticalGradient(
-                    0.0f to Color(0xFFF8FAFC),
-                    0.5f to Color(0xFFEAF0F5),
-                    1.0f to Color(0xFFF4F7FA)
+    val context = LocalContext.current
+    val backgroundChoice = customBackgroundColorState.value
+    val backgroundUri = customBackgroundUriState.value
+    val customBase = when (backgroundChoice) {
+        "blue" -> Color(0xFFDFEEFA)
+        "lavender" -> Color(0xFFECE7FA)
+        "mint" -> Color(0xFFE0F3EB)
+        "rose" -> Color(0xFFF9E4EC)
+        else -> if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA)
+    }
+    val backgroundBitmap = remember(backgroundUri) {
+        backgroundUri?.let { value -> runCatching { context.contentResolver.openInputStream(Uri.parse(value))?.use { BitmapFactory.decodeStream(it) } }.getOrNull() }
+    }
+    Box(modifier = modifier.clipToBounds().background(customBase)) {
+        if (backgroundBitmap != null && backgroundChoice == "photo") {
+            Image(bitmap = backgroundBitmap.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color.Black.copy(alpha = 0.56f) else Color.White.copy(alpha = 0.42f)))
+        } else if (backgroundChoice == "default") {
+            Box(
+                Modifier.fillMaxSize().background(
+                    if (isHaliMeoDark()) Brush.verticalGradient(
+                        0.0f to Color(0xFF050608),
+                        0.48f to Color(0xFF08090C),
+                        1.0f to Color(0xFF030405)
+                    ) else Brush.verticalGradient(
+                        0.0f to Color(0xFFF8FAFC),
+                        0.5f to Color(0xFFEAF0F5),
+                        1.0f to Color(0xFFF4F7FA)
+                    )
                 )
             )
-        )
         Box(
             Modifier.align(Alignment.TopCenter).offset(y = (-170).dp).size(560.dp)
                 .blur(150.dp)
@@ -368,10 +397,26 @@ private fun SettingsScreen(
     val accentText = MaterialTheme.colorScheme.primary
     var themeMode by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("theme_mode", "system") ?: "system") }
     var specialDateLabel by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date_label", "") ?: "") }
-    var specialDate by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date", "") ?: "") }
+    var specialDate by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date", "")?.let { displayHaliMeoDate(it) } ?: "") }
+    var backgroundColor by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("background_color", "default") ?: "default") }
+    var backgroundPhoto by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("background_photo", null)) }
+    val backgroundPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching { ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            backgroundPhoto = uri.toString()
+            customBackgroundUriState.value = uri.toString()
+            customBackgroundColorState.value = "photo"
+            backgroundColor = "photo"
+            ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putString("background_photo", uri.toString()).putString("background_color", "photo").apply()
+        }
+    }
+    LaunchedEffect(Unit) {
+        customBackgroundColorState.value = backgroundColor
+        customBackgroundUriState.value = backgroundPhoto
+    }
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
-            val parsed = runCatching { java.time.LocalDate.parse(specialDate) }.getOrNull()
+            val parsed = parseHaliMeoDate(specialDate)
             if (parsed != null && specialDateLabel.isNotBlank()) scheduleSpecialDateReminder(ctx, specialDateLabel.trim(), parsed)
         }
     }
@@ -388,7 +433,10 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
+                    Text("ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge)
+                }
                 Text(displayName, color = primaryText, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 Text("I ricordi vengono salvati localmente prima della sincronizzazione.", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
             }
@@ -397,10 +445,13 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth().border(1.dp, FrostedEdge, RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = FrostedSurface)
+            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("ASPETTO", color = accentText, style = MaterialTheme.typography.labelLarge)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Palette, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
+                    Text("ASPETTO", color = accentText, style = MaterialTheme.typography.labelLarge)
+                }
                 Text("Adatta HaliMeo al tuo dispositivo", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     listOf("system" to "Sistema", "dark" to "Scura", "light" to "Chiara").forEachIndexed { index, option ->
@@ -416,24 +467,71 @@ private fun SettingsScreen(
                     }
                 }
                 Text("La scelta viene salvata sul dispositivo.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                Text("Sfondo", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                val backgroundOptions = listOf("default" to "Predefinito", "blue" to "Blu", "lavender" to "Lavanda", "mint" to "Menta", "rose" to "Rosa")
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    backgroundOptions.forEach { option ->
+                        val swatch = when (option.first) {
+                            "blue" -> Color(0xFF8CCFFF)
+                            "lavender" -> Color(0xFFC2B2FF)
+                            "mint" -> Color(0xFF8EDFC3)
+                            "rose" -> Color(0xFFFFAFC8)
+                            else -> MaterialTheme.colorScheme.primary
+                        }
+                        FilterChip(
+                            selected = backgroundColor == option.first,
+                            onClick = {
+                                backgroundColor = option.first
+                                backgroundPhoto = null
+                                customBackgroundColorState.value = option.first
+                                customBackgroundUriState.value = null
+                                ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putString("background_color", option.first).remove("background_photo").apply()
+                            },
+                            label = { Text(option.second) },
+                            leadingIcon = { Box(Modifier.size(13.dp).clip(CircleShape).background(swatch)) },
+                            shape = RoundedCornerShape(20.dp)
+                        )
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedButton(onClick = { backgroundPicker.launch(arrayOf("image/*")) }, shape = RoundedCornerShape(22.dp)) {
+                        Icon(Icons.Default.Image, contentDescription = null)
+                        Spacer(Modifier.width(7.dp))
+                        Text(if (backgroundColor == "photo") "Cambia foto" else "Usa una foto")
+                    }
+                    if (backgroundColor == "photo") {
+                        TextButton(onClick = {
+                            backgroundColor = "default"
+                            backgroundPhoto = null
+                            customBackgroundColorState.value = "default"
+                            customBackgroundUriState.value = null
+                            ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putString("background_color", "default").remove("background_photo").apply()
+                        }) { Text("Rimuovi") }
+                    }
+                }
+                Text("Puoi scegliere un colore oppure una foto dalla galleria.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
             }
         }
 
         Card(
             modifier = Modifier.fillMaxWidth().border(1.dp, FrostedEdge, RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = FrostedSurface)
+            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("DATA SPECIALE", color = accentText, style = MaterialTheme.typography.labelLarge)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Event, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
+                    Text("DATA SPECIALE", color = accentText, style = MaterialTheme.typography.labelLarge)
+                }
                 Text("Tenete a portata di mano una data importante", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(value = specialDateLabel, onValueChange = { specialDateLabel = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Nome (es. compleanno)") })
-                OutlinedTextField(value = specialDate, onValueChange = { specialDate = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Data AAAA-MM-GG") }, placeholder = { Text("2026-12-26") })
+                OutlinedTextField(value = specialDate, onValueChange = { specialDate = it.take(10) }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(24.dp), label = { Text("Data (gg/mm/aa)") }, placeholder = { Text("26/12/26") })
                 Button(
                     onClick = {
-                        val parsed = runCatching { java.time.LocalDate.parse(specialDate) }.getOrNull()
+                        val parsed = parseHaliMeoDate(specialDate)
                         if (specialDateLabel.isNotBlank() && parsed != null) {
-                            ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putString("special_date_label", specialDateLabel.trim()).putString("special_date", specialDate).apply()
+                            ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putString("special_date_label", specialDateLabel.trim()).putString("special_date", parsed.toString()).apply()
+                            specialDate = displayHaliMeoDate(parsed.toString())
                             if (Build.VERSION.SDK_INT >= 33 && ctx.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                                 notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
                             } else {
@@ -444,7 +542,7 @@ private fun SettingsScreen(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Salva data") }
-                val parsedDate = runCatching { java.time.LocalDate.parse(specialDate) }.getOrNull()
+                val parsedDate = parseHaliMeoDate(specialDate)
                 if (parsedDate != null && specialDateLabel.isNotBlank()) {
                     val today = java.time.LocalDate.now()
                     val next = if (parsedDate.isBefore(today)) parsedDate.withYear(today.year + 1) else parsedDate
@@ -458,15 +556,19 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = FrostedSurface)
+            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.CloudSync, contentDescription = null, tint = accentText, modifier = Modifier.size(20.dp))
+                    Text("SINCRONIZZAZIONE", color = accentText, style = MaterialTheme.typography.labelLarge)
+                }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(if (pendingSyncCount == 0) Icons.Default.CloudDone else Icons.Default.CloudUpload, contentDescription = null, tint = accentText, modifier = Modifier.size(26.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text(if (pendingSyncCount == 0) "Tutto aggiornato" else "$pendingSyncCount ricordi in attesa", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text(if (pendingSyncCount == 0) "Non ci sono modifiche da inviare." else "I dati restano sul dispositivo finché la sincronizzazione non riesce.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
-                        Text(if (lastSyncAt > 0L) "Ultimo tentativo riuscito: " + java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(lastSyncAt)) else "Nessuna sincronizzazione riuscita in questa installazione.", color = secondaryText, style = MaterialTheme.typography.labelSmall)
+                        Text(if (lastSyncAt > 0L) "Ultimo tentativo riuscito: " + java.text.SimpleDateFormat("dd/MM/yy HH:mm", java.util.Locale.ITALIAN).format(java.util.Date(lastSyncAt)) else "Nessuna sincronizzazione riuscita in questa installazione.", color = secondaryText, style = MaterialTheme.typography.labelSmall)
                     }
                 }
                 Button(
@@ -523,7 +625,10 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("INVITI", color = accentText, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.MarkEmailRead, contentDescription = null, tint = accentText, modifier = Modifier.size(22.dp))
+                    Text("INVITI", color = accentText, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                }
                 Text("Crea un codice monouso valido 7 giorni e condividilo direttamente dal telefono.", color = secondaryText)
 
                 when (isOwner) {
@@ -568,7 +673,7 @@ private fun SettingsScreen(
                             Card(
                                 modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(20.dp)),
                                 shape = RoundedCornerShape(20.dp),
-                                colors = CardDefaults.cardColors(containerColor = FrostedSurfaceStrong)
+                                colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
                             ) {
                                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                     Text("IL TUO CODICE", color = accentText, style = MaterialTheme.typography.labelLarge)
@@ -804,7 +909,7 @@ private fun DiaryScreen(
                 onValueChange = { query = it },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(28.dp),
                 placeholder = { Text("Cerca un ricordo…") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Cerca") },
                 trailingIcon = {
@@ -816,12 +921,16 @@ private fun DiaryScreen(
                 },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = Color.White.copy(alpha = 0.20f),
-                    focusedTextColor = Color(0xFFF5F7FA),
-                    unfocusedTextColor = Color(0xFFF5F7FA),
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.55f),
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedContainerColor = frostedSurfaceStrongColor(),
+                    unfocusedContainerColor = frostedSurfaceColor(),
                     focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    cursorColor = MaterialTheme.colorScheme.primary
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                    focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
         }
@@ -831,13 +940,35 @@ private fun DiaryScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            FilterChip(selected=favoritesOnly,onClick={favoritesOnly=!favoritesOnly},label={Text("Preferiti")},leadingIcon={Icon(if(favoritesOnly) Icons.Default.Favorite else Icons.Default.FavoriteBorder,contentDescription=null,modifier=Modifier.size(16.dp))})
+            FilterChip(
+                selected = favoritesOnly,
+                onClick = { favoritesOnly = !favoritesOnly },
+                label = { Text("Preferiti") },
+                leadingIcon = { Icon(if (favoritesOnly) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = categoryAccent("momento").copy(alpha = if (isHaliMeoDark()) 0.28f else 0.20f),
+                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
+                    selectedLeadingIconColor = categoryAccent("momento"),
+                    containerColor = frostedSurfaceColor(),
+                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    iconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
             categories.forEach { category ->
+                val categoryColor = if (category == "Tutte") MaterialTheme.colorScheme.primary else categoryAccent(category)
                 FilterChip(
                     selected = selectedCategory == category,
                     onClick = { selectedCategory = category },
                     label = { Text(category) },
-                    leadingIcon = if (selectedCategory == category) ({ Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }) else null
+                    leadingIcon = if (selectedCategory == category) ({ Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }) else ({ Icon(categoryIcon(category), contentDescription = null, modifier = Modifier.size(16.dp)) }),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = categoryColor.copy(alpha = if (isHaliMeoDark()) 0.28f else 0.20f),
+                        selectedLabelColor = MaterialTheme.colorScheme.onSurface,
+                        selectedLeadingIconColor = categoryColor,
+                        containerColor = frostedSurfaceColor(),
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        iconColor = categoryColor.copy(alpha = 0.85f)
+                    )
                 )
             }
         }
@@ -859,7 +990,7 @@ private fun DiaryScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(28.dp),
-                        colors = CardDefaults.cardColors(containerColor = FrostedSurface)
+                        colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
                     ) {
                         Column(
                             modifier = Modifier.padding(24.dp),
@@ -977,7 +1108,7 @@ private fun DiaryScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = accent, modifier = Modifier.size(14.dp))
-                                            Text(entry.memoryDate, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+                                            Text(displayHaliMeoDate(entry.memoryDate), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
                                             Surface(shape = RoundedCornerShape(50), color = accent.copy(alpha = 0.13f)) {
                                                 Text(entry.category.ifBlank { "Ricordo" }, modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp), color = accent, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                             }
@@ -1104,7 +1235,7 @@ private fun DiaryScreen(
         Card(
             modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(26.dp)).border(1.dp, FrostedEdge, RoundedCornerShape(26.dp)),
             shape = RoundedCornerShape(26.dp),
-            colors = CardDefaults.cardColors(containerColor = FrostedSurfaceStrong)
+            colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(title, { title = it }, label = { Text("Titolo") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
