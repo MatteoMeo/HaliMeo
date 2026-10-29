@@ -344,12 +344,12 @@ class MainActivity:ComponentActivity() {
     var settledTab by remember { mutableFloatStateOf(primaryTab.toFloat()) }
     LaunchedEffect(primaryTab) { settledTab = primaryTab.toFloat(); draggedTab = Float.NaN }
     val navigationBlurState = rememberBlurOverlayState(
-        initialConfig = BlurOverlayConfig(radius = 18f, downsampleFactor = 6f, isLive = false)
-            .withTint(Color(0xFF0B1220).copy(alpha = 0.30f))
+        initialConfig = BlurOverlayConfig(radius = 18f, downsampleFactor = 6f, isLive = true)
+            .withTint(Color(0xFF0B1220).copy(alpha = 0.24f))
     )
     val fabBlurState = rememberBlurOverlayState(
-        initialConfig = BlurOverlayConfig(radius = 18f, downsampleFactor = 6f, isLive = false)
-            .withTint(Color(0xFF0B1220).copy(alpha = 0.30f))
+        initialConfig = BlurOverlayConfig(radius = 18f, downsampleFactor = 6f, isLive = true)
+            .withTint(Color(0xFF0B1220).copy(alpha = 0.24f))
     )
     // Update the capture only when the preference changes, not on every recomposition.
     LaunchedEffect(liveBlurDisabledState.value) {
