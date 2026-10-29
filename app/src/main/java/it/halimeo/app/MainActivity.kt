@@ -343,7 +343,6 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
         }
         Box(
             Modifier.align(Alignment.TopCenter).offset(y = (-140).dp).size(460.dp)
-                .blur(104.dp)
                 .background(
                     Brush.radialGradient(
                         0.0f to palette.primary.copy(alpha = 0.12f),
@@ -354,7 +353,6 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
         )
         Box(
             Modifier.align(Alignment.CenterStart).offset(x = (-210).dp, y = 40.dp).size(380.dp)
-                .blur(96.dp)
                 .background(
                     Brush.radialGradient(
                         0.0f to palette.tertiary.copy(alpha = 0.075f),
@@ -1198,31 +1196,22 @@ private fun DiaryScreen(
                         }
                     }
                     itemsIndexed(filtered, key = { _, entry -> entry.id }, contentType = { _, _ -> "diary_entry" }) { _, entry ->
-                        val cardInteraction = remember(entry.id) { MutableInteractionSource() }
-                        val cardPressed by cardInteraction.collectIsPressedAsState()
-                        val cardScale by animateFloatAsState(
-                            targetValue = if (cardPressed) 0.985f else 1f,
-                            animationSpec = spring(dampingRatio = 0.62f, stiffness = 520f),
-                            label = "memoryCardPress"
-                        )
                         val expanded = entry.id in expandedEntryIds
                         val accent = categoryAccent(entry.category)
                         val photoContext = LocalContext.current
-                        val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext) {
-                            value = entry.photoUri?.let { decodeScaledBitmap(photoContext, it, maxDimension = 1200) }
+                        val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext, expanded) {
+                            // Decode only after opening a card; eagerly decoding every visible photo
+                            // causes avoidable IO, allocations and frame drops while scrolling.
+                            value = if (expanded) entry.photoUri?.let { decodeScaledBitmap(photoContext, it, maxDimension = 1000) } else null
                         }
                         ElevatedCard(
                             modifier = Modifier.fillMaxWidth()
-                                .graphicsLayer { scaleX = cardScale; scaleY = cardScale }
                                 .clickable(
-                                    interactionSource = cardInteraction,
-                                    indication = null,
                                     onClick = {
                                         feedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                         expandedEntryIds = if (entry.id in expandedEntryIds) expandedEntryIds - entry.id else expandedEntryIds + entry.id
                                     }
                                 )
-                                .shadow(5.dp, RoundedCornerShape(28.dp), clip = false)
                                 .border(1.dp, frostedEdgeColor(), MaterialTheme.shapes.large),
                             shape = MaterialTheme.shapes.large,
                             colors = CardDefaults.elevatedCardColors(containerColor = frostedSurfaceColor())
@@ -1336,9 +1325,9 @@ private fun DiaryScreen(
                                         }
                                     }
                                 }
-                                if (!expanded && (entry.body.length > 140 || entryPhoto != null)) {
+                                if (!expanded && (entry.body.length > 140 || entry.photoUri != null)) {
                                     Text(
-                                        if (entryPhoto != null) "Apri ricordo e foto" else "Leggi tutto",
+                                        if (entry.photoUri != null) "Apri ricordo e foto" else "Leggi tutto",
                                         color = MaterialTheme.colorScheme.primary,
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.SemiBold
