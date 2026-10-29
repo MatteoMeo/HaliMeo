@@ -306,96 +306,7 @@ class MainActivity:ComponentActivity() {
     )
     var draggedTab by remember { mutableStateOf<Float?>(null) }
     SideEffect { navigationBlurState.isEnabled = !liveBlurDisabledState.value }
-    BlurOverlay(
-        state = navigationBlurState,
-        modifier = Modifier.align(Alignment.BottomCenter)
-            .fillMaxWidth()
-            // Keep a bounded height so the live blur overlay can measure its child content.
-            .navigationBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-            .height(68.dp)
-    ) {
-    Row(
-        Modifier.fillMaxWidth()
-            .pointerInput(primaryTab, currentRoute) {
-                var dragPosition = primaryTab.toFloat()
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        val navWidth = (size.width - 62.dp.toPx()).coerceAtLeast(1f)
-                        val step = ((navWidth - 6.dp.toPx()) / 3f + 3.dp.toPx()).coerceAtLeast(1f)
-                        dragPosition = ((offset.x - 3.dp.toPx()) / step).coerceIn(0f, 2f)
-                        draggedTab = dragPosition
-                    },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        val navWidth = (size.width - 62.dp.toPx()).coerceAtLeast(1f)
-                        val step = ((navWidth - 6.dp.toPx()) / 3f + 3.dp.toPx()).coerceAtLeast(1f)
-                        dragPosition = (dragPosition + dragAmount.x / step).coerceIn(0f, 2f)
-                        draggedTab = dragPosition
-                    },
-                    onDragEnd = {
-                        val target = (draggedTab ?: dragPosition).roundToInt().coerceIn(0, 2)
-                        draggedTab = null
-                        val route = primaryRoutes[target]
-                        if (route != currentRoute) nav.navigate(route) {
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onDragCancel = { draggedTab = null }
-                )
-            },
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Surface(modifier = Modifier.weight(1f).shadow(8.dp, RoundedCornerShape(50), clip = false).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.34f), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = Color(0x500B1220), tonalElevation = 0.dp) {
-            BoxWithConstraints(
-                Modifier.fillMaxWidth().height(58.dp)
-                    .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.07f), Color(0xFF0F1A2B).copy(alpha = 0.55f), Color(0xFF101827).copy(alpha = 0.66f))))
-                    .padding(horizontal = 3.dp, vertical = 3.dp)
 
-            ) {
-                val tabWidth = (maxWidth - 6.dp) / 3
-                // Keep the pill in the graphics layer: no per-frame layout work.
-                val pillPosition by animateFloatAsState(
-                    targetValue = draggedTab ?: primaryTab.toFloat(),
-                    animationSpec = spring(dampingRatio = 0.84f, stiffness = 520f),
-                    label = "navigationPillPosition"
-                )
-                Box(
-                    Modifier.graphicsLayer {
-                        translationX = (tabWidth + 3.dp).toPx() * pillPosition
-                    }.width(tabWidth).fillMaxHeight()
-                        .clip(RoundedCornerShape(50))
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.White.copy(alpha = 0.18f), MaterialTheme.colorScheme.primary.copy(alpha = 0.22f), MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                            )
-                        )
-                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50))
-
-                )
-                Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) { nav.navigate("settings") { launchSingleTop = true; restoreState = true } }
-                }
-            }
-        }
-        Surface(
-            modifier = Modifier.size(54.dp).shadow(7.dp, RoundedCornerShape(23.dp))
-                .clickable { editing = null; nav.navigate("edit") },
-            shape = RoundedCornerShape(23.dp),
-            color = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            shadowElevation = 0.dp
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(25.dp))
-            }
-        }
-    }
-    }
 }
 }
 /**
@@ -607,21 +518,6 @@ private fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
         Card(
-            modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
-        ) {
-            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.Person, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
-                    Text("ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge)
-                }
-                Text(displayName, color = primaryText, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                Text("I ricordi vengono salvati localmente prima della sincronizzazione.", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
-            }
-        }
-
-        Card(
             modifier = Modifier.fillMaxWidth().shadow(6.dp, RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
@@ -629,8 +525,10 @@ private fun SettingsScreen(
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.AccountCircle, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
-                    Text("IL VOSTRO PROFILO", color = accentText, style = MaterialTheme.typography.labelLarge)
+                    Text("PROFILO E ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge)
                 }
+                Text("Account: $displayName", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
+                Text("I ricordi vengono salvati sul dispositivo prima della sincronizzazione.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Surface(
                         modifier = Modifier.size(76.dp).clickable { profilePhotoPicker.launch(arrayOf("image/*")) },
