@@ -330,10 +330,7 @@ class MainActivity:ComponentActivity() {
             .withTint(Color(0xFF0B1220).copy(alpha = 0.055f))
     )
     var draggedTab by remember { mutableStateOf<Float?>(null) }
-    LaunchedEffect(liveBlurDisabledState.value) {
-        navigationBlurState.isEnabled = !liveBlurDisabledState.value
-    }
-    if (currentRoute != "edit") BlurOverlay(
+    if (currentRoute != "edit" && !liveBlurDisabledState.value) BlurOverlay(
         state = navigationBlurState,
         modifier = Modifier.align(Alignment.BottomStart)
             .padding(start = 12.dp, end = 78.dp)
@@ -348,12 +345,12 @@ class MainActivity:ComponentActivity() {
             modifier = Modifier.fillMaxSize()
                 .border(1.dp, Color.White.copy(alpha = 0.32f), RoundedCornerShape(50)),
             shape = RoundedCornerShape(50),
-            color = if (liveBlurDisabledState.value) Color(0xD9101724) else Color.Transparent,
+            color = Color.Transparent,
             tonalElevation = 0.dp
         ) {
             BoxWithConstraints(
                 Modifier.fillMaxSize()
-                    .background(if (liveBlurDisabledState.value) Color(0xFF101827).copy(alpha = 0.92f) else Color(0xFF0B1220).copy(alpha = 0.045f))
+                    .background(Color(0xFF0B1220).copy(alpha = 0.045f))
                     .padding(horizontal = 3.dp, vertical = 3.dp)
             ) {
                 val tabWidth = (maxWidth - 6.dp) / 3
@@ -370,7 +367,7 @@ class MainActivity:ComponentActivity() {
                         .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50))
                 )
                 Row(
-                    Modifier.fillMaxSize().pointerInput(primaryTab, currentRoute) {
+                    Modifier.fillMaxSize()
                         var dragPosition = primaryTab.toFloat()
                         detectDragGestures(
                             onDragStart = { offset ->
@@ -395,7 +392,6 @@ class MainActivity:ComponentActivity() {
                             },
                             onDragCancel = { draggedTab = null }
                         )
-                    },
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -405,6 +401,20 @@ class MainActivity:ComponentActivity() {
                 }
             }
         }
+    }
+    if (currentRoute != "edit" && liveBlurDisabledState.value) {
+        Surface(
+            modifier = Modifier.align(Alignment.BottomStart)
+                .padding(start = 12.dp, end = 78.dp)
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(vertical = 4.dp)
+                .height(68.dp),
+            shape = RoundedCornerShape(50),
+            color = Color(0xE6101724),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.22f)),
+            tonalElevation = 0.dp
+        ) {}
     }
     Box(
         Modifier.align(Alignment.BottomEnd)
@@ -643,7 +653,17 @@ private fun SettingsScreen(
                 fontWeight = FontWeight.Bold,
                 maxLines = 1
             )
-            Text("Personalizza il vostro spazio.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                "Personalizza il vostro spazio.",
+                modifier = Modifier.height(if (settingsHeaderCollapsed) 0.dp else 26.dp).graphicsLayer {
+                    alpha = if (settingsHeaderCollapsed) 0f else 1f
+                    translationY = if (settingsHeaderCollapsed) -4.dp.toPx() else 0f
+                },
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Clip
+            )
         }
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(settingsScrollState).padding(start = 20.dp, end = 20.dp, bottom = 116.dp),
@@ -706,6 +726,24 @@ private fun SettingsScreen(
                     Text("ASPETTO", color = accentText, style = MaterialTheme.typography.labelLarge)
                 }
                 Text("Tema scuro AMOLED sempre attivo, con accento dinamico.", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
+                Text("Anteprima in tempo reale", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Surface(
+                    modifier = Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(22.dp)),
+                    shape = RoundedCornerShape(22.dp), color = frostedSurfaceStrongColor()
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)) { Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp)) }
+                            Column(Modifier.weight(1f)) {
+                                Text("Un ricordo importante", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text("29/10/26 · Ricordo", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Icon(Icons.Default.FavoriteBorder, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text("Questa è la leggibilità prevista per testi, icone e schede con le impostazioni correnti.", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+                        Text("Accento e gradienti seguono lo sfondo selezionato.", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                    }
+                }
                 Text("Sfondo", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 val backgroundOptions = listOf(
                     "default" to "Predefinito", "blue" to "Blu", "lavender" to "Lavanda",
@@ -760,6 +798,22 @@ private fun SettingsScreen(
                     }
                 }
                 Text("Puoi scegliere un colore oppure una foto dalla galleria.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                AnimatedVisibility(visible = backgroundColor == "photo") {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Sfocatura", color = primaryText, style = MaterialTheme.typography.labelLarge)
+                            Spacer(Modifier.weight(1f))
+                            Text("${backgroundBlur.toInt()} dp", color = secondaryText, style = MaterialTheme.typography.labelMedium)
+                        }
+                        Slider(value = backgroundBlur, onValueChange = { backgroundBlur = it; saveBackgroundTuning() }, valueRange = 0f..24f)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Luminosità sfondo", color = primaryText, style = MaterialTheme.typography.labelLarge)
+                            Spacer(Modifier.weight(1f))
+                            Text(when { backgroundBrightness < -0.15f -> "Più scuro"; backgroundBrightness > 0.15f -> "Più chiaro"; else -> "Neutro" }, color = secondaryText, style = MaterialTheme.typography.labelMedium)
+                        }
+                        Slider(value = backgroundBrightness, onValueChange = { backgroundBrightness = it; saveBackgroundTuning() }, valueRange = -1f..1f)
+                    }
+                }
                 Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
                 Text("Prestazioni e movimento", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
