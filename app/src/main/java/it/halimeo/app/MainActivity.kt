@@ -184,9 +184,17 @@ private val TextPrimary = Color(0xFFF5F7FA)
             outline = Color(0xFF8996A1)
         )
     }
+    val backgroundAccent = when (customBackgroundColorState.value) {
+        "blue" -> Color(0xFF397CA6)
+        "lavender" -> Color(0xFF7961B5)
+        "mint" -> Color(0xFF287D65)
+        "rose" -> Color(0xFFB34F75)
+        else -> scheme.primary
+    }
+    val adaptiveScheme = scheme.copy(primary = backgroundAccent, secondary = backgroundAccent.copy(alpha = 0.88f))
     // Material 3 Expressive supplies the expressive motion system and updated component defaults.
     MaterialExpressiveTheme(
-            colorScheme = scheme,
+            colorScheme = adaptiveScheme,
             typography = rememberHaliMeoTypography(staticFontWidth, staticFontRoundness),
             motionScheme = MotionScheme.expressive(),
             shapes = Shapes(
