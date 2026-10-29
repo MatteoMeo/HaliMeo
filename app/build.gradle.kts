@@ -21,7 +21,8 @@ android {
         targetSdk = 35
         versionCode = alphaVersionCode
         versionName = alphaVersionName
-        buildConfigField("String", "API_BASE_URL", "\"${project.findProperty(\"HALIMEO_API_BASE_URL\") ?: \"https://halimeo.example/\"}\"")
+        val apiBaseUrl = (project.findProperty("HALIMEO_API_BASE_URL") as String?) ?: "https://halimeo.example/"
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
         buildConfigField("int", "APP_VERSION_CODE", alphaVersionCode.toString())
     }
     buildFeatures { compose = true; buildConfig = true }
