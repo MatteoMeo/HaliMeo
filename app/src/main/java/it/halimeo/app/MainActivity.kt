@@ -93,7 +93,6 @@ import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.HazeColorEffect
 import dev.chrisbanes.haze.blur.hazeBlur
 import androidx.compose.ui.graphics.compositeOver
-import io.github.ezoushen.blur.cmp.withTint
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.*
 import it.halimeo.app.data.*
