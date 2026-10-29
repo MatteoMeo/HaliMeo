@@ -59,10 +59,6 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import com.skydoves.cloudy.Sky
-import com.skydoves.cloudy.cloudy
-import com.skydoves.cloudy.rememberSky
-import com.skydoves.cloudy.sky
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -75,7 +71,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import android.view.HapticFeedbackConstants
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -99,16 +94,11 @@ private val Elevated = Color(0xFF101317)
 private val FrostedSurface = Color(0xB8101419)
 private val FrostedSurfaceStrong = Color(0xD9101419)
 private val OneUiMotionEasing = CubicBezierEasing(0.22f, 0.25f, 0f, 1f)
-@Composable private fun frostedEdgeColor(): Color = if (isHaliMeoDark()) Color.White.copy(alpha = 0.24f) else Color(0xFF526477).copy(alpha = 0.22f)
-@Composable private fun frostedGlassBrush(): Brush = Brush.linearGradient(listOf(Color.White.copy(alpha = if (isHaliMeoDark()) 0.065f else 0.42f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.075f else 0.13f)))
-@Composable private fun isHaliMeoDark(): Boolean = when (themeModeState.value) {
-    "light" -> false
-    "dark" -> true
-    else -> isSystemInDarkTheme()
-}
+@Composable private fun frostedEdgeColor(): Color = Color.White.copy(alpha = 0.20f)
+@Composable private fun frostedGlassBrush(): Brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.065f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.075f)))
+@Composable private fun isHaliMeoDark(): Boolean = true
 @Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) Color(0x99101419) else Color(0xB8FFFFFF)
 @Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) Color(0xCC0C0F12) else Color(0xD6FFFFFF)
-private val themeModeState = mutableStateOf("system")
 private val customBackgroundColorState = mutableStateOf("default")
 private val customBackgroundUriState = mutableStateOf<String?>(null)
 private val backgroundBlurState = mutableStateOf(0f)
@@ -154,8 +144,7 @@ private suspend fun decodeScaledBitmap(context: android.content.Context, uriStri
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable private fun HaliMeoTheme(content: @Composable () -> Unit) {
-    val mode by themeModeState
-    val darkTheme = isHaliMeoDark()
+    val darkTheme = true
     val context = LocalContext.current
     SideEffect {
         (context as? ComponentActivity)?.window?.let { window ->
@@ -183,7 +172,7 @@ private suspend fun decodeScaledBitmap(context: android.content.Context, uriStri
     val staticFontRoundness = 28f
     // Android 12+ supplies Material You / Monet colors derived from the device wallpaper.
     // Keep the app dark with a true-black canvas for AMOLED displays.
-    val scheme = if (darkTheme && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    val scheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         dynamicDarkColorScheme(context).copy(
             background = Color.Black,
             surface = Color(0xFF080A0C),
@@ -193,30 +182,11 @@ private suspend fun decodeScaledBitmap(context: android.content.Context, uriStri
             onSurfaceVariant = Color(0xFFD0D4DC),
             outline = Color(0xFF30383E)
         )
-    } else if (darkTheme) {
-        darkColorScheme(
-            primary=Mint, onPrimary=Color(0xFF102A3A), secondary=Color(0xFF72D9E8), onSecondary=Color(0xFF06272D),
-            background=Ink, onBackground=TextPrimary, surface=Panel, onSurface=TextPrimary,
-            surfaceVariant=Elevated, onSurfaceVariant=Muted, outline=Color(0xFF30383E)
-        )
-    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        dynamicLightColorScheme(context).copy(
-            background = Color(0xFFF3F6FA),
-            surface = Color(0xFFF8FAFC),
-            surfaceVariant = Color(0xFFE5EBF0),
-            onBackground = Color(0xFF171B20),
-            onSurface = Color(0xFF171B20),
-            onSurfaceVariant = Color(0xFF46515B),
-            outline = Color(0xFF8996A1)
-        )
     } else {
-        lightColorScheme(
-            primary = Color(0xFF315D78), onPrimary = Color.White,
-            secondary = Color(0xFF286A73), onSecondary = Color.White,
-            background = Color(0xFFF4F7FA), onBackground = Color(0xFF171B20),
-            surface = Color(0xFFF8FAFC), onSurface = Color(0xFF171B20),
-            surfaceVariant = Color(0xFFE5EBF0), onSurfaceVariant = Color(0xFF46515B),
-            outline = Color(0xFF8996A1)
+        darkColorScheme(
+            primary = Mint, onPrimary = Color(0xFF102A3A), secondary = Color(0xFF72D9E8), onSecondary = Color(0xFF06272D),
+            background = Ink, onBackground = TextPrimary, surface = Panel, onSurface = TextPrimary,
+            surfaceVariant = Elevated, onSurfaceVariant = Muted, outline = Color(0xFF30383E)
         )
     }
     val backgroundAccent = when (customBackgroundColorState.value) {
@@ -258,7 +228,6 @@ class MainActivity:ComponentActivity() {
         val preferredHz = windowManager.defaultDisplay.supportedModes.maxOfOrNull { it.refreshRate }
             ?: windowManager.defaultDisplay.refreshRate
         window.attributes = window.attributes.apply { preferredRefreshRate = preferredHz }
-        themeModeState.value = getSharedPreferences("halimeo_preferences", MODE_PRIVATE).getString("theme_mode", "system") ?: "system"
         lastSyncAtState.value = getSharedPreferences("halimeo_preferences", MODE_PRIVATE).getLong("last_sync_at", 0L)
         setContent { HaliMeoTheme { HaliMeoRoot() } }
     }
@@ -283,9 +252,8 @@ class MainActivity:ComponentActivity() {
         favoritesPrefs.edit().putStringSet("ids", updated.toSet()).apply()
     }
     val nav= rememberNavController(); val backStackEntry by nav.currentBackStackEntryAsState(); val currentRoute=backStackEntry?.destination?.route
-    val glassSky = rememberSky()
     Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA))) {
-    HaliMeoAmbientBackdrop(Modifier.fillMaxSize().sky(glassSky))
+    HaliMeoAmbientBackdrop(Modifier.fillMaxSize())
     Scaffold(containerColor=Color.Transparent,topBar={TopAppBar(
         title={Text("HaliMeo", fontWeight=FontWeight.ExtraBold, style=MaterialTheme.typography.headlineSmall.copy(letterSpacing=(-1.1).sp, brush=Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.primary))))},
         modifier=Modifier.heightIn(min=56.dp),
@@ -296,7 +264,7 @@ class MainActivity:ComponentActivity() {
         }
     )},bottomBar={}, floatingActionButton = {}, content = { padding ->
         NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(220, easing = OneUiMotionEasing))+slideInHorizontally(tween(260, easing = OneUiMotionEasing)){it/18}},exitTransition={fadeOut(tween(160, easing = OneUiMotionEasing))+slideOutHorizontally(tween(190, easing = OneUiMotionEasing)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
-            composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}},glassSky)}
+            composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,{t,b,c,d,photo->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id,photo);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
             composable("trips"){TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })}
             composable("tripMonaco"){MissionScreen()}
@@ -304,7 +272,7 @@ class MainActivity:ComponentActivity() {
         }
     })
     Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Surface(modifier = Modifier.weight(1f).shadow(8.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).cloudy(sky = glassSky, radius = 22, tint = frostedSurfaceColor().copy(alpha = 0.30f)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = frostedSurfaceColor(), tonalElevation = 0.dp) {
+        Surface(modifier = Modifier.weight(1f).shadow(8.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = frostedSurfaceColor(), tonalElevation = 0.dp) {
             Row(Modifier.fillMaxWidth().height(68.dp).background(Brush.linearGradient(listOf(Color.White.copy(alpha = if (isHaliMeoDark()) 0.13f else 0.62f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.14f else 0.20f)))).padding(horizontal = 4.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
                 FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
@@ -331,11 +299,11 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     val overlayStrength = backgroundOverlayState.value
     val brightnessAdjustment = backgroundBrightnessState.value
     val customBase = when (backgroundChoice) {
-        "blue" -> if (isHaliMeoDark()) Color(0xFF071522) else Color(0xFFDFEEFA)
-        "lavender" -> if (isHaliMeoDark()) Color(0xFF120E20) else Color(0xFFECE7FA)
-        "mint" -> if (isHaliMeoDark()) Color(0xFF071A14) else Color(0xFFE0F3EB)
-        "rose" -> if (isHaliMeoDark()) Color(0xFF210D16) else Color(0xFFF9E4EC)
-        else -> if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA)
+        "blue" -> Color(0xFF071522)
+        "lavender" -> Color(0xFF120E20)
+        "mint" -> Color(0xFF071A14)
+        "rose" -> Color(0xFF210D16)
+        else -> Color.Black
     }
     val backgroundBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, backgroundUri, context) {
         value = backgroundUri?.let { decodeScaledBitmap(context, it, maxDimension = 1600) }
@@ -365,15 +333,10 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
         } else if (backgroundChoice == "default") {
             Box(
                 Modifier.fillMaxSize().background(
-                    if (isHaliMeoDark()) Brush.verticalGradient(
+                    Brush.verticalGradient(
                         0.0f to Color(0xFF050608),
                         0.48f to Color(0xFF08090C),
                         1.0f to Color(0xFF030405)
-                    ) else Brush.verticalGradient(
-                        0.0f to Color(0xFFF5F8FC),
-                        0.38f to Color(0xFFE6EEF7),
-                        0.72f to Color(0xFFF0EAF8),
-                        1.0f to Color(0xFFE8F2F1)
                     )
                 )
             )
@@ -490,7 +453,6 @@ private fun SettingsScreen(
     val primaryText = MaterialTheme.colorScheme.onSurface
     val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
     val accentText = MaterialTheme.colorScheme.primary
-    var themeMode by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("theme_mode", "system") ?: "system") }
     var specialDateLabel by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date_label", "") ?: "") }
     var specialDate by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date", "")?.let { displayHaliMeoDate(it) } ?: "") }
     var specialDates by remember { mutableStateOf(readHaliMeoSpecialDates(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE))) }
@@ -559,21 +521,7 @@ private fun SettingsScreen(
                     Icon(Icons.Default.Palette, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
                     Text("ASPETTO", color = accentText, style = MaterialTheme.typography.labelLarge)
                 }
-                Text("Adatta HaliMeo al tuo dispositivo", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    listOf("system" to "Sistema", "dark" to "Scura", "light" to "Chiara").forEachIndexed { index, option ->
-                        SegmentedButton(
-                            selected = themeMode == option.first,
-                            onClick = {
-                                themeMode = option.first
-                                themeModeState.value = option.first
-                                ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putString("theme_mode", option.first).apply()
-                            },
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 3)
-                        ) { Text(option.second, maxLines = 1) }
-                    }
-                }
-                Text("La scelta viene salvata sul dispositivo.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                Text("Tema scuro AMOLED sempre attivo, con accento dinamico.", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
                 Text("Sfondo", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 val backgroundOptions = listOf("default" to "Predefinito", "blue" to "Blu", "lavender" to "Lavanda", "mint" to "Menta", "rose" to "Rosa")
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -965,7 +913,6 @@ private fun DiaryScreen(
     onEdit: (DiaryEntry) -> Unit,
     onToggleFavorite: (DiaryEntry) -> Unit,
     onDelete: (DiaryEntry) -> Unit,
-    glassSky: Sky
 ) {
     var query by remember { mutableStateOf("") }
     var searchExpanded by remember { mutableStateOf(false) }
@@ -1078,7 +1025,7 @@ private fun DiaryScreen(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).cloudy(sky = glassSky, radius = 16, tint = frostedSurfaceColor().copy(alpha = 0.30f)),
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)),
                 singleLine = true,
                 shape = RoundedCornerShape(28.dp),
                 placeholder = { Text("Cerca un ricordo…") },
