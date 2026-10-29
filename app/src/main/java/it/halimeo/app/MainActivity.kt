@@ -16,6 +16,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.expandVertically
@@ -294,23 +297,45 @@ class MainActivity:ComponentActivity() {
             popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(50)) else fadeOut(tween(210, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(280, easing = OneUiMotionEasing)) { it / 12 } }
         ) {
             composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
-            composable("edit"){EditScreen(editing,{t,b,c,d,photo->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id,photo);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
+            composable(
+                route = "edit",
+                enterTransition = {
+                    if (reduceAnimationsState.value) fadeIn(tween(90))
+                    else fadeIn(tween(220, easing = OneUiMotionEasing)) +
+                        scaleIn(initialScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(360, easing = OneUiMotionEasing))
+                },
+                exitTransition = {
+                    if (reduceAnimationsState.value) fadeOut(tween(80))
+                    else fadeOut(tween(180, easing = OneUiMotionEasing)) +
+                        scaleOut(targetScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(300, easing = OneUiMotionEasing))
+                },
+                popEnterTransition = {
+                    if (reduceAnimationsState.value) fadeIn(tween(80))
+                    else fadeIn(tween(180, easing = OneUiMotionEasing)) +
+                        scaleIn(initialScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(300, easing = OneUiMotionEasing))
+                },
+                popExitTransition = {
+                    if (reduceAnimationsState.value) fadeOut(tween(80))
+                    else fadeOut(tween(220, easing = OneUiMotionEasing)) +
+                        scaleOut(targetScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(360, easing = OneUiMotionEasing))
+                }
+            ) { EditScreen(editing,{t,b,c,d,photo->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id,photo);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()}) }
             composable("trips"){TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })}
             composable("tripMonaco"){MissionScreen()}
             composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,)}
         }
     })
     val navigationBlurState = rememberBlurOverlayState(
-        initialConfig = BlurOverlayConfig(radius = 22f, downsampleFactor = 5f, isLive = true)
-            .withTint(Color(0xFF0B1220).copy(alpha = 0.32f))
+        initialConfig = BlurOverlayConfig(radius = 30f, downsampleFactor = 3f, isLive = true)
+            .withTint(Color(0xFF0B1220).copy(alpha = 0.12f))
     )
     var draggedTab by remember { mutableStateOf<Float?>(null) }
     SideEffect { navigationBlurState.isEnabled = !liveBlurDisabledState.value }
-    BlurOverlay(
+    if (currentRoute != "edit") BlurOverlay(
         state = navigationBlurState,
         modifier = Modifier.align(Alignment.BottomStart)
-            .fillMaxWidth()
             .padding(start = 12.dp, end = 78.dp)
+            .fillMaxWidth()
             .navigationBarsPadding()
             .padding(vertical = 4.dp)
             .height(68.dp)
@@ -319,14 +344,14 @@ class MainActivity:ComponentActivity() {
     ) {
         Surface(
             modifier = Modifier.fillMaxSize()
-                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.34f), RoundedCornerShape(50)),
+                .border(1.dp, Color.White.copy(alpha = 0.32f), RoundedCornerShape(50)),
             shape = RoundedCornerShape(50),
-            color = Color(0x500B1220),
+            color = Color.Transparent,
             tonalElevation = 0.dp
         ) {
             BoxWithConstraints(
                 Modifier.fillMaxSize()
-                    .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.07f), Color(0xFF0F1A2B).copy(alpha = 0.55f), Color(0xFF101827).copy(alpha = 0.66f))))
+                    .background(Color(0xFF0B1220).copy(alpha = 0.10f))
                     .padding(horizontal = 3.dp, vertical = 3.dp)
             ) {
                 val tabWidth = (maxWidth - 6.dp) / 3
