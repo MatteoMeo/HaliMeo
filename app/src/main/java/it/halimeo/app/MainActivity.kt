@@ -1213,7 +1213,7 @@ private fun DiaryScreen(
     var title by remember(existing?.id) { mutableStateOf(existing?.title.orEmpty()) }
     var body by remember(existing?.id) { mutableStateOf(existing?.body.orEmpty()) }
     var cat by remember(existing?.id) { mutableStateOf(existing?.category ?: "Ricordo") }
-    var date by remember(existing?.id) { mutableStateOf(existing?.memoryDate ?: java.time.LocalDate.now().toString()) }
+    var date by remember(existing?.id) { mutableStateOf(existing?.memoryDate?.let { displayHaliMeoDate(it) } ?: displayHaliMeoDate(java.time.LocalDate.now().toString())) }
     var photoUri by remember(existing?.id) { mutableStateOf(existing?.photoUri) }
     val context = LocalContext.current
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -1239,7 +1239,7 @@ private fun DiaryScreen(
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(title, { title = it }, label = { Text("Titolo") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(date, { date = it }, label = { Text("Data AAAA-MM-GG") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(date, { date = it.take(10) }, label = { Text("Data (gg/mm/aa)") }, placeholder = { Text("26/12/26") }, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(cat, { cat = it }, label = { Text("Categoria") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(body, { body = it }, label = { Text("Ricordo") }, modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp), minLines = 5)
                 Text("FOTO DEL RICORDO", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
@@ -1280,7 +1280,11 @@ private fun DiaryScreen(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) { Text("Annulla") }
-                    Button(onClick = { if (title.isNotBlank() && body.isNotBlank()) onSave(title, body, cat, date, photoUri) }, modifier = Modifier.weight(1f), enabled = title.isNotBlank() && body.isNotBlank()) {
+                    Button(onClick = {
+                        val parsedDate = parseHaliMeoDate(date)
+                        if (title.isNotBlank() && body.isNotBlank() && parsedDate != null) onSave(title, body, cat, parsedDate.toString(), photoUri)
+                        else if (parsedDate == null) Toast.makeText(context, "Inserisci una data valida nel formato gg/mm/aa", Toast.LENGTH_SHORT).show()
+                    }, modifier = Modifier.weight(1f), enabled = title.isNotBlank() && body.isNotBlank()) {
                         Icon(Icons.Default.Check, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
                         Text("Salva")
