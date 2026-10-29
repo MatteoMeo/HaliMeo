@@ -306,17 +306,17 @@ class MainActivity:ComponentActivity() {
             startDestination = "diary",
             modifier = Modifier.padding(padding),
             // Page changes should feel like a deliberate Android page swipe, not a barely visible fade.
-            enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(50)) else fadeIn(tween(130, easing = OneUiMotionEasing)) + slideInHorizontally(tween(130, easing = OneUiMotionEasing)) { it / 7 } },
-            exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(35)) else fadeOut(tween(100, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(150, easing = OneUiMotionEasing)) { -it / 12 } },
-            popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(50)) else fadeIn(tween(140, easing = OneUiMotionEasing)) + slideInHorizontally(spring(dampingRatio = 0.92f, stiffness = 520f)) { -it / 7 } },
-            popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(35)) else fadeOut(tween(100, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(150, easing = OneUiMotionEasing)) { it / 12 } }
+            enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(25)) else fadeIn(tween(65, easing = OneUiMotionEasing)) + slideInHorizontally(tween(90, easing = OneUiMotionEasing)) { it / 7 } },
+            exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(20)) else fadeOut(tween(45, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(70, easing = OneUiMotionEasing)) { -it / 12 } },
+            popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(25)) else fadeIn(tween(65, easing = OneUiMotionEasing)) + slideInHorizontally(spring(dampingRatio = 0.9f, stiffness = 900f)) { -it / 7 } },
+            popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(20)) else fadeOut(tween(45, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(70, easing = OneUiMotionEasing)) { it / 12 } }
         ) {
             composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable(
                 route = "edit",
                 enterTransition = {
                     if (reduceAnimationsState.value) fadeIn(tween(90))
-                    else fadeIn(tween(150, easing = OneUiMotionEasing)) +
+                    else fadeIn(tween(90, easing = OneUiMotionEasing)) +
                         scaleIn(initialScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(220, easing = OneUiMotionEasing))
                 },
                 exitTransition = {
@@ -331,7 +331,7 @@ class MainActivity:ComponentActivity() {
                 },
                 popExitTransition = {
                     if (reduceAnimationsState.value) fadeOut(tween(80))
-                    else fadeOut(tween(150, easing = OneUiMotionEasing)) +
+                    else fadeOut(tween(90, easing = OneUiMotionEasing)) +
                         scaleOut(targetScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(220, easing = OneUiMotionEasing))
                 }
             ) { EditScreen(editing,{t,b,c,d,photo->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id,photo);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()}) }
@@ -356,6 +356,14 @@ class MainActivity:ComponentActivity() {
         val enabled = !liveBlurDisabledState.value
         navigationBlurState.isEnabled = enabled
         fabBlurState.isEnabled = enabled
+    }
+    LaunchedEffect(currentRoute, liveBlurDisabledState.value) {
+        if (liveBlurDisabledState.value) return@LaunchedEffect
+        navigationBlurState.config = navigationBlurState.config.copy(isLive = false)
+        fabBlurState.config = fabBlurState.config.copy(isLive = false)
+        kotlinx.coroutines.delay(110)
+        navigationBlurState.config = navigationBlurState.config.copy(isLive = true)
+        fabBlurState.config = fabBlurState.config.copy(isLive = true)
     }
     if (currentRoute != "edit") BlurOverlay(
         state = navigationBlurState,
@@ -383,7 +391,7 @@ class MainActivity:ComponentActivity() {
                 val tabWidth = (maxWidth - 6.dp) / 3
                 val animatedPillPosition by animateFloatAsState(
                     targetValue = settledTab,
-                    animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.86f, stiffness = 620f),
+                    animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.82f, stiffness = 950f),
                     label = "navigationPillPosition"
                 )
                 val pillPosition = if (draggedTab.isNaN()) animatedPillPosition else draggedTab
@@ -564,7 +572,7 @@ private fun FloatingNavItem(
 ) {
     val animatedIcon by animateColorAsState(
         targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(durationMillis = 180),
+        animationSpec = tween(durationMillis = 90),
         label = "navItemIcon"
     )
     val itemScale by animateFloatAsState(
@@ -681,7 +689,7 @@ private fun SettingsScreen(
     val settingsHeaderCollapsed by remember { derivedStateOf { settingsScrollState.value > 48 } }
     val settingsTitleScale by animateFloatAsState(
         targetValue = if (settingsHeaderCollapsed) 0.76f else 1f,
-        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(150, easing = OneUiMotionEasing),
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "settingsTitleScale"
     )
     Column(Modifier.fillMaxSize().background(Color.Transparent)) {
@@ -798,7 +806,7 @@ private fun SettingsScreen(
                     Spacer(Modifier.weight(1f))
                     Icon(if ("appearance" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("appearance" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "appearance" in expandedSettingsSections, enter = fadeIn(tween(110)) + expandVertically(tween(150)), exit = fadeOut(tween(80)) + shrinkVertically(tween(120))) {
+                AnimatedVisibility(visible = "appearance" in expandedSettingsSections, enter = fadeIn(tween(55)) + expandVertically(tween(90)), exit = fadeOut(tween(35)) + shrinkVertically(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Tema scuro AMOLED sempre attivo, con accento dinamico.", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
                 Text("Anteprima in tempo reale", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -994,7 +1002,7 @@ private fun SettingsScreen(
                     Spacer(Modifier.weight(1f))
                     Icon(if ("date" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("date" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "date" in expandedSettingsSections, enter = fadeIn(tween(110)) + expandVertically(tween(150)), exit = fadeOut(tween(80)) + shrinkVertically(tween(120))) {
+                AnimatedVisibility(visible = "date" in expandedSettingsSections, enter = fadeIn(tween(55)) + expandVertically(tween(90)), exit = fadeOut(tween(35)) + shrinkVertically(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Tenete a portata di mano una data importante", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(value = specialDateLabel, onValueChange = { specialDateLabel = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Nome (es. compleanno)") })
@@ -1037,7 +1045,7 @@ private fun SettingsScreen(
                     Spacer(Modifier.weight(1f))
                     Icon(if ("sync" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("sync" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "sync" in expandedSettingsSections, enter = fadeIn(tween(110)) + expandVertically(tween(150)), exit = fadeOut(tween(80)) + shrinkVertically(tween(120))) {
+                AnimatedVisibility(visible = "sync" in expandedSettingsSections, enter = fadeIn(tween(55)) + expandVertically(tween(90)), exit = fadeOut(tween(35)) + shrinkVertically(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(if (pendingSyncCount == 0) Icons.Default.CloudDone else Icons.Default.CloudUpload, contentDescription = null, tint = accentText, modifier = Modifier.size(26.dp))
@@ -1109,7 +1117,7 @@ private fun SettingsScreen(
                     Spacer(Modifier.weight(1f))
                     Icon(if ("invites" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("invites" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "invites" in expandedSettingsSections, enter = fadeIn(tween(110)) + expandVertically(tween(150)), exit = fadeOut(tween(80)) + shrinkVertically(tween(120))) {
+                AnimatedVisibility(visible = "invites" in expandedSettingsSections, enter = fadeIn(tween(55)) + expandVertically(tween(90)), exit = fadeOut(tween(35)) + shrinkVertically(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Crea un codice monouso valido 7 giorni e condividilo direttamente dal telefono.", color = secondaryText)
 
@@ -1357,7 +1365,7 @@ private fun DiaryScreen(
     // repeatedly measures the header while the diary is scrolling.
     val headerTitleScale by animateFloatAsState(
         targetValue = if (headerCollapsed) 0.76f else 1f,
-        animationSpec = tween(150, easing = OneUiMotionEasing),
+        animationSpec = tween(90, easing = OneUiMotionEasing),
         label = "diaryHeaderTitleScale"
     )
     val categories = remember(entries) {
@@ -1800,7 +1808,7 @@ private fun DiaryScreen(
     val editHeaderCollapsed by remember { derivedStateOf { editScrollState.value > 48 } }
     val editTitleScale by animateFloatAsState(
         targetValue = if (editHeaderCollapsed) 0.76f else 1f,
-        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(150, easing = OneUiMotionEasing),
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "editTitleScale"
     )
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -1912,7 +1920,7 @@ private fun AnimatedPageTitle(
     )
     val alpha by animateFloatAsState(
         targetValue = if (entered || reduceAnimationsState.value) 1f else 0.55f,
-        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(180),
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90),
         label = "pageTitleAlpha"
     )
     Text(
@@ -1937,7 +1945,7 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
     val tripsHeaderCollapsed by remember { derivedStateOf { tripsScrollState.value > 48 } }
     val tripsTitleScale by animateFloatAsState(
         targetValue = if (tripsHeaderCollapsed) 0.76f else 1f,
-        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(150, easing = OneUiMotionEasing),
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "tripsTitleScale"
     )
     Column(
