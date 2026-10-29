@@ -305,11 +305,12 @@ class MainActivity:ComponentActivity() {
             nav,
             startDestination = "diary",
             modifier = Modifier.padding(padding),
-            // Page changes should feel like a deliberate Android page swipe, not a barely visible fade.
-            enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(25)) else fadeIn(tween(35, easing = OneUiMotionEasing)) + slideInHorizontally(tween(55, easing = OneUiMotionEasing)) { it / 7 } },
-            exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(20)) else fadeOut(tween(25, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(45, easing = OneUiMotionEasing)) { -it / 12 } },
-            popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(25)) else fadeIn(tween(35, easing = OneUiMotionEasing)) + slideInHorizontally(spring(dampingRatio = 0.88f, stiffness = 1100f)) { -it / 7 } },
-            popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(20)) else fadeOut(tween(25, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(45, easing = OneUiMotionEasing)) { it / 12 } }
+            // Primary navigation should respond immediately: keep only a very short fade,
+            // avoiding simultaneous full-screen slide + live-backdrop recapture on every tap.
+            enterTransition = { if (reduceAnimationsState.value) androidx.compose.animation.EnterTransition.None else fadeIn(tween(35)) },
+            exitTransition = { if (reduceAnimationsState.value) androidx.compose.animation.ExitTransition.None else fadeOut(tween(25)) },
+            popEnterTransition = { if (reduceAnimationsState.value) androidx.compose.animation.EnterTransition.None else fadeIn(tween(35)) },
+            popExitTransition = { if (reduceAnimationsState.value) androidx.compose.animation.ExitTransition.None else fadeOut(tween(25)) }
         ) {
             composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable(
@@ -572,12 +573,12 @@ private fun FloatingNavItem(
 ) {
     val animatedIcon by animateColorAsState(
         targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(durationMillis = 90),
+        animationSpec = tween(durationMillis = 55),
         label = "navItemIcon"
     )
     val itemScale by animateFloatAsState(
         targetValue = if (selected) 1.04f else 0.96f,
-        animationSpec = spring(dampingRatio = 0.78f, stiffness = 420f),
+        animationSpec = spring(dampingRatio = 0.78f, stiffness = 900f),
         label = "navItemScale"
     )
     Box(
