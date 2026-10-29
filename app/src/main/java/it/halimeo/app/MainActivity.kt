@@ -1760,6 +1760,7 @@ private fun DiaryScreen(
             }
         }
     }
+    }
     if (pendingDelete != null) {
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
