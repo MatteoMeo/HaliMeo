@@ -908,8 +908,9 @@ private fun DiaryScreen(
                             label = "memoryCardPress"
                         )
                         val accent = categoryAccent(entry.category)
+                        val photoContext = LocalContext.current
                         val entryPhoto = remember(entry.photoUri) {
-                            entry.photoUri?.let { value -> runCatching { LocalContext.current.contentResolver.openInputStream(Uri.parse(value))?.use { BitmapFactory.decodeStream(it) } }.getOrNull() }
+                            entry.photoUri?.let { value -> runCatching { photoContext.contentResolver.openInputStream(Uri.parse(value))?.use { BitmapFactory.decodeStream(it) } }.getOrNull() }
                         }
                         ElevatedCard(
                             modifier = Modifier.fillMaxWidth()
