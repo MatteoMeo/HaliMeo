@@ -261,29 +261,7 @@ class MainActivity:ComponentActivity() {
             IconButton(onClick={activity.lifecycleScope.launch{runCatching{repo.syncNow()}.onSuccess{val now=System.currentTimeMillis();ctx.getSharedPreferences("halimeo_preferences",android.content.Context.MODE_PRIVATE).edit().putLong("last_sync_at",now).apply();lastSyncAtState.value=now;Toast.makeText(ctx,"Sincronizzazione completata",Toast.LENGTH_SHORT).show()}.onFailure{Toast.makeText(ctx,"Offline: dati conservati sul dispositivo",Toast.LENGTH_LONG).show()}}}){Icon(Icons.Default.CloudSync,"Sincronizza")}
             IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.AutoMirrored.Filled.Logout,"Esci")}
         }
-    )},bottomBar={
-        Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(
-                modifier = Modifier.weight(1f).shadow(14.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(50)),
-                shape = RoundedCornerShape(50), color = frostedSurfaceColor(), tonalElevation = 0.dp
-            ) {
-                Row(Modifier.fillMaxWidth().height(68.dp).background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.055f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.045f)))).padding(horizontal = 4.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) { nav.navigate("settings") { launchSingleTop = true; restoreState = true } }
-                }
-            }
-            AnimatedVisibility(visible = currentRoute == "diary", enter = fadeIn(tween(180)) + slideInHorizontally(tween(220)) { it / 3 }, exit = fadeOut(tween(120)) + slideOutHorizontally(tween(160)) { it / 3 }) {
-                val addInteraction = remember { MutableInteractionSource() }
-                val addPressed by addInteraction.collectIsPressedAsState()
-                val addScale by animateFloatAsState(targetValue = if (addPressed) 0.90f else 1f, animationSpec = spring(dampingRatio = 0.55f, stiffness = 600f), label = "addMemoryPress")
-                Surface(
-                    modifier = Modifier.size(62.dp).graphicsLayer { scaleX = addScale; scaleY = addScale }.clickable(interactionSource = addInteraction, indication = null, onClick = { editing = null; nav.navigate("edit") }),
-                    shape = RoundedCornerShape(23.dp), color = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary, shadowElevation = 8.dp
-                ) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(29.dp)) } }
-            }
-        }
-    }, floatingActionButton = {}, content = { padding ->
+    )},bottomBar={}, floatingActionButton = {}, content = { padding ->
         NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
             composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,{t,b,c,d,photo->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id,photo);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
@@ -292,6 +270,18 @@ class MainActivity:ComponentActivity() {
             composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,)}
         }
     })
+    Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Surface(modifier = Modifier.weight(1f).shadow(14.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = frostedSurfaceColor(), tonalElevation = 0.dp) {
+            Row(Modifier.fillMaxWidth().height(68.dp).background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.055f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.045f))).padding(horizontal = 4.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
+                FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
+                FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) { nav.navigate("settings") { launchSingleTop = true; restoreState = true } }
+            }
+        }
+        AnimatedVisibility(visible = currentRoute == "diary", enter = fadeIn(tween(180)) + slideInHorizontally(tween(220)) { it / 3 }, exit = fadeOut(tween(120)) + slideOutHorizontally(tween(160)) { it / 3 }) {
+            Surface(modifier = Modifier.size(62.dp).clickable { editing = null; nav.navigate("edit") }, shape = RoundedCornerShape(23.dp), color = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary, shadowElevation = 8.dp) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(29.dp)) } }
+        }
+    }
     }
 }
 /**
@@ -1167,13 +1157,13 @@ private fun DiaryScreen(
                                             }
                                         }
                                     }
-                                    if (!specialLabel.isBlank() && daysUntil != null) {
+                                    upcomingSpecial?.let { (item, date, daysUntil) ->
                                         Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth()) {
                                             Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                                 Icon(Icons.Default.Event, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                                 Column(Modifier.weight(1f)) {
-                                                    Text(specialLabel, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
-                                                    Text(if (daysUntil == 0L) "È oggi!" else "Mancano " + daysUntil + " giorni · " + displayHaliMeoDate(specialDate.toString()), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                                                    Text(item.label, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+                                                    Text(if (daysUntil == 0L) "È oggi!" else "Mancano $daysUntil giorni · ${displayHaliMeoDate(date.toString())}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                                                 }
                                             }
                                         }
