@@ -320,20 +320,6 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     Box(modifier = modifier.clipToBounds().background(customBase)) {
         if (bitmap != null && backgroundChoice == "photo") {
             Image(bitmap = bitmap.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.12f; scaleY = 1.12f }.blur(photoBlur.dp), contentScale = ContentScale.Crop)
-            val averageLuminance = remember(bitmap) {
-                runCatching {
-                    var total = 0L
-                    var samples = 0
-                    val stepX = (bitmap.width / 24).coerceAtLeast(1)
-                    val stepY = (bitmap.height / 24).coerceAtLeast(1)
-                    for (y in 0 until bitmap.height step stepY) for (x in 0 until bitmap.width step stepX) {
-                        val pixel = bitmap.getPixel(x, y)
-                        total += (0.2126 * android.graphics.Color.red(pixel) + 0.7152 * android.graphics.Color.green(pixel) + 0.0722 * android.graphics.Color.blue(pixel)).toLong()
-                        samples++
-                    }
-                    if (samples == 0) 128f else total.toFloat() / samples
-                }.getOrDefault(128f)
-            }
             val useDarkOverlay = if (brightnessAdjustment == 0f) isHaliMeoDark() else brightnessAdjustment < 0f
             val overlayColor = if (useDarkOverlay) Color.Black else Color.White
             val effectiveOverlay = if (isHaliMeoDark()) maxOf(overlayStrength, 0.68f) else maxOf(overlayStrength, 0.58f)
