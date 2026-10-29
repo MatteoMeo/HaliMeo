@@ -238,7 +238,7 @@ class MainActivity:ComponentActivity() {
     val session=remember{SessionStore(ctx)}; val repo=remember{DiaryRepository(ctx)}
     var signed by remember{mutableStateOf<Boolean?>(null)}; var displayName by remember{mutableStateOf("")}
     LaunchedEffect(Unit){signed=!session.token().isNullOrBlank();displayName=session.name()}
-    if(signed==null){Box(Modifier.fillMaxSize().background(Color.Black),contentAlignment=Alignment.Center){LoadingIndicator(modifier=Modifier.size(64.dp), color=MaterialTheme.colorScheme.primary)};return}
+    if(signed==null){Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA)),contentAlignment=Alignment.Center){LoadingIndicator(modifier=Modifier.size(64.dp), color=MaterialTheme.colorScheme.primary)};return}
     if(signed==false){AuthScreen(
         onLogin={e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.login(LoginRequest(e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Accesso non riuscito")}}},
         onRedeem={code,n,e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.redeem(RedeemInviteRequest(code,n,e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Invito non valido")}}}
@@ -272,7 +272,7 @@ class MainActivity:ComponentActivity() {
         }
     })
     Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Surface(modifier = Modifier.weight(1f).shadow(18.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, Color.White.copy(alpha = if (isHaliMeoDark()) 0.28f else 0.72f), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = frostedSurfaceColor(), tonalElevation = 0.dp) {
+        Surface(modifier = Modifier.weight(1f).shadow(18.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = frostedSurfaceColor(), tonalElevation = 0.dp) {
             Row(Modifier.fillMaxWidth().height(68.dp).background(Brush.linearGradient(listOf(Color.White.copy(alpha = if (isHaliMeoDark()) 0.13f else 0.62f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.14f else 0.20f)))).padding(horizontal = 4.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
                 FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
@@ -666,7 +666,7 @@ private fun SettingsScreen(
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
@@ -783,7 +783,7 @@ private fun SettingsScreen(
 
                         if (inviteCode.isNotBlank()) {
                             Card(
-                                modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(20.dp)),
+                                modifier = Modifier.fillMaxWidth().border(1.dp, frostedEdgeColor(), RoundedCornerShape(20.dp)),
                                 shape = RoundedCornerShape(20.dp),
                                 colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
                             ) {
@@ -870,7 +870,7 @@ private fun SettingsScreen(
                     Text(serverMessage, color=dotColor, style=MaterialTheme.typography.labelLarge)
                 }
                 OutlinedTextField(serverUrl, { serverUrl=it; urlError="" }, label={Text("Indirizzo del server")}, placeholder={Text("http://192.168.1.50:8000")}, singleLine=true, modifier=Modifier.fillMaxWidth())
-                if (urlError.isNotBlank()) Text(urlError, color=Color(0xFFFF879B), style=MaterialTheme.typography.bodySmall)
+                if (urlError.isNotBlank()) Text(urlError, color=MaterialTheme.colorScheme.error, style=MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick={
                         try {
@@ -895,7 +895,7 @@ private fun SettingsScreen(
         Spacer(Modifier.height(16.dp))
         if(redeem){OutlinedTextField(code,{code=it},label={Text("Codice invito")},modifier=Modifier.fillMaxWidth());OutlinedTextField(name,{name=it},label={Text("Nome")},modifier=Modifier.fillMaxWidth())}
         OutlinedTextField(email,{email=it},label={Text("Email")},modifier=Modifier.fillMaxWidth());OutlinedTextField(pass,{pass=it},label={Text("Password")},modifier=Modifier.fillMaxWidth())
-        if(error.isNotBlank())Text(error,color=Color(0xFFFF879B));Spacer(Modifier.height(12.dp))
+        if(error.isNotBlank())Text(error,color=MaterialTheme.colorScheme.error);Spacer(Modifier.height(12.dp))
         Button(enabled=!busy,onClick={busy=true;val fail:(String)->Unit={error=it;busy=false};if(redeem)onRedeem(code,name,email,pass,fail)else onLogin(email,pass,fail)},modifier=Modifier.fillMaxWidth()){Text(if(redeem)"ACCETTA INVITO" else "ACCEDI")}
         TextButton(onClick={redeem=!redeem;error=""}){Text(if(redeem)"Ho già un account" else "Ho un codice invito")}
     }
@@ -1357,9 +1357,9 @@ private fun DiaryScreen(
                                                 Text("Modifica")
                                             }
                                             TextButton(onClick = { pendingDelete = entry }) {
-                                                Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = Color(0xFFFF879B), modifier = Modifier.size(17.dp))
+                                                Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(17.dp))
                                                 Spacer(Modifier.width(6.dp))
-                                                Text("Elimina", color = Color(0xFFFF879B))
+                                                Text("Elimina", color = MaterialTheme.colorScheme.error)
                                             }
                                         }
                                     }
@@ -1436,7 +1436,7 @@ private fun DiaryScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth().height(92.dp),
                         shape = RoundedCornerShape(20.dp),
-                        color = Color.White.copy(alpha = 0.045f),
+                        color = frostedSurfaceColor(),
                         border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor())
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
