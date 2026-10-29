@@ -306,6 +306,93 @@ class MainActivity:ComponentActivity() {
     )
     var draggedTab by remember { mutableStateOf<Float?>(null) }
     SideEffect { navigationBlurState.isEnabled = !liveBlurDisabledState.value }
+    BlurOverlay(
+        state = navigationBlurState,
+        modifier = Modifier.align(Alignment.BottomStart)
+            .fillMaxWidth()
+            .padding(start = 12.dp, end = 78.dp)
+            .navigationBarsPadding()
+            .padding(vertical = 4.dp)
+            .height(68.dp)
+            .clip(RoundedCornerShape(50))
+            .clipToBounds()
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize()
+                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.34f), RoundedCornerShape(50)),
+            shape = RoundedCornerShape(50),
+            color = Color(0x500B1220),
+            tonalElevation = 0.dp
+        ) {
+            BoxWithConstraints(
+                Modifier.fillMaxSize()
+                    .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.07f), Color(0xFF0F1A2B).copy(alpha = 0.55f), Color(0xFF101827).copy(alpha = 0.66f))))
+                    .padding(horizontal = 3.dp, vertical = 3.dp)
+            ) {
+                val tabWidth = (maxWidth - 6.dp) / 3
+                val pillPosition by animateFloatAsState(
+                    targetValue = draggedTab ?: primaryTab.toFloat(),
+                    animationSpec = spring(dampingRatio = 0.84f, stiffness = 520f),
+                    label = "navigationPillPosition"
+                )
+                Box(
+                    Modifier.graphicsLayer { translationX = (tabWidth + 3.dp).toPx() * pillPosition }
+                        .width(tabWidth).fillMaxHeight()
+                        .clip(RoundedCornerShape(50))
+                        .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.18f), MaterialTheme.colorScheme.primary.copy(alpha = 0.22f), MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))))
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50))
+                )
+                Row(
+                    Modifier.fillMaxSize().pointerInput(primaryTab, currentRoute) {
+                        var dragPosition = primaryTab.toFloat()
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                val step = (size.width / 3f).coerceAtLeast(1f)
+                                dragPosition = (offset.x / step).coerceIn(0f, 2f)
+                                draggedTab = dragPosition
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                val step = (size.width / 3f).coerceAtLeast(1f)
+                                dragPosition = (dragPosition + dragAmount.x / step).coerceIn(0f, 2f)
+                                draggedTab = dragPosition
+                            },
+                            onDragEnd = {
+                                val target = (draggedTab ?: dragPosition).roundToInt().coerceIn(0, 2)
+                                draggedTab = null
+                                val route = primaryRoutes[target]
+                                if (route != currentRoute) nav.navigate(route) {
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            onDragCancel = { draggedTab = null }
+                        )
+                    },
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) { nav.navigate("settings") { launchSingleTop = true; restoreState = true } }
+                }
+            }
+        }
+    }
+    Box(
+        Modifier.align(Alignment.BottomEnd)
+            .padding(end = 12.dp)
+            .navigationBarsPadding()
+            .padding(bottom = 11.dp)
+            .size(54.dp)
+            .shadow(7.dp, RoundedCornerShape(23.dp))
+            .clip(RoundedCornerShape(23.dp))
+            .background(MaterialTheme.colorScheme.primary)
+            .clickable { editing = null; nav.navigate("edit") },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(25.dp), tint = MaterialTheme.colorScheme.onPrimary)
+    }
 
 }
 }
