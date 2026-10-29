@@ -27,10 +27,14 @@ class DiaryRepository(context: Context) {
         val response=ApiClient.api.sync("Bearer $token", SyncRequest(pending.map { it.toDto() }))
         val local=pending.associateBy { it.id }
         val remoteById = response.changes.associateBy { it.id }
-        dao.upsertAll(response.changes.mapNotNull { dto ->
-            val localEntry=local[dto.id]
-            if(localEntry!=null && localEntry.updatedAt>dto.updatedAt) null else dto.toEntity()
-        })
+        val mergedRemote = mutableListOf<DiaryEntry>()
+        for (dto in response.changes) {
+            val localEntry = dao.get(dto.id)
+            if (localEntry != null && localEntry.updatedAt > dto.updatedAt) continue
+            // Photos are intentionally device-local for now and must survive server syncs.
+            mergedRemote += dto.toEntity().copy(photoUri = localEntry?.photoUri)
+        }
+        dao.upsertAll(mergedRemote)
         // Never mark a local edit as synced unless the server confirms an equal/newer version.
         pending.forEach { localEntry ->
             val remote=remoteById[localEntry.id]
