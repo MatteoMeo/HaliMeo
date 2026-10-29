@@ -74,6 +74,10 @@ private val Panel = Color(0xFF101114)
 private val Mint = Color(0xFFB9DDF5)
 private val Muted = Color(0xFFB4BAC5)
 private val Elevated = Color(0xFF101317)
+// Balanced One UI-inspired glass surfaces: translucent charcoal with a cool edge highlight.
+private val FrostedSurface = Color(0xC8101419)
+private val FrostedSurfaceStrong = Color(0xD9101419)
+private val FrostedEdge = Color.White.copy(alpha = 0.17f)
 private val HaliMeoBackdrop = Brush.verticalGradient(listOf(Color.Black, Color.Black, Color.Black))
 private val TextPrimary = Color(0xFFF5F7FA)
 
@@ -158,7 +162,7 @@ class MainActivity:ComponentActivity() {
         Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(
                 modifier = Modifier.weight(1f).shadow(14.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(50)),
-                shape = RoundedCornerShape(50), color = Color(0xB812151B), tonalElevation = 0.dp
+                shape = RoundedCornerShape(50), color = FrostedSurface, tonalElevation = 0.dp
             ) {
                 Row(Modifier.fillMaxWidth().height(68.dp).background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.055f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.045f)))).padding(horizontal = 4.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                     FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
@@ -323,9 +327,9 @@ private fun SettingsScreen(
         Text("IMPOSTAZIONI", color = primaryText, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
 
         Card(
-            modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(24.dp)).border(1.dp, FrostedEdge, RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xB8101114))
+            colors = CardDefaults.cardColors(containerColor = FrostedSurface)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge)
@@ -337,7 +341,7 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xC8101115))
+            colors = CardDefaults.cardColors(containerColor = FrostedSurface)
         ) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -393,7 +397,7 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xE6101115))
+            colors = CardDefaults.cardColors(containerColor = FrostedSurfaceStrong)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("INVITI", color = accentText, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
@@ -441,7 +445,7 @@ private fun SettingsScreen(
                             Card(
                                 modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(20.dp)),
                                 shape = RoundedCornerShape(20.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xE6101115))
+                                colors = CardDefaults.cardColors(containerColor = FrostedSurfaceStrong)
                             ) {
                                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                     Text("IL TUO CODICE", color = accentText, style = MaterialTheme.typography.labelLarge)
@@ -518,7 +522,7 @@ private fun SettingsScreen(
         }
     }
     Column(Modifier.fillMaxSize().background(HaliMeoBackdrop).padding(20.dp),verticalArrangement=Arrangement.Center){Text("HaliMeo",style=MaterialTheme.typography.displayMedium,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black);Text("Un posto solo vostro.",color=Muted);Spacer(Modifier.height(16.dp))
-        Card(colors=CardDefaults.cardColors(containerColor=Panel), modifier=Modifier.fillMaxWidth()) {
+        Card(colors=CardDefaults.cardColors(containerColor=FrostedSurfaceStrong), modifier=Modifier.fillMaxWidth().border(1.dp, FrostedEdge, RoundedCornerShape(24.dp)), shape=RoundedCornerShape(24.dp)) {
             Column(Modifier.padding(12.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     val dotColor = when (serverOnline) { true -> Color(0xFF86E3B0); false -> Color(0xFFFF8E9B); null -> Color(0xFFFFD18A) }
@@ -730,7 +734,7 @@ private fun DiaryScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(28.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xB8101114))
+                        colors = CardDefaults.cardColors(containerColor = FrostedSurface)
                     ) {
                         Column(
                             modifier = Modifier.padding(24.dp),
@@ -798,10 +802,10 @@ private fun DiaryScreen(
                                 .graphicsLayer { scaleX = cardScale; scaleY = cardScale; alpha = itemAlpha; translationY = itemOffset }
                                 .clickable(interactionSource = cardInteraction, indication = null, onClick = { onEdit(entry) })
                                 .shadow(10.dp, RoundedCornerShape(28.dp), clip = false)
-                                .border(1.dp, Color.White.copy(alpha = 0.19f), MaterialTheme.shapes.large)
+                                .border(1.dp, FrostedEdge, MaterialTheme.shapes.large)
                                 .animateContentSize(),
                             shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.elevatedCardColors(containerColor = Color(0xB8101114))
+                            colors = CardDefaults.elevatedCardColors(containerColor = FrostedSurface)
                         ) {
                             Column(
                                 modifier = Modifier.padding(15.dp),
@@ -920,9 +924,9 @@ private fun DiaryScreen(
         Text(if (existing == null) "NUOVO RICORDO" else "MODIFICA RICORDO", color = Color(0xFFF5F7FA), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Text("I momenti importanti, custoditi in un posto vostro.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         Card(
-            modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(26.dp)),
+            modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(26.dp)).border(1.dp, FrostedEdge, RoundedCornerShape(26.dp)),
             shape = RoundedCornerShape(26.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xE6101115))
+            colors = CardDefaults.cardColors(containerColor = FrostedSurfaceStrong)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(title, { title = it }, label = { Text("Titolo") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -962,12 +966,12 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
                 .graphicsLayer { scaleX = tripScale; scaleY = tripScale }
                 .clickable(interactionSource = tripInteraction, indication = null, onClick = onOpenMonaco),
             shape = RoundedCornerShape(26.dp),
-            color = Color(0xFF101114),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
+            color = FrostedSurface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, FrostedEdge),
             tonalElevation = 0.dp
         ) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Box(Modifier.size(76.dp).clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.24f), MaterialTheme.colorScheme.surfaceVariant))), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(76.dp).clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.10f), MaterialTheme.colorScheme.primary.copy(alpha = 0.20f), MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.76f)))), contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.LocationCity, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(36.dp))
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
