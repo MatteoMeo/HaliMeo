@@ -65,8 +65,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.Image
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -81,9 +79,6 @@ import it.halimeo.app.data.*
 import it.halimeo.app.network.*
 import it.halimeo.app.sync.SyncScheduler
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.delay
 
 private val Ink = Color.Black
 private val Panel = Color(0xFF101114)
@@ -127,20 +122,6 @@ private val lastSyncAtState = mutableStateOf(0L)
 private val TextPrimary = Color(0xFFF5F7FA)
 
 
-
-// Decode user-selected images off the main thread and downsample them before Compose.
-private suspend fun decodeScaledBitmap(context: android.content.Context, uriString: String, maxDimension: Int): android.graphics.Bitmap? = withContext(Dispatchers.IO) {
-    val uri = Uri.parse(uriString)
-    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    runCatching {
-        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@withContext null
-        var sampleSize = 1
-        while (maxOf(bounds.outWidth / sampleSize, bounds.outHeight / sampleSize) > maxDimension) sampleSize *= 2
-        val options = BitmapFactory.Options().apply { inSampleSize = sampleSize; inPreferredConfig = Bitmap.Config.ARGB_8888 }
-        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
-    }.getOrNull()
-}
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable private fun HaliMeoTheme(content: @Composable () -> Unit) {
