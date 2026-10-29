@@ -1,0 +1,11 @@
+<resources>
+    <style name="Theme.HaliMeo" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:statusBarColor">#00000000</item>
+        <item name="android:navigationBarColor">#00000000</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:colorAccent">#B9DDF5</item>
+        <item name="android:windowBackground">#050608</item>
+    </style>
+</resources>
