@@ -395,11 +395,11 @@ class MainActivity:ComponentActivity() {
                         .pointerInput(Unit) {
                             detectDragGestures(
                                 onDragStart = { offset ->
-                                    draggedTab = (offset.x / (size.width / 3f)).coerceIn(0f, 2f)
+                                    draggedTab = ((offset.x - (size.width - 6.dp.toPx()) / 6f) / ((size.width + 3.dp.toPx()) / 3f)).coerceIn(0f, 2f)
                                 },
                                 onDrag = { change, dragAmount ->
                                     change.consume()
-                                    val stride = size.width / 3f
+                                    val stride = (size.width + 3.dp.toPx()) / 3f
                                     draggedTab = ((if (draggedTab.isNaN()) primaryTab.toFloat() else draggedTab) + dragAmount.x / stride).coerceIn(0f, 2f)
                                 },
                                 onDragEnd = {
