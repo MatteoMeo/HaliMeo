@@ -38,7 +38,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-halimeo-gradle-build-cache-
       - name: Build debug APK
-        run: chmod +x gradlew && ./gradlew --build-cache --parallel assembleDebug
+        env:
+          HALIMEO_VERSION_CODE: ${{ github.run_number }}
+          HALIMEO_VERSION_NAME: 1.0.${{ github.run_number }}
+        run: chmod +x gradlew && ./gradlew --build-cache --parallel -PHALIMEO_VERSION_CODE="$HALIMEO_VERSION_CODE" -PHALIMEO_VERSION_NAME="$HALIMEO_VERSION_NAME" assembleDebug
       - name: Prepare APK
         run: cp app/build/outputs/apk/debug/*.apk HaliMeo-alpha-debug.apk
       - name: Upload APK artifact
