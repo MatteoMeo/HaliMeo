@@ -300,7 +300,7 @@ class MainActivity:ComponentActivity() {
             .withTint(Color(0xFF0B1220).copy(alpha = 0.32f))
     )
     var draggedTab by remember { mutableStateOf<Float?>(null) }
-    SideEffect { navigationBlurState.isEnabled = !liveBlurDisabledState.value }
+    LaunchedEffect(liveBlurDisabledState.value) { navigationBlurState.isEnabled = !liveBlurDisabledState.value }
 
     // Keep the blur bounds identical to the navigation capsule. The FAB is a
     // separate sibling so it cannot stretch the blur layer or shift its padding.
@@ -1307,7 +1307,7 @@ private fun DiaryScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(28.dp)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.34f), RoundedCornerShape(28.dp)),
                         shape = RoundedCornerShape(28.dp),
                         colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
                     ) {
@@ -1698,11 +1698,12 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
         )
         Surface(
             modifier = Modifier.fillMaxWidth()
+                .shadow(8.dp, RoundedCornerShape(26.dp))
                 .graphicsLayer { scaleX = tripScale; scaleY = tripScale }
                 .clickable(interactionSource = tripInteraction, indication = null, onClick = onOpenMonaco),
             shape = RoundedCornerShape(26.dp),
             color = frostedSurfaceColor(),
-            border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor()),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)),
             tonalElevation = 0.dp
         ) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
