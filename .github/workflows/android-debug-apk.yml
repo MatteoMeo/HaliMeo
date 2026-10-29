@@ -116,19 +116,26 @@ jobs:
             echo "::error::apksigner non trovato negli Android Build Tools."
             exit 1
           fi
-          "$APKSIGNER" verify --verbose "$APK"
-          APK_CERT_INFO="$("$APKSIGNER" verify --print-certs "$APK" 2>&1)"
+          # Firma esplicitamente l’APK con la chiave persistente: Gradle può usare una
+          # debug.keystore diversa da quella generata/restaurata in questo workflow.
+          SIGNED_APK="${APK%.apk}-alpha-signed.apk"
+          "$APKSIGNER" sign --ks "$HOME/.android/debug.keystore" \
+            --ks-key-alias androiddebugkey \
+            --ks-pass pass:android --key-pass pass:android \
+            --out "$SIGNED_APK" "$APK"
+          "$APKSIGNER" verify --verbose "$SIGNED_APK"
+          APK_CERT_INFO="$("$APKSIGNER" verify --print-certs "$SIGNED_APK" 2>&1)"
           echo "$APK_CERT_INFO"
-          # Estrae l’impronta anche se apksigner la stampa con i due punti tra i byte.
-          APK_CERT_SHA256="$(printf '%s\n' "$APK_CERT_INFO" | tr -d ':' | grep -Eio '[0-9a-f]{64}' | head -n 1 | tr '[:upper:]' '[:lower:]')"
+          APK_CERT_SHA256="$(printf '%s\n' "$APK_CERT_INFO" | grep -Eio '[0-9a-f]{64}' | head -n 1 | tr '[:upper:]' '[:lower:]')"
           EXPECTED_SHA256="$(printf '%s' "$HALIMEO_SIGNING_CERT_SHA256" | tr '[:upper:]' '[:lower:]')"
           if [ -z "$APK_CERT_SHA256" ] || [ "$APK_CERT_SHA256" != "$EXPECTED_SHA256" ]; then
-            echo "::error::La firma dell'APK non corrisponde alla chiave Alpha persistente. Pubblicazione annullata."
+            echo "::error::La firma dell’APK non corrisponde alla chiave Alpha persistente. Pubblicazione annullata."
             echo "Attesa: $EXPECTED_SHA256"
             echo "APK:     $APK_CERT_SHA256"
             exit 1
           fi
-          cp "$APK" "HaliMeo-${HALIMEO_VERSION_NAME}-build${HALIMEO_VERSION_CODE}-debug.apk"
+          cp "$SIGNED_APK" "HaliMeo-${HALIMEO_VERSION_NAME}-build${HALIMEO_VERSION_CODE}-debug.apk"
+          echo "Firma verificata: l’APK usa la chiave Alpha persistente."
           echo "Firma verificata: l'APK usa la chiave Alpha persistente."
 
       - name: Genera il changelog in italiano
