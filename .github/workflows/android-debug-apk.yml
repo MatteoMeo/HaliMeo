@@ -14,11 +14,11 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
-    name: Compile debug APK
+    name: Compile and publish alpha APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
@@ -32,10 +32,24 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
       - name: Build debug APK
         run: chmod +x gradlew && ./gradlew --no-daemon assembleDebug
-      - name: Upload APK
+      - name: Prepare APK
+        run: cp app/build/outputs/apk/debug/*.apk HaliMeo-alpha-debug.apk
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: halimeo-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: HaliMeo-alpha-debug.apk
           if-no-files-found: error
           retention-days: 14
+      - name: Publish latest alpha release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: alpha-latest
+          name: HaliMeo Alpha (latest)
+          body: |
+            Latest automatically built HaliMeo alpha debug APK from the feature/ui-ux-refresh branch.
+
+            This is a prerelease build for testing. Install only if you understand it may contain bugs.
+          prerelease: true
+          make_latest: false
+          files: HaliMeo-alpha-debug.apk
