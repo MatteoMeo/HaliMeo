@@ -126,6 +126,8 @@ private fun displayHaliMeoDate(value: String): String {
     return date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yy"))
 }
 private val lastSyncAtState = mutableStateOf(0L)
+private val reduceAnimationsState = mutableStateOf(false)
+private val liveBlurDisabledState = mutableStateOf(false)
 @Composable private fun haliMeoAuthBackdrop(): Brush = if (isHaliMeoDark()) Brush.verticalGradient(listOf(Color(0xFF0A1426), Color(0xFF0B1220), Color(0xFF080D16))) else Brush.verticalGradient(listOf(Color(0xFFF4F8FC), Color(0xFFE7F0F8), Color(0xFFF5F0FA)))
 private val TextPrimary = Color(0xFFF5F7FA)
 
@@ -183,6 +185,17 @@ private val TextPrimary = Color(0xFFF5F7FA)
         "lavender" -> Color(0xFF8878FF)
         "mint" -> Color(0xFF2F9DAB)
         "rose" -> Color(0xFFD66A9B)
+        "amber" -> Color(0xFFFFB547)
+        "coral" -> Color(0xFFFF786B)
+        "red" -> Color(0xFFFF525F)
+        "orange" -> Color(0xFFFF8A35)
+        "yellow" -> Color(0xFFE3C84B)
+        "green" -> Color(0xFF58C98D)
+        "teal" -> Color(0xFF31C7B3)
+        "cyan" -> Color(0xFF45C8E8)
+        "indigo" -> Color(0xFF6575F5)
+        "violet" -> Color(0xFFB17CFF)
+        "magenta" -> Color(0xFFE56CCB)
         else -> scheme.primary
     }
     val adaptiveScheme = scheme.copy(primary = backgroundAccent, secondary = backgroundAccent.copy(alpha = 0.88f))
@@ -586,16 +599,27 @@ private fun SettingsScreen(
                 }
                 Text("Tema scuro AMOLED sempre attivo, con accento dinamico.", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
                 Text("Sfondo", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                val backgroundOptions = listOf("default" to "Predefinito", "blue" to "Blu", "lavender" to "Lavanda", "mint" to "Menta", "rose" to "Rosa")
+                val backgroundOptions = listOf(
+                    "default" to "Predefinito", "blue" to "Blu", "lavender" to "Lavanda",
+                    "mint" to "Menta", "rose" to "Rosa", "amber" to "Ambra",
+                    "coral" to "Corallo", "red" to "Rosso", "orange" to "Arancione",
+                    "yellow" to "Giallo", "green" to "Verde", "teal" to "Ottanio",
+                    "cyan" to "Ciano", "indigo" to "Indaco", "violet" to "Viola",
+                    "magenta" to "Magenta"
+                )
+                val accentSwatches = mapOf(
+                    "blue" to Color(0xFF3E91FF), "lavender" to Color(0xFF8878FF),
+                    "mint" to Color(0xFF2F9DAB), "rose" to Color(0xFFD66A9B),
+                    "amber" to Color(0xFFFFB547), "coral" to Color(0xFFFF786B),
+                    "red" to Color(0xFFFF525F), "orange" to Color(0xFFFF8A35),
+                    "yellow" to Color(0xFFE3C84B), "green" to Color(0xFF58C98D),
+                    "teal" to Color(0xFF31C7B3), "cyan" to Color(0xFF45C8E8),
+                    "indigo" to Color(0xFF6575F5), "violet" to Color(0xFFB17CFF),
+                    "magenta" to Color(0xFFE56CCB)
+                )
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     backgroundOptions.forEach { option ->
-                        val swatch = when (option.first) {
-                            "blue" -> if (isHaliMeoDark()) Color(0xFF3E91FF) else Color(0xFF8CCFFF)
-                            "lavender" -> if (isHaliMeoDark()) Color(0xFF8878FF) else Color(0xFFC2B2FF)
-                            "mint" -> if (isHaliMeoDark()) Color(0xFF2F9DAB) else Color(0xFF8EDFC3)
-                            "rose" -> if (isHaliMeoDark()) Color(0xFFD66A9B) else Color(0xFFFFAFC8)
-                            else -> MaterialTheme.colorScheme.primary
-                        }
+                        val swatch = accentSwatches[option.first] ?: MaterialTheme.colorScheme.primary
                         FilterChip(
                             selected = backgroundColor == option.first,
                             onClick = {
@@ -628,6 +652,50 @@ private fun SettingsScreen(
                     }
                 }
                 Text("Puoi scegliere un colore oppure una foto dalla galleria.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+                Text("Prestazioni e movimento", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+                var selectedRefreshRate by remember { mutableIntStateOf(prefs.getInt("preferred_refresh_rate", 120)) }
+                var reduceAnimations by remember { mutableStateOf(prefs.getBoolean("reduce_animations", false)) }
+                var disableLiveBlur by remember { mutableStateOf(prefs.getBoolean("disable_live_blur", false)) }
+                Text("Frequenza schermo", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    listOf(48, 60, 90, 120).forEachIndexed { index, hz ->
+                        SegmentedButton(
+                            selected = selectedRefreshRate == hz,
+                            onClick = {
+                                selectedRefreshRate = hz
+                                prefs.edit().putInt("preferred_refresh_rate", hz).apply()
+                                activity.window.attributes = activity.window.attributes.apply { preferredRefreshRate = hz.toFloat() }
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index, 4)
+                        ) { Text("$hz", maxLines = 1) }
+                    }
+                }
+                Text("Richiede uno schermo compatibile: Android può comunque scegliere una frequenza diversa in base al contenuto e al risparmio energetico.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Riduci le animazioni", color = primaryText, style = MaterialTheme.typography.bodyLarge)
+                        Text("Transizioni più rapide e meno effetti di movimento.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Switch(checked = reduceAnimations, onCheckedChange = {
+                        reduceAnimations = it
+                        prefs.edit().putBoolean("reduce_animations", it).apply()
+                        reduceAnimationsState.value = it
+                    })
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Disattiva blur live", color = primaryText, style = MaterialTheme.typography.bodyLarge)
+                        Text("Utile per risparmiare batteria o migliorare la fluidità.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Switch(checked = disableLiveBlur, onCheckedChange = {
+                        disableLiveBlur = it
+                        prefs.edit().putBoolean("disable_live_blur", it).apply()
+                        liveBlurDisabledState.value = it
+                    })
+                }
+                Text("Suggerimento: il blur e le animazioni possono aumentare il carico grafico. Disattivali se noti cali di fluidità o consumi elevati.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 Text("Anteprima in tempo reale", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Surface(
                     modifier = Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(22.dp)),
