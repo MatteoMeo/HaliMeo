@@ -759,7 +759,7 @@ private fun SettingsScreen(
                         reduceAnimations = it
                         prefs.edit().putBoolean("reduce_animations", it).apply()
                         reduceAnimationsState.value = it
-                    , colors = SwitchDefaults.colors(
+                    }, colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
                         checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f),
                         checkedBorderColor = MaterialTheme.colorScheme.primary,
@@ -777,7 +777,7 @@ private fun SettingsScreen(
                         disableLiveBlur = it
                         prefs.edit().putBoolean("disable_live_blur", it).apply()
                         liveBlurDisabledState.value = it
-                    , colors = SwitchDefaults.colors(
+                    }, colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
                         checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f),
                         checkedBorderColor = MaterialTheme.colorScheme.primary,
