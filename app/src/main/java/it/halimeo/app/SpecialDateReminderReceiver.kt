@@ -55,5 +55,7 @@ class SpecialDateReminderReceiver : BroadcastReceiver() {
         if (Build.VERSION.SDK_INT < 33 || context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
             manager.notify(47021, notification)
         }
+        // Re-arm the annual reminder after today's notification.
+        runCatching { LocalDate.parse(date) }.getOrNull()?.let { scheduleSpecialDateReminder(context, label, it) }
     }
 }
