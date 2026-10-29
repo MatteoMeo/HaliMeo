@@ -305,8 +305,10 @@ class MainActivity:ComponentActivity() {
         state = navigationBlurState,
         modifier = Modifier.align(Alignment.BottomCenter)
             .fillMaxWidth()
+            // Keep a bounded height so the live blur overlay can measure its child content.
             .navigationBarsPadding()
             .padding(horizontal = 12.dp, vertical = 4.dp)
+            .height(68.dp)
     ) {
     Row(
         Modifier.fillMaxWidth()
