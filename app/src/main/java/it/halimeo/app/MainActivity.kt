@@ -10,6 +10,8 @@ import android.os.Build
 import android.webkit.*
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -54,6 +56,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.Image
+import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -78,17 +83,20 @@ private val Elevated = Color(0xFF101317)
 private val FrostedSurface = Color(0xC8101419)
 private val FrostedSurfaceStrong = Color(0xD9101419)
 private val FrostedEdge = Color.White.copy(alpha = 0.17f)
+private val themeModeState = mutableStateOf("system")
 private val HaliMeoBackdrop = Brush.verticalGradient(listOf(Color.Black, Color.Black, Color.Black))
 private val TextPrimary = Color(0xFFF5F7FA)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable private fun HaliMeoTheme(content: @Composable () -> Unit) {
+    val mode by themeModeState
+    val darkTheme = when (mode) { "light" -> false; "dark" -> true; else -> isSystemInDarkTheme() }
     val context = LocalContext.current
     val staticFontWidth = 100f
     val staticFontRoundness = 28f
     // Android 12+ supplies Material You / Monet colors derived from the device wallpaper.
     // Keep the app dark with a true-black canvas for AMOLED displays.
-    val scheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    val scheme = if (darkTheme && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         dynamicDarkColorScheme(context).copy(
             background = Color.Black,
             surface = Color(0xFF080A0C),
@@ -98,11 +106,20 @@ private val TextPrimary = Color(0xFFF5F7FA)
             onSurfaceVariant = Color(0xFFD0D4DC),
             outline = Color(0xFF30383E)
         )
-    } else {
+    } else if (darkTheme) {
         darkColorScheme(
             primary=Mint, onPrimary=Color(0xFF102A3A), secondary=Color(0xFF72D9E8), onSecondary=Color(0xFF06272D),
             background=Ink, onBackground=TextPrimary, surface=Panel, onSurface=TextPrimary,
             surfaceVariant=Elevated, onSurfaceVariant=Muted, outline=Color(0xFF30383E)
+        )
+    } else {
+        lightColorScheme(
+            primary = Color(0xFF315D78), onPrimary = Color.White,
+            secondary = Color(0xFF286A73), onSecondary = Color.White,
+            background = Color(0xFFF4F7FA), onBackground = Color(0xFF171B20),
+            surface = Color(0xFFF8FAFC), onSurface = Color(0xFF171B20),
+            surfaceVariant = Color(0xFFE5EBF0), onSurfaceVariant = Color(0xFF46515B),
+            outline = Color(0xFF8996A1)
         )
     }
     // Material 3 Expressive supplies the expressive motion system and updated component defaults.
@@ -125,6 +142,7 @@ class MainActivity:ComponentActivity() {
         SyncScheduler.schedule(this)
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) window.isNavigationBarContrastEnforced = false
+        themeModeState.value = getSharedPreferences("halimeo_preferences", MODE_PRIVATE).getString("theme_mode", "system") ?: "system"
         setContent { HaliMeoTheme { HaliMeoRoot() } }
     }
 }
@@ -316,9 +334,12 @@ private fun SettingsScreen(
         }
     }
 
-    val primaryText = Color(0xFFF5F7FA)
+    val primaryText = MaterialTheme.colorScheme.onSurface
     val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
     val accentText = MaterialTheme.colorScheme.primary
+    var themeMode by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("theme_mode", "system") ?: "system") }
+    var specialDateLabel by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date_label", "") ?: "") }
+    var specialDate by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date", "") ?: "") }
 
     Column(
         Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(16.dp),
@@ -335,6 +356,62 @@ private fun SettingsScreen(
                 Text("ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge)
                 Text(displayName, color = primaryText, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 Text("I ricordi vengono salvati localmente prima della sincronizzazione.", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth().border(1.dp, FrostedEdge, RoundedCornerShape(24.dp)),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = FrostedSurface)
+        ) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("ASPETTO", color = accentText, style = MaterialTheme.typography.labelLarge)
+                Text("Adatta HaliMeo al tuo dispositivo", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    listOf("system" to "Sistema", "dark" to "Scura", "light" to "Chiara").forEachIndexed { index, option ->
+                        SegmentedButton(
+                            selected = themeMode == option.first,
+                            onClick = {
+                                themeMode = option.first
+                                themeModeState.value = option.first
+                                ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putString("theme_mode", option.first).apply()
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 3)
+                        ) { Text(option.second, maxLines = 1) }
+                    }
+                }
+                Text("La scelta viene salvata sul dispositivo.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth().border(1.dp, FrostedEdge, RoundedCornerShape(24.dp)),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = FrostedSurface)
+        ) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("DATA SPECIALE", color = accentText, style = MaterialTheme.typography.labelLarge)
+                Text("Tenete a portata di mano una data importante", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                OutlinedTextField(value = specialDateLabel, onValueChange = { specialDateLabel = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Nome (es. compleanno)") })
+                OutlinedTextField(value = specialDate, onValueChange = { specialDate = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Data AAAA-MM-GG") }, placeholder = { Text("2026-12-26") })
+                Button(
+                    onClick = {
+                        val parsed = runCatching { java.time.LocalDate.parse(specialDate) }.getOrNull()
+                        if (specialDateLabel.isNotBlank() && parsed != null) {
+                            ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putString("special_date_label", specialDateLabel.trim()).putString("special_date", specialDate).apply()
+                            Toast.makeText(ctx, "Data speciale salvata", Toast.LENGTH_SHORT).show()
+                        } else Toast.makeText(ctx, "Inserisci un nome e una data valida", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Salva data") }
+                val parsedDate = runCatching { java.time.LocalDate.parse(specialDate) }.getOrNull()
+                if (parsedDate != null && specialDateLabel.isNotBlank()) {
+                    val today = java.time.LocalDate.now()
+                    val next = if (parsedDate.isBefore(today)) parsedDate.withYear(today.year + 1) else parsedDate
+                    val days = java.time.temporal.ChronoUnit.DAYS.between(today, next)
+                    Text(if (days == 0L) "È oggi: $specialDateLabel!" else "Mancano $days giorni a $specialDateLabel", color = accentText, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                }
+                Text("Conto alla rovescia locale per compleanni e date importanti.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
             }
         }
 
