@@ -13,11 +13,11 @@ on:
       - '.github/workflows/android-debug-apk.yml'
   workflow_dispatch:
 
-# Non cancelliamo una build già avviata: deve poter salvare la chiave di firma
-# persistente nella cache. Le build successive verranno eseguite in coda.
+# La chiave di firma persistente è già stata salvata: solo la build più recente
+# deve occupare il runner, così le modifiche successive non restano in coda.
 concurrency:
   group: halimeo-alpha-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: write
