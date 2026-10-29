@@ -1198,6 +1198,7 @@ private fun SettingsScreen(
 }
 
 }
+}
 @Composable private fun AuthScreen(onLogin:(String,String,(String)->Unit)->Unit,onRedeem:(String,String,String,String,(String)->Unit)->Unit){
     var redeem by remember{mutableStateOf(false)};var code by remember{mutableStateOf("")};var name by remember{mutableStateOf("")};var email by remember{mutableStateOf("")};var pass by remember{mutableStateOf("")};var error by remember{mutableStateOf("")};var busy by remember{mutableStateOf(false)}
     var serverUrl by remember { mutableStateOf(ApiClient.baseUrl().removeSuffix("/")) }
