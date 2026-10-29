@@ -75,10 +75,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import io.github.ezoushen.blur.cmp.BlurOverlay
-import io.github.ezoushen.blur.cmp.BlurOverlayConfig
-import io.github.ezoushen.blur.cmp.rememberBlurOverlayState
-import io.github.ezoushen.blur.cmp.withTint
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.*
 import it.halimeo.app.data.*
@@ -274,82 +270,13 @@ class MainActivity:ComponentActivity() {
             composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,)}
         }
     })
-    val navigationBlurState = rememberBlurOverlayState(
-        initialConfig = BlurOverlayConfig(radius = 22f, downsampleFactor = 4f, isLive = true)
-            .withTint(Color(0xFF0B1220).copy(alpha = 0.34f))
-    )
-    BlurOverlay(
-        state = navigationBlurState,
-        modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-    ) {
-    Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Surface(modifier = Modifier.weight(1f).shadow(8.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.34f), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = Color.Transparent, tonalElevation = 0.dp) {
+    Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Surface(modifier = Modifier.weight(1f).shadow(8.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = Color(0xF20B1220), tonalElevation = 0.dp) {
             BoxWithConstraints(
                 Modifier.fillMaxWidth().height(58.dp)
+                    .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.12f), Color(0xFF0F1A2B).copy(alpha = 0.96f), Color(0xFF101827).copy(alpha = 0.98f))))
                     .padding(horizontal = 3.dp, vertical = 3.dp)
             ) {
-                val tabWidth = (maxWidth - 6.dp) / 3
-                var draggedTab by remember { mutableStateOf<Float?>(null) }
-                // Keep the pill in the graphics layer: no per-frame layout work.
-                val pillPosition by animateFloatAsState(
-                    targetValue = draggedTab ?: primaryTab.toFloat(),
-                    animationSpec = spring(dampingRatio = 0.84f, stiffness = 520f),
-                    label = "navigationPillPosition"
-                )
-                Box(
-                    Modifier.graphicsLayer {
-                        translationX = (tabWidth + 3.dp).toPx() * pillPosition
-                    }.width(tabWidth).fillMaxHeight()
-                        .clip(RoundedCornerShape(50))
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.White.copy(alpha = 0.18f), MaterialTheme.colorScheme.primary.copy(alpha = 0.22f), MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                            )
-                        )
-                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50))
-                        .pointerInput(primaryTab, tabWidth) {
-                            detectDragGestures(
-                                onDragStart = { draggedTab = primaryTab.toFloat() },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    val stepPx = (tabWidth + 3.dp).toPx().coerceAtLeast(1f)
-                                    draggedTab = ((draggedTab ?: primaryTab.toFloat()) + dragAmount.x / stepPx).coerceIn(0f, 2f)
-                                },
-                                onDragEnd = {
-                                    val target = (draggedTab ?: primaryTab.toFloat()).roundToInt().coerceIn(0, 2)
-                                    draggedTab = null
-                                    val route = primaryRoutes[target]
-                                    if (route != currentRoute) nav.navigate(route) {
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                                onDragCancel = { draggedTab = null }
-                            )
-                        }
-                )
-                Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) { nav.navigate("settings") { launchSingleTop = true; restoreState = true } }
-                }
-            }
-        }
-        Surface(
-            modifier = Modifier.size(54.dp).shadow(7.dp, RoundedCornerShape(23.dp))
-                .clickable { editing = null; nav.navigate("edit") },
-            shape = RoundedCornerShape(23.dp),
-            color = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            shadowElevation = 0.dp
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(25.dp))
-            }
-        }
-    }
-    }
-    }
 }
 /**
  * Subtle Monet-tinted ambient light behind translucent surfaces.
