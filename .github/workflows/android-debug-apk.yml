@@ -167,39 +167,29 @@ jobs:
             else
               RANGE="-5 ${CURRENT_SHA}"
             fi
+            SUBJECTS="$(git log --format='%s' $RANGE)"
+            CHANGED="$(git diff --name-only ${LAST_ALPHA_TAG:-$(git rev-list --max-parents=0 HEAD | tail -n 1)}..${CURRENT_SHA} 2>/dev/null || true)"
+            SUMMARY_COUNT=0
+            if printf '%s\n' "$SUBJECTS" | grep -Eiq 'navbar|blur|navigation|profile|account|animation|appearance|One UI|diary|screen|interface|ambient|gradient|settings'; then
+              echo "- **Interfaccia e navigazione:** migliorati la barra inferiore, il blur e le transizioni; riunite le informazioni del profilo in una sola sezione."
+              SUMMARY_COUNT=$((SUMMARY_COUNT + 1))
+            fi
+            if printf '%s\n' "$CHANGED" | grep -Eq '^app/src/main/res/(drawable|mipmap)'; then
+              echo "- **Icona dell’app:** introdotto il diario liquid glass con risorse adattive e variante monocromatica per i launcher Android."
+              SUMMARY_COUNT=$((SUMMARY_COUNT + 1))
+            fi
+            if printf '%s\n' "$SUBJECTS" | grep -Eiq 'Gradle|build|compile|Kotlin|version|sign|release|changelog|cache'; then
+              echo "- **Build e aggiornamenti:** corretti problemi di compilazione e rafforzati versionamento, firma e pubblicazione delle release Alpha."
+              SUMMARY_COUNT=$((SUMMARY_COUNT + 1))
+            fi
+            if printf '%s\n' "$SUBJECTS" | grep -Eiq 'profile|photo|diary|memory|ricordo|edit'; then
+              echo "- **Diario e profilo:** migliorata la gestione dei ricordi e dei dati del profilo locale."
+              SUMMARY_COUNT=$((SUMMARY_COUNT + 1))
+            fi
+            if [ "$SUMMARY_COUNT" -eq 0 ]; then
+              echo "- **Manutenzione:** correzioni tecniche e aggiornamenti interni per mantenere stabile la versione Alpha."
+            fi
 
-            git log --format='%h%x09%s' $RANGE -- app/src/main/java/it/halimeo/app/MainActivity.kt app/src/main/res/drawable app/src/main/res/mipmap-anydpi-v26 | while IFS=$'\t' read -r hash subject; do
-              [ -n "${hash:-}" ] || continue
-              case "$subject" in
-                "Fix incompatible animation spec types in reduced-motion gradient"*)
-                  description="Corretto l'errore Kotlin che impediva la compilazione: l'animazione dello sfondo ora mantiene un tipo di animazione compatibile anche quando è attiva l'opzione Riduci le animazioni." ;;
-                "Fix navbar blur bounds and unify profile/account settings"*)
-                  description="Accorpate le schede Account e Il vostro profilo in un'unica sezione, mantenendo foto, soprannome e descrizione. Separato il contenuto della barra dal pulsante + e ristretto il contenitore del blur." ;;
-                "Keep live blur inside navigation bar bounds"*)
-                  description="Il blur è limitato alla sola barra di navigazione, con bordi arrotondati e ritaglio del contenuto; il pulsante + è posizionato fuori dall'overlay e non riceve blur." ;;
-                "Replace H monogram with adaptive liquid-glass diary icon"*)
-                  description="Sostituita la H con un simbolo di diario a copertina traslucida, pagine e segnalibro. Aggiornate anche le versioni monocromatica e di sfondo dell'icona adattiva, mantenendo il simbolo nella stessa area sicura per le maschere dei launcher." ;;
-                "Stabilize live blur state and unify frosted card styling"*)
-                  description="Resa più coerente la gestione dello stato del blur live e uniformato lo stile delle superfici effetto vetro per ridurre differenze visive tra le schermate." ;;
-                "Restore balanced navbar structure and fix reduced motion and switch contrast"*)
-                  description="Ribilanciata la barra inferiore e migliorato il contrasto degli interruttori nelle Impostazioni; l'opzione per ridurre il movimento evita gli spostamenti animati dello sfondo." ;;
-                "Add subtle motion to ambient gradient background"*)
-                  description="Aggiunto un movimento molto lento alle luci dello sfondo per dare profondità senza animare i contenuti principali." ;;
-                "Add profile photo and editable local profile details"*)
-                  description="Aggiunte foto, soprannome e descrizione modificabili per il profilo locale. È indicato chiaramente che questi dati restano sul dispositivo e non cambiano ancora il profilo online." ;;
-                "Fix malformed appearance switch callbacks blocking Kotlin compilation"*)
-                  description="Corrette le parentesi delle callback degli interruttori Aspetto che impedivano al compilatore Kotlin di leggere correttamente i parametri degli Switch." ;;
-                "Import animateFloat for the animated gradient backdrop"*)
-                  description="Aggiunto l'import mancante di animateFloat, necessario per compilare le animazioni del gradiente di sfondo." ;;
-                "Respect reduced motion for ambient gradient animation"*)
-                  description="Collegato il movimento del gradiente all'opzione Riduci le animazioni: quando è attiva, le luci dello sfondo restano ferme." ;;
-                *)
-                  description="Modifica tecnica registrata: ${subject}. Il titolo del commit è riportato per identificare con precisione la modifica, senza attribuirle effetti non verificati." ;;
-              esac
-              printf '%s\n' "- ${description} (commit ${hash})"
-            done
-
-            
             echo
             echo "---"
             echo
