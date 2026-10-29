@@ -876,10 +876,8 @@ private fun SettingsScreen(
 }
 @Composable
 private fun categoryAccent(category: String, memorySeed: String = category): Color {
-    val normalized = category.trim().lowercase()
     val dark = isHaliMeoDark()
-    // Stable per-memory palette: cards keep their colour while recomposing/reordering,
-    // but new memories naturally spread across the accent palette.
+    // Stable per-memory palette: visually varied, but never changes during recomposition.
     val memoryPalette = if (dark) listOf(
         Color(0xFF83C9FF), Color(0xFFFF9FBD), Color(0xFFFFC878),
         Color(0xFFB9A5FF), Color(0xFF8DE0C1), Color(0xFF7FE1E8),
@@ -889,15 +887,7 @@ private fun categoryAccent(category: String, memorySeed: String = category): Col
         Color(0xFF5D42A3), Color(0xFF17694F), Color(0xFF126B73),
         Color(0xFF9A4933), Color(0xFF7545A0), Color(0xFF4B6F24)
     )
-    val stableAccent = memoryPalette[(memorySeed.hashCode() and Int.MAX_VALUE) % memoryPalette.size]
-    return when {
-        listOf("viagg", "vacanz", "gita", "monaco", "avventura").any(normalized::contains) -> if (dark) Color(0xFF83C9FF) else Color(0xFF175E91)
-        listOf("compleanno", "anniversario", "festa", "regalo").any(normalized::contains) -> if (dark) Color(0xFFFF9FBD) else Color(0xFF9C3155)
-        listOf("cena", "ristorante", "cibo", "pranzo", "aperitivo").any(normalized::contains) -> if (dark) Color(0xFFFFC878) else Color(0xFF855000)
-        listOf("momento", "ricordo", "giornata", "speciale").any(normalized::contains) -> if (dark) Color(0xFFB9A5FF) else Color(0xFF5D42A3)
-        listOf("foto", "fotografia", "immagine").any(normalized::contains) -> if (dark) Color(0xFF8DE0C1) else Color(0xFF17694F)
-        else -> stableAccent
-    }
+    return memoryPalette[(memorySeed.hashCode() and Int.MAX_VALUE) % memoryPalette.size]
 }
 
 private fun categoryIcon(category: String): androidx.compose.ui.graphics.vector.ImageVector {
