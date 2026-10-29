@@ -96,8 +96,8 @@ private val FrostedEdge = Color.White.copy(alpha = 0.17f)
     "dark" -> true
     else -> isSystemInDarkTheme()
 }
-@Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) Color(0xFF101419) else Color(0xFFFFFFFF)
-@Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) Color(0xFF0C0F12) else Color(0xFFFFFFFF)
+@Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) Color(0xD9101419) else Color(0xD9FFFFFF)
+@Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) Color(0xE60C0F12) else Color(0xE6FFFFFF)
 private val themeModeState = mutableStateOf("system")
 private val customBackgroundColorState = mutableStateOf("default")
 private val customBackgroundUriState = mutableStateOf<String?>(null)
@@ -1236,7 +1236,19 @@ private fun DiaryScreen(
                             shape = MaterialTheme.shapes.large,
                             colors = CardDefaults.elevatedCardColors(containerColor = frostedSurfaceColor())
                         ) {
-                            Column(
+                            Box {
+                                Box(
+                                    Modifier.matchParentSize().clip(MaterialTheme.shapes.large).background(
+                                        Brush.linearGradient(
+                                            listOf(
+                                                Color.White.copy(alpha = if (isHaliMeoDark()) 0.055f else 0.30f),
+                                                Color.Transparent,
+                                                MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.045f else 0.10f)
+                                            )
+                                        )
+                                    )
+                                )
+                                Column(
                                 modifier = Modifier.padding(15.dp),
                                 verticalArrangement = Arrangement.spacedBy(11.dp)
                             ) {
@@ -1352,6 +1364,7 @@ private fun DiaryScreen(
                                         fontWeight = FontWeight.SemiBold
                                     )
                                 }
+                            }
                             }
                         }
                     }
