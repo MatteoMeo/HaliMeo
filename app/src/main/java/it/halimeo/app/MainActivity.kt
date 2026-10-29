@@ -61,6 +61,8 @@ import androidx.compose.foundation.Image
 import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -83,6 +85,13 @@ private val Elevated = Color(0xFF101317)
 private val FrostedSurface = Color(0xC8101419)
 private val FrostedSurfaceStrong = Color(0xD9101419)
 private val FrostedEdge = Color.White.copy(alpha = 0.17f)
+@Composable private fun isHaliMeoDark(): Boolean = when (themeModeState.value) {
+    "light" -> false
+    "dark" -> true
+    else -> isSystemInDarkTheme()
+}
+@Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) FrostedSurface else Color(0xDDF8FBFF)
+@Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) FrostedSurfaceStrong else Color(0xF2FFFFFF)
 private val themeModeState = mutableStateOf("system")
 private val lastSyncAtState = mutableStateOf(0L)
 private val HaliMeoBackdrop = Brush.verticalGradient(listOf(Color.Black, Color.Black, Color.Black))
@@ -91,7 +100,7 @@ private val TextPrimary = Color(0xFFF5F7FA)
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable private fun HaliMeoTheme(content: @Composable () -> Unit) {
     val mode by themeModeState
-    val darkTheme = when (mode) { "light" -> false; "dark" -> true; else -> isSystemInDarkTheme() }
+    val darkTheme = isHaliMeoDark()
     val context = LocalContext.current
     val staticFontWidth = 100f
     val staticFontRoundness = 28f
@@ -168,7 +177,7 @@ class MainActivity:ComponentActivity() {
         favoritesPrefs.edit().putStringSet("ids", updated.toSet()).apply()
     }
     val nav= rememberNavController(); val backStackEntry by nav.currentBackStackEntryAsState(); val currentRoute=backStackEntry?.destination?.route
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA))) {
     HaliMeoAmbientBackdrop(Modifier.fillMaxSize())
     Scaffold(containerColor=Color.Transparent,topBar={TopAppBar(
         title={Text("HaliMeo", fontWeight=FontWeight.ExtraBold, style=MaterialTheme.typography.headlineSmall.copy(letterSpacing=(-1.1).sp, brush=Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.primary))))},
@@ -182,7 +191,7 @@ class MainActivity:ComponentActivity() {
         Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(
                 modifier = Modifier.weight(1f).shadow(14.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(50)),
-                shape = RoundedCornerShape(50), color = FrostedSurface, tonalElevation = 0.dp
+                shape = RoundedCornerShape(50), color = frostedSurfaceColor(), tonalElevation = 0.dp
             ) {
                 Row(Modifier.fillMaxWidth().height(68.dp).background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.055f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.045f)))).padding(horizontal = 4.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                     FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
@@ -219,13 +228,17 @@ class MainActivity:ComponentActivity() {
 private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     val palette = MaterialTheme.colorScheme
     // Keep the base nearly uniform: broad, low-opacity radial fields avoid visible gradient bands.
-    Box(modifier = modifier.clipToBounds().background(Color.Black)) {
+    Box(modifier = modifier.clipToBounds().background(if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA))) {
         Box(
             Modifier.fillMaxSize().background(
-                Brush.verticalGradient(
+                if (isHaliMeoDark()) Brush.verticalGradient(
                     0.0f to Color(0xFF050608),
                     0.48f to Color(0xFF08090C),
                     1.0f to Color(0xFF030405)
+                ) else Brush.verticalGradient(
+                    0.0f to Color(0xFFF8FAFC),
+                    0.5f to Color(0xFFEAF0F5),
+                    1.0f to Color(0xFFF4F7FA)
                 )
             )
         )
@@ -359,7 +372,7 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(24.dp)).border(1.dp, FrostedEdge, RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = FrostedSurface)
+            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge)
@@ -494,7 +507,7 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth().border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = FrostedSurfaceStrong)
+            colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("INVITI", color = accentText, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
@@ -619,7 +632,7 @@ private fun SettingsScreen(
         }
     }
     Column(Modifier.fillMaxSize().background(HaliMeoBackdrop).padding(20.dp),verticalArrangement=Arrangement.Center){Text("HaliMeo",style=MaterialTheme.typography.displayMedium,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black);Text("Un posto solo vostro.",color=Muted);Spacer(Modifier.height(16.dp))
-        Card(colors=CardDefaults.cardColors(containerColor=FrostedSurfaceStrong), modifier=Modifier.fillMaxWidth().border(1.dp, FrostedEdge, RoundedCornerShape(24.dp)), shape=RoundedCornerShape(24.dp)) {
+        Card(colors=CardDefaults.cardColors(containerColor=frostedSurfaceStrongColor()), modifier=Modifier.fillMaxWidth().border(1.dp, FrostedEdge, RoundedCornerShape(24.dp)), shape=RoundedCornerShape(24.dp)) {
             Column(Modifier.padding(12.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     val dotColor = when (serverOnline) { true -> Color(0xFF86E3B0); false -> Color(0xFFFF8E9B); null -> Color(0xFFFFD18A) }
@@ -694,6 +707,7 @@ private fun DiaryScreen(
     var favoritesOnly by remember { mutableStateOf(false) }
     var newestFirst by remember { mutableStateOf(true) }
     var pendingDelete by remember { mutableStateOf<DiaryEntry?>(null) }
+    val feedbackView = LocalView.current
     var headerCollapsed by remember { mutableStateOf(false) }
     val diaryNestedScroll = remember {
         object : NestedScrollConnection {
@@ -894,6 +908,9 @@ private fun DiaryScreen(
                             label = "memoryCardPress"
                         )
                         val accent = categoryAccent(entry.category)
+                        val entryPhoto = remember(entry.photoUri) {
+                            entry.photoUri?.let { value -> runCatching { LocalContext.current.contentResolver.openInputStream(Uri.parse(value))?.use { BitmapFactory.decodeStream(it) } }.getOrNull() }
+                        }
                         ElevatedCard(
                             modifier = Modifier.fillMaxWidth()
                                 .graphicsLayer { scaleX = cardScale; scaleY = cardScale; alpha = itemAlpha; translationY = itemOffset }
@@ -947,7 +964,7 @@ private fun DiaryScreen(
                                     val heartInteraction = remember(entry.id) { MutableInteractionSource() }
                                     val heartPressed by heartInteraction.collectIsPressedAsState()
                                     val heartScale by animateFloatAsState(targetValue = if (heartPressed) 1.32f else if (isFavorite) 1.08f else 1f, animationSpec = spring(dampingRatio = 0.38f, stiffness = 650f), label = "favoriteHeartPop")
-                                    IconButton(onClick = { onToggleFavorite(entry) }, interactionSource = heartInteraction) {
+                                    IconButton(onClick = { feedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onToggleFavorite(entry) }, interactionSource = heartInteraction) {
                                         Icon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = if (isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti", tint = if (isFavorite) accent else Muted, modifier = Modifier.graphicsLayer { scaleX = heartScale; scaleY = heartScale })
                                     }
                                     if (entry.syncState != "SYNCED") {
@@ -965,6 +982,14 @@ private fun DiaryScreen(
                                             }
                                         }
                                     }
+                                }
+                                if (entryPhoto != null) {
+                                    Image(
+                                        bitmap = entryPhoto!!.asImageBitmap(),
+                                        contentDescription = "Foto del ricordo: " + entry.title,
+                                        modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp).clip(RoundedCornerShape(18.dp)),
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                    )
                                 }
                                 Text(
                                     entry.body,
