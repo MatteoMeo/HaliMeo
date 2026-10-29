@@ -10,6 +10,8 @@ import android.os.Build
 import android.webkit.*
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
@@ -117,6 +119,20 @@ private val TextPrimary = Color(0xFFF5F7FA)
     val mode by themeModeState
     val darkTheme = isHaliMeoDark()
     val context = LocalContext.current
+    SideEffect {
+        (context as? ComponentActivity)?.window?.let { window ->
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                window.isNavigationBarContrastEnforced = false
+                window.isStatusBarContrastEnforced = false
+            }
+            WindowInsetsControllerCompat(window, window.decorView).apply {
+                isAppearanceLightNavigationBars = !darkTheme
+                isAppearanceLightStatusBars = !darkTheme
+            }
+        }
+    }
     LaunchedEffect(context) {
         val prefs = context.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
         customBackgroundColorState.value = prefs.getString("background_color", "default") ?: "default"
@@ -180,8 +196,13 @@ class MainActivity:ComponentActivity() {
         super.onCreate(savedInstanceState)
         ApiClient.initialize(applicationContext)
         SyncScheduler.schedule(this)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) window.isNavigationBarContrastEnforced = false
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+            window.isStatusBarContrastEnforced = false
+        }
         themeModeState.value = getSharedPreferences("halimeo_preferences", MODE_PRIVATE).getString("theme_mode", "system") ?: "system"
         lastSyncAtState.value = getSharedPreferences("halimeo_preferences", MODE_PRIVATE).getLong("last_sync_at", 0L)
         setContent { HaliMeoTheme { HaliMeoRoot() } }
