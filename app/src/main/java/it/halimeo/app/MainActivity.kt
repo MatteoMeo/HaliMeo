@@ -79,6 +79,7 @@ import it.halimeo.app.data.*
 import it.halimeo.app.network.*
 import it.halimeo.app.sync.SyncScheduler
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 private val Ink = Color.Black
 private val Panel = Color(0xFF101114)
@@ -897,6 +898,7 @@ private fun DiaryScreen(
     var pendingDelete by remember { mutableStateOf<DiaryEntry?>(null) }
     var expandedEntryIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     val feedbackView = LocalView.current
+    val diaryContext = LocalContext.current
     val listState = rememberLazyListState()
     // Cache diary header data instead of sorting favourites and parsing special dates
     // again whenever Compose recomposes the LazyColumn.
@@ -904,7 +906,7 @@ private fun DiaryScreen(
         entries.asSequence().filter { it.id in favoriteIds }.sortedByDescending { it.memoryDate }.take(2).toList()
     }
     val upcomingSpecial = remember(entries, favoriteIds) {
-        val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+        val prefs = diaryContext.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
         readHaliMeoSpecialDates(prefs).mapNotNull { item ->
             parseHaliMeoDate(item.date)?.let { date ->
                 val today = java.time.LocalDate.now()
