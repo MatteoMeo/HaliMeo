@@ -1977,11 +1977,7 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
                         Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                     }
                 }
-                        }
-                }
             }
-        }
-
         }
     }
 }
