@@ -521,6 +521,29 @@ private fun SettingsScreen(
         TextButton(onClick={redeem=!redeem;error=""}){Text(if(redeem)"Ho già un account" else "Ho un codice invito")}
     }
 }
+private fun categoryAccent(category: String): Color {
+    val normalized = category.trim().lowercase()
+    return when {
+        listOf("viagg", "vacanz", "gita", "monaco", "avventura").any(normalized::contains) -> Color(0xFF83C9FF)
+        listOf("compleanno", "anniversario", "festa", "regalo").any(normalized::contains) -> Color(0xFFFF9FBD)
+        listOf("cena", "ristorante", "cibo", "pranzo", "aperitivo").any(normalized::contains) -> Color(0xFFFFC878)
+        listOf("momento", "ricordo", "giornata", "speciale").any(normalized::contains) -> Color(0xFFB9A5FF)
+        listOf("foto", "fotografia", "immagine").any(normalized::contains) -> Color(0xFF8DE0C1)
+        else -> Color(0xFFB9DDF5)
+    }
+}
+
+private fun categoryIcon(category: String): androidx.compose.ui.graphics.vector.ImageVector {
+    val normalized = category.trim().lowercase()
+    return when {
+        listOf("viagg", "vacanz", "gita", "monaco", "avventura").any(normalized::contains) -> Icons.Default.FlightTakeoff
+        listOf("compleanno", "anniversario", "festa", "regalo").any(normalized::contains) -> Icons.Default.Celebration
+        listOf("cena", "ristorante", "cibo", "pranzo", "aperitivo").any(normalized::contains) -> Icons.Default.Restaurant
+        listOf("foto", "fotografia", "immagine").any(normalized::contains) -> Icons.Default.PhotoCamera
+        else -> Icons.Default.AutoAwesome
+    }
+}
+
 @Composable
 private fun DiaryScreen(
     entries: List<DiaryEntry>,
@@ -716,39 +739,54 @@ private fun DiaryScreen(
                             animationSpec = spring(dampingRatio = 0.62f, stiffness = 520f),
                             label = "memoryCardPress"
                         )
+                        val accent = categoryAccent(entry.category)
                         ElevatedCard(
                             modifier = Modifier.fillMaxWidth()
                                 .graphicsLayer { scaleX = cardScale; scaleY = cardScale; alpha = itemAlpha; translationY = itemOffset }
                                 .clickable(interactionSource = cardInteraction, indication = null, onClick = { onEdit(entry) })
                                 .shadow(10.dp, RoundedCornerShape(28.dp), clip = false)
-                                .border(1.dp, Color.White.copy(alpha = 0.14f), MaterialTheme.shapes.large)
+                                .border(1.dp, accent.copy(alpha = 0.28f), MaterialTheme.shapes.large)
                                 .animateContentSize(),
                             shape = MaterialTheme.shapes.large,
                             colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFF101114))
                         ) {
                             Column(
-                                modifier = Modifier.padding(14.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                                modifier = Modifier.padding(15.dp),
+                                verticalArrangement = Arrangement.spacedBy(11.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.Top
                                 ) {
-                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Surface(
+                                        modifier = Modifier.padding(top = 2.dp).size(42.dp),
+                                        shape = RoundedCornerShape(14.dp),
+                                        color = accent.copy(alpha = 0.13f),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.22f))
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(categoryIcon(entry.category), contentDescription = null, tint = accent, modifier = Modifier.size(21.dp))
+                                        }
+                                    }
+                                    Spacer(Modifier.width(11.dp))
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                                         Text(
                                             entry.title,
-                                            style = MaterialTheme.typography.titleLarge,
+                                            style = MaterialTheme.typography.titleLarge.copy(letterSpacing = (-0.35).sp),
                                             color = Color.White,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                         Row(
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(7.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
-                                            Text(entry.memoryDate, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
-                                            Text("·", color = Muted)
-                                            Text(entry.category, color = Muted, style = MaterialTheme.typography.labelMedium)
+                                            Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = accent, modifier = Modifier.size(14.dp))
+                                            Text(entry.memoryDate, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+                                            Surface(shape = RoundedCornerShape(50), color = accent.copy(alpha = 0.13f)) {
+                                                Text(entry.category.ifBlank { "Ricordo" }, modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp), color = accent, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            }
                                         }
                                     }
                                     val isFavorite = entry.id in favoriteIds
@@ -756,7 +794,7 @@ private fun DiaryScreen(
                                     val heartPressed by heartInteraction.collectIsPressedAsState()
                                     val heartScale by animateFloatAsState(targetValue = if (heartPressed) 1.32f else if (isFavorite) 1.08f else 1f, animationSpec = spring(dampingRatio = 0.38f, stiffness = 650f), label = "favoriteHeartPop")
                                     IconButton(onClick = { onToggleFavorite(entry) }, interactionSource = heartInteraction) {
-                                        Icon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = if (isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti", tint = if (isFavorite) MaterialTheme.colorScheme.primary else Muted, modifier = Modifier.graphicsLayer { scaleX = heartScale; scaleY = heartScale })
+                                        Icon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = if (isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti", tint = if (isFavorite) accent else Muted, modifier = Modifier.graphicsLayer { scaleX = heartScale; scaleY = heartScale })
                                     }
                                     if (entry.syncState != "SYNCED") {
                                         Surface(
@@ -777,7 +815,7 @@ private fun DiaryScreen(
                                 Text(
                                     entry.body,
                                     color = MaterialTheme.colorScheme.onSurface,
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
                                     maxLines = 4,
                                     overflow = TextOverflow.Ellipsis
                                 )
