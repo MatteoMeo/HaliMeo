@@ -117,6 +117,11 @@ private val TextPrimary = Color(0xFFF5F7FA)
     val mode by themeModeState
     val darkTheme = isHaliMeoDark()
     val context = LocalContext.current
+    LaunchedEffect(context) {
+        val prefs = context.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+        customBackgroundColorState.value = prefs.getString("background_color", "default") ?: "default"
+        customBackgroundUriState.value = prefs.getString("background_photo", null)
+    }
     val staticFontWidth = 100f
     val staticFontRoundness = 28f
     // Android 12+ supplies Material You / Monet colors derived from the device wallpaper.
