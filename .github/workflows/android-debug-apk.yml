@@ -136,7 +136,6 @@ jobs:
           fi
           cp "$SIGNED_APK" "HaliMeo-${HALIMEO_VERSION_NAME}-build${HALIMEO_VERSION_CODE}-debug.apk"
           echo "Firma verificata: l’APK usa la chiave Alpha persistente."
-          echo "Firma verificata: l'APK usa la chiave Alpha persistente."
 
       - name: Genera il changelog in italiano
         env:
