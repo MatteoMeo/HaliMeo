@@ -207,7 +207,7 @@ class MainActivity:ComponentActivity() {
     Scaffold(containerColor=Color.Transparent,topBar={TopAppBar(
         title={Text("HaliMeo", fontWeight=FontWeight.ExtraBold, style=MaterialTheme.typography.headlineSmall.copy(letterSpacing=(-1.1).sp, brush=Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.primary))))},
         modifier=Modifier.heightIn(min=56.dp),
-        colors=TopAppBarDefaults.topAppBarColors(containerColor=Color.Transparent, scrolledContainerColor=Color.Transparent, titleContentColor=TextPrimary,actionIconContentColor=TextPrimary),
+        colors=TopAppBarDefaults.topAppBarColors(containerColor=Color.Transparent, scrolledContainerColor=Color.Transparent, titleContentColor=MaterialTheme.colorScheme.onSurface,actionIconContentColor=MaterialTheme.colorScheme.onSurface),
         actions={
             IconButton(onClick={activity.lifecycleScope.launch{runCatching{repo.syncNow()}.onSuccess{val now=System.currentTimeMillis();ctx.getSharedPreferences("halimeo_preferences",android.content.Context.MODE_PRIVATE).edit().putLong("last_sync_at",now).apply();lastSyncAtState.value=now;Toast.makeText(ctx,"Sincronizzazione completata",Toast.LENGTH_SHORT).show()}.onFailure{Toast.makeText(ctx,"Offline: dati conservati sul dispositivo",Toast.LENGTH_LONG).show()}}}){Icon(Icons.Default.CloudSync,"Sincronizza")}
             IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.AutoMirrored.Filled.Logout,"Esci")}
@@ -338,7 +338,7 @@ private fun FloatingNavItem(
         label = "navItemIcon"
     )
     val animatedLabel by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.onSurface else Color(0xFFD5D9DD),
+        targetValue = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = tween(durationMillis = 180),
         label = "navItemLabel"
     )
@@ -1012,7 +1012,7 @@ private fun DiaryScreen(
                                 "La vostra storia comincia qui",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 "Salvate il primo momento speciale. I ricordi vengono conservati sul dispositivo e sincronizzati quando possibile.",
@@ -1073,7 +1073,7 @@ private fun DiaryScreen(
                                 .border(1.dp, FrostedEdge, MaterialTheme.shapes.large)
                                 .animateContentSize(),
                             shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.elevatedCardColors(containerColor = FrostedSurface)
+                            colors = CardDefaults.elevatedCardColors(containerColor = frostedSurfaceColor())
                         ) {
                             Column(
                                 modifier = Modifier.padding(15.dp),
@@ -1311,7 +1311,7 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
                 .graphicsLayer { scaleX = tripScale; scaleY = tripScale }
                 .clickable(interactionSource = tripInteraction, indication = null, onClick = onOpenMonaco),
             shape = RoundedCornerShape(26.dp),
-            color = FrostedSurface,
+            color = frostedSurfaceColor(),
             border = androidx.compose.foundation.BorderStroke(1.dp, FrostedEdge),
             tonalElevation = 0.dp
         ) {
