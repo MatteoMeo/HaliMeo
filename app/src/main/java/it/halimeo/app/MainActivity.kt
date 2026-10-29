@@ -412,8 +412,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     val overlayStrength = backgroundOverlayState.value
     val brightnessAdjustment = backgroundBrightnessState.value
     val motion = rememberInfiniteTransition(label = "ambientGradientMotion")
-    val driftX by motion.animateFloat(initialValue = if (reduceAnimationsState.value) 0f else -24f, targetValue = if (reduceAnimationsState.value) 0f else 24f, animationSpec = if (reduceAnimationsState.value) tween(0) else infiniteRepeatable(animation = tween(18000, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "ambientGradientDriftX")
-    val driftY by motion.animateFloat(initialValue = if (reduceAnimationsState.value) 0f else 16f, targetValue = if (reduceAnimationsState.value) 0f else -16f, animationSpec = if (reduceAnimationsState.value) tween(0) else infiniteRepeatable(animation = tween(23000, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "ambientGradientDriftY")
+    val driftX by motion.animateFloat(initialValue = if (reduceAnimationsState.value) 0f else -24f, targetValue = if (reduceAnimationsState.value) 0f else 24f, animationSpec = infiniteRepeatable(animation = tween(18000, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "ambientGradientDriftX")
+    val driftY by motion.animateFloat(initialValue = if (reduceAnimationsState.value) 0f else 16f, targetValue = if (reduceAnimationsState.value) 0f else -16f, animationSpec = infiniteRepeatable(animation = tween(23000, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "ambientGradientDriftY")
     val customBase = when (backgroundChoice) {
         "blue" -> Color(0xFF071522)
         "lavender" -> Color(0xFF120E20)
