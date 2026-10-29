@@ -546,14 +546,19 @@ private fun SettingsScreen(
         }
     }
 
-    Column(
-        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(rememberScrollState()).padding(start = 20.dp, top = 18.dp, end = 20.dp, bottom = 116.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.padding(bottom = 2.dp)) {
+    Column(Modifier.fillMaxSize().background(Color.Transparent)) {
+        // Keep the settings title pinned while only the options below it scroll.
+        Column(
+            Modifier.fillMaxWidth().padding(start = 20.dp, top = 18.dp, end = 20.dp, bottom = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
             AnimatedPageTitle("Impostazioni", MaterialTheme.typography.headlineLarge)
             Text("Personalizza il vostro spazio.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
         }
+        Column(
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, bottom = 116.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         Card(
             modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
@@ -873,6 +878,7 @@ private fun SettingsScreen(
                 }
                 Text("Versione ${BuildConfig.VERSION_NAME}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             }
+        }
         }
     }
 }
