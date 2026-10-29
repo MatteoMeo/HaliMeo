@@ -197,8 +197,24 @@ jobs:
                   description="Abilitata la compilazione parallela per ridurre i tempi di build." ;;
                 "Publish each successful alpha APK"*)
                   description="Automatizzata la pubblicazione degli APK Alpha su GitHub Releases." ;;
+                "Improve live glass navbar, precise drag, page transitions and adaptive diary header"*)
+                  description="La barra inferiore usa il blur live direttamente dietro ai controlli, per evitare la fascia bianca che compariva sotto la navigazione. Il trascinamento della pillola viene calcolato sulle coordinate reali del dito; le animazioni tra schermate sono più visibili e il sottotitolo del Diario libera spazio quando la pagina scorre." ;;
+                "Share navigation drag state with the gesture detector"*)
+                  description="Corretto il collegamento tra il dito e la pillola: lo stato del trascinamento è ora condiviso con il rilevatore del gesto, così la selezione può seguire il movimento invece di scattare soltanto al rilascio." ;;
+                "Keep Settings title fixed while scrolling its options"*)
+                  description="Il titolo Impostazioni resta in alto mentre scorri le opzioni. In questo modo sai sempre in quale sezione ti trovi, senza dover tornare all'inizio." ;;
+                "Align navigation drag calculations with actual touch coordinates"*)
+                  description="Affinata la precisione del trascinamento della barra: il punto di partenza ora corrisponde alla posizione reale del tocco, riducendo gli spostamenti imprevisti." ;;
+                "Restore stable app structure and add live blur plus finger-tracking nav pill"*)
+                  description="Ripristinata la struttura delle schermate e reintrodotto il blur live. Lo scopo è mantenere visibili i controlli e permettere alla pillola di seguire il dito." ;;
+                "Fix draggable pill gesture scope and refine One UI control shapes"*)
+                  description="Resi i pulsanti più compatti e vicini allo stile One UI, riducendo le forme troppo tonde. Sistemata anche la gestione del gesto di trascinamento." ;;
+                "Restore navigation bar after blur prototype regression"*)
+                  description="Ripristinati la barra di navigazione e il pulsante + che erano scomparsi durante la prova del blur." ;;
+                "Remove blur prototype dependency until overlay integration is fixed"*)
+                  description="Rimossa temporaneamente la libreria di sfocatura dopo un problema d'integrazione, per evitare di distribuire una versione instabile." ;;
                 *)
-                  description="Aggiornamento tecnico: ${subject}" ;;
+                  description="Piccolo aggiornamento di manutenzione: lo scopo è migliorare stabilità, chiarezza o facilità d'uso dell'app." ;;
               esac
               echo "- ${description} (`${hash}`)"
             done
