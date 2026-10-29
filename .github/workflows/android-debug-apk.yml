@@ -168,26 +168,35 @@ jobs:
               RANGE="-5 ${CURRENT_SHA}"
             fi
             SUBJECTS="$(git log --format='%s' $RANGE)"
-            CHANGED="$(git diff --name-only ${LAST_ALPHA_TAG:-$(git rev-list --max-parents=0 HEAD | tail -n 1)}..${CURRENT_SHA} 2>/dev/null || true)"
             SUMMARY_COUNT=0
-            if printf '%s\n' "$SUBJECTS" | grep -Eiq 'navbar|blur|navigation|profile|account|animation|appearance|One UI|diary|screen|interface|ambient|gradient|settings'; then
-              echo "- **Interfaccia e navigazione:** migliorati la barra inferiore, il blur e le transizioni; riunite le informazioni del profilo in una sola sezione."
+
+            if printf '%s\n' "$SUBJECTS" | grep -Fq 'Stabilize live blur overlays and restore finger-following navigation pill'; then
+              echo "- **Navbar e tocchi:** ripristinata la pillola che segue il dito durante lo scorrimento tra Diario, Viaggi e Impostazioni. Ridotta la complessità del blur e collegato l'interruttore di disattivazione allo stato reale dell'effetto. Il pulsante + usa un livello di blur separato per non interferire con la barra."
               SUMMARY_COUNT=$((SUMMARY_COUNT + 1))
             fi
-            if printf '%s\n' "$CHANGED" | grep -Eq '^app/src/main/res/(drawable|mipmap)'; then
-              echo "- **Icona dell’app:** introdotto il diario liquid glass con risorse adattive e variante monocromatica per i launcher Android."
+            if printf '%s\n' "$SUBJECTS" | grep -Fq 'Keep backdrop stable and persist exact background brightness percentage'; then
+              echo "- **Sfondo e fluidità:** fermato il movimento continuo dei gradienti che invalidava lo sfondo a ogni fotogramma sotto la navbar sfocata. La luminosità viene salvata come percentuale separata, quindi anche 0% rimane nero dopo aver riaperto l'app."
               SUMMARY_COUNT=$((SUMMARY_COUNT + 1))
             fi
-            if printf '%s\n' "$SUBJECTS" | grep -Eiq 'Gradle|build|compile|Kotlin|version|sign|release|changelog|cache'; then
-              echo "- **Build e aggiornamenti:** corretti problemi di compilazione e rafforzati versionamento, firma e pubblicazione delle release Alpha."
+            if printf '%s\n' "$SUBJECTS" | grep -Fq 'Make background brightness a continuous 0–100 photo adjustment'; then
+              echo "- **Luminosità della foto:** sostituiti i tre preset scuro/automatico/chiaro con uno slider continuo 0–100. 0% rende la foto nera, 50% mantiene la luminosità originale e 100% la porta vicino al bianco; i valori intermedi modificano direttamente i pixel."
               SUMMARY_COUNT=$((SUMMARY_COUNT + 1))
             fi
-            if printf '%s\n' "$SUBJECTS" | grep -Eiq 'profile|photo|diary|memory|ricordo|edit'; then
-              echo "- **Diario e profilo:** migliorata la gestione dei ricordi e dei dati del profilo locale."
+            if printf '%s\n' "$SUBJECTS" | grep -Fq 'Show profile editor only when creating or editing the saved profile'; then
+              echo "- **Profilo:** dopo il primo salvataggio nome e descrizione non restano più in campi sempre aperti. Viene mostrato il riepilogo con il pulsante Modifica profilo; i campi ricompaiono soltanto quando lo si preme."
+              SUMMARY_COUNT=$((SUMMARY_COUNT + 1))
+            fi
+            if printf '%s\n' "$SUBJECTS" | grep -Fq 'Make settings sections collapsible to shorten the settings page'; then
+              echo "- **Impostazioni più compatte:** Profilo e account, Aspetto, Data speciale, Sincronizzazione e Inviti si possono espandere o comprimere dal titolo, così i controlli non occupano tutti la pagina contemporaneamente."
+              SUMMARY_COUNT=$((SUMMARY_COUNT + 1))
+            fi
+            if printf '%s\n' "$SUBJECTS" | grep -Fq 'Remove obsolete duplicate background brightness controls'; then
+              echo "- **Controlli sfondo:** rimossa la vecchia copia dello slider con scala -1/+1, che era rimasta accanto al nuovo controllo percentuale."
               SUMMARY_COUNT=$((SUMMARY_COUNT + 1))
             fi
             if [ "$SUMMARY_COUNT" -eq 0 ]; then
-              echo "- **Manutenzione:** correzioni tecniche e aggiornamenti interni per mantenere stabile la versione Alpha."
+              echo "- Modifiche incluse in questa build:"
+              git log --format='  - %s' $RANGE
             fi
 
             echo
