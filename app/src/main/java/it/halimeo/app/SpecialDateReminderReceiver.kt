@@ -19,9 +19,11 @@ private const val ACTION_REMINDER = "it.halimeo.app.SPECIAL_DATE_REMINDER"
 
 fun scheduleSpecialDateReminder(context: Context, label: String, date: LocalDate) {
     val today = LocalDate.now()
-    val nextDate = if (date.isBefore(today) || (date == today && LocalTime.now().hour >= 9)) {
-        runCatching { date.withYear(today.year + 1) }.getOrElse { date.plusYears(1) }
-    } else date.withYear(today.year)
+    val candidate = runCatching { date.withYear(today.year) }
+        .getOrElse { LocalDate.of(today.year, date.month, 28) }
+    val nextDate = if (candidate.isBefore(today) || (candidate == today && LocalTime.now().hour >= 9)) {
+        candidate.plusYears(1)
+    } else candidate
     val trigger = LocalDateTime.of(nextDate, LocalTime.of(9, 0))
         .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
     val intent = Intent(context, SpecialDateReminderReceiver::class.java).apply {
