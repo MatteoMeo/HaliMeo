@@ -770,7 +770,6 @@ private fun SettingsScreen(
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(if (profileNickname.isBlank()) displayName else profileNickname, color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(if (isProfileEditing) "Tocca la foto per cambiarla" else "Attiva Modifica profilo per cambiare la foto", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
                 }
                 if (isProfileEditing) {
@@ -896,34 +895,15 @@ private fun SettingsScreen(
                 }
                 Text("Puoi scegliere un colore oppure una foto dalla galleria.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 AnimatedVisibility(visible = backgroundColor == "photo") {
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text("Sfocatura", color = primaryText, style = MaterialTheme.typography.labelLarge)
-                                            Spacer(Modifier.weight(1f))
-                                            Text("${backgroundBlur.toInt()} dp", color = secondaryText, style = MaterialTheme.typography.labelMedium)
-                                        }
-                                        Slider(value = backgroundBlur, onValueChange = { backgroundBlur = it; saveBackgroundTuning() }, valueRange = 0f..24f, colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary, inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant))
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text("Intensità overlay", color = primaryText, style = MaterialTheme.typography.labelLarge)
-                                            Spacer(Modifier.weight(1f))
-                                            Text("${(backgroundOverlay * 100).toInt()}%", color = secondaryText, style = MaterialTheme.typography.labelMedium)
-                                        }
-                                        Slider(value = backgroundOverlay, onValueChange = { backgroundOverlay = it; saveBackgroundTuning() }, valueRange = 0.12f..0.82f, colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary, inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant))
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text("Luminosità della foto", color = primaryText, style = MaterialTheme.typography.labelLarge)
-                                            Spacer(Modifier.weight(1f))
-                                            Text("${backgroundBrightness.toInt()}%", color = secondaryText, style = MaterialTheme.typography.labelMedium)
-                                        }
-                                        Slider(
-                                            value = backgroundBrightness,
-                                            onValueChange = { backgroundBrightness = it; saveBackgroundTuning() },
-                                            valueRange = 0f..100f,
-                                            steps = 0,
-                                            colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary, inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant)
-                                        )
-                                        Text("0% = nero puro · 50% = foto originale · 100% = quasi bianco.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
-                                    }
-                                }
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Sfocatura", color = primaryText, style = MaterialTheme.typography.labelLarge)
+                            Spacer(Modifier.weight(1f))
+                            Text("${backgroundBlur.toInt()} dp", color = secondaryText, style = MaterialTheme.typography.labelMedium)
+                        }
+                        Slider(value = backgroundBlur, onValueChange = { backgroundBlur = it; saveBackgroundTuning() }, valueRange = 0f..24f, colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary, inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant))
+                    }
+                }
                 Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
                 Text("Prestazioni e movimento", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
@@ -1338,7 +1318,7 @@ private fun DiaryScreen(
     // Cache diary header data instead of sorting favourites and parsing special dates
     // again whenever Compose recomposes the LazyColumn.
     val featuredMemories = remember(entries, favoriteIds) {
-        entries.asSequence().filter { it.id in favoriteIds }.sortedByDescending { it.memoryDate }.take(2).toList()
+        entries.asSequence().filter { it.id in favoriteIds }.sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }.take(2).toList()
     }
     val upcomingSpecial = remember(entries, favoriteIds) {
         val prefs = diaryContext.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
@@ -1384,7 +1364,7 @@ private fun DiaryScreen(
                 (selectedCategory == "Tutte" || it.category.equals(selectedCategory, ignoreCase = true)) &&
                 (!favoritesOnly || it.id in favoriteIds)
         }
-        if (newestFirst) matches.sortedByDescending { it.memoryDate } else matches.sortedBy { it.memoryDate }
+        if (newestFirst) matches.sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN } else matches.sortedBy { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }
     }
 
     if (showCalendar) {
@@ -1510,6 +1490,7 @@ private fun DiaryScreen(
             ) {
                 FilterChip(
                     selected = favoritesOnly, onClick = { favoritesOnly = !favoritesOnly },
+                    shape = RoundedCornerShape(50),
                     label = { Text("Preferiti", maxLines = 1) },
                     leadingIcon = { Icon(if (favoritesOnly) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, modifier = Modifier.size(16.dp)) },
                     colors = FilterChipDefaults.filterChipColors(
@@ -1522,6 +1503,7 @@ private fun DiaryScreen(
                     val categoryColor = if (category == "Tutte") MaterialTheme.colorScheme.primary else categoryAccent(category)
                     FilterChip(
                         selected = selectedCategory == category, onClick = { selectedCategory = category },
+                        shape = RoundedCornerShape(50),
                         label = { Text(category, maxLines = 1) },
                         leadingIcon = if (selectedCategory == category) ({ Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }) else ({ Icon(categoryIcon(category), contentDescription = null, modifier = Modifier.size(16.dp)) }),
                         colors = FilterChipDefaults.filterChipColors(
@@ -1533,10 +1515,16 @@ private fun DiaryScreen(
                     )
                 }
             }
-            TextButton(onClick = { newestFirst = !newestFirst }, contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)) {
-                Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(3.dp))
-                Text(if (newestFirst) "Recenti" else "Vecchi", maxLines = 1, style = MaterialTheme.typography.labelLarge)
+            Surface(
+                modifier = Modifier.clip(RoundedCornerShape(50)).clickable { newestFirst = !newestFirst },
+                shape = RoundedCornerShape(50),
+                color = frostedSurfaceColor(),
+                border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor())
+            ) {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                    Text(if (newestFirst) "Recenti" else "Vecchie", maxLines = 1, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
+                }
             }
         }
         Spacer(Modifier.height(4.dp))
@@ -1654,7 +1642,7 @@ private fun DiaryScreen(
                                 // Clip the whole card layer before drawing the outline. This prevents
                                 // the rectangular layer from leaking past rounded glass corners.
                                 .clip(MaterialTheme.shapes.large)
-                                .border(1.2.dp, accent.copy(alpha = 0.48f), MaterialTheme.shapes.large)
+                                .border(1.dp, frostedEdgeColor().copy(alpha = 0.9f), MaterialTheme.shapes.large)
                                 .clickable(
                                     onClick = {
                                         feedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -1662,7 +1650,7 @@ private fun DiaryScreen(
                                     }
                                 ),
                             shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor().copy(alpha = 0.96f)),
+                            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor()),
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {
                             Box {
@@ -2012,12 +2000,12 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
 @SuppressLint("SetJavaScriptEnabled")
 @Composable private fun MissionScreen(){
     AndroidView(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().background(Color(0xFF0A0E16)),
         factory = { ctx ->
             WebView(ctx).apply {
                 // Keep WebView stable during Compose page transitions; this avoids black frames.
                 setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
-                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                setBackgroundColor(android.graphics.Color.rgb(10, 14, 22))
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.allowFileAccess = true
