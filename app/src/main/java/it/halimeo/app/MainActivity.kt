@@ -1982,6 +1982,10 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
             }
         }
 
+        }
+    }
+}
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable private fun MissionScreen(){
     AndroidView(modifier=Modifier.fillMaxSize(),factory={ctx->WebView(ctx).apply{
