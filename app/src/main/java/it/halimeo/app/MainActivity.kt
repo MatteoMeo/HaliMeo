@@ -75,6 +75,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import io.github.ezoushen.blur.cmp.BlurOverlay
+import io.github.ezoushen.blur.cmp.BlurOverlayConfig
+import io.github.ezoushen.blur.cmp.rememberBlurOverlayState
+import io.github.ezoushen.blur.cmp.withTint
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.*
 import it.halimeo.app.data.*
@@ -270,11 +274,18 @@ class MainActivity:ComponentActivity() {
             composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,)}
         }
     })
-    Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Surface(modifier = Modifier.weight(1f).shadow(8.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = Color(0xF20B1220), tonalElevation = 0.dp) {
+    val navigationBlurState = rememberBlurOverlayState(
+        initialConfig = BlurOverlayConfig(radius = 22f, downsampleFactor = 4f, isLive = true)
+            .withTint(Color(0xFF0B1220).copy(alpha = 0.34f))
+    )
+    BlurOverlay(
+        state = navigationBlurState,
+        modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+    ) {
+    Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Surface(modifier = Modifier.weight(1f).shadow(8.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.34f), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = Color.Transparent, tonalElevation = 0.dp) {
             BoxWithConstraints(
                 Modifier.fillMaxWidth().height(58.dp)
-                    .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.12f), Color(0xFF0F1A2B).copy(alpha = 0.96f), Color(0xFF101827).copy(alpha = 0.98f))))
                     .padding(horizontal = 3.dp, vertical = 3.dp)
             ) {
                 val tabWidth = (maxWidth - 6.dp) / 3
@@ -336,6 +347,7 @@ class MainActivity:ComponentActivity() {
                 Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(25.dp))
             }
         }
+    }
     }
     }
 }
