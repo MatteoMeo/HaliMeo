@@ -225,9 +225,17 @@ class MainActivity:ComponentActivity() {
         // Prefer the device's highest supported refresh rate; Android may still honor
         // system power-saving and thermal policies and choose a lower rate when needed.
         @Suppress("DEPRECATION")
-        val preferredHz = windowManager.defaultDisplay.supportedModes.maxOfOrNull { it.refreshRate }
-            ?: windowManager.defaultDisplay.refreshRate
-        window.attributes = window.attributes.apply { preferredRefreshRate = preferredHz }
+        val display = windowManager.defaultDisplay
+        val currentMode = display.mode
+        val highRefreshMode = display.supportedModes
+            .filter { it.physicalWidth == currentMode.physicalWidth && it.physicalHeight == currentMode.physicalHeight }
+            .maxByOrNull { it.refreshRate }
+        window.attributes = window.attributes.apply {
+            preferredRefreshRate = highRefreshMode?.refreshRate ?: display.refreshRate
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && highRefreshMode != null) {
+                preferredDisplayModeId = highRefreshMode.modeId
+            }
+        }
         lastSyncAtState.value = getSharedPreferences("halimeo_preferences", MODE_PRIVATE).getLong("last_sync_at", 0L)
         setContent { HaliMeoTheme { HaliMeoRoot() } }
     }
