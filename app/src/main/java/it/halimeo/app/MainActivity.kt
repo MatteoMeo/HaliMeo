@@ -170,7 +170,7 @@ class MainActivity:ComponentActivity() {
                 ) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(29.dp)) } }
             }
         }
-    },floatingActionButton={}}){padding->
+    }, floatingActionButton = {}, content = { padding ->
         NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){it/18}},exitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
             composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,{t,b,c,d->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
@@ -178,7 +178,7 @@ class MainActivity:ComponentActivity() {
             composable("tripMonaco"){MissionScreen()}
             composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,)}
         }
-    }
+    })
     }
 }
 /**
