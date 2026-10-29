@@ -342,16 +342,18 @@ class MainActivity:ComponentActivity() {
     })
     var draggedTab by remember { mutableFloatStateOf(Float.NaN) }
     val navigationBlurState = rememberBlurOverlayState(
-        initialConfig = BlurOverlayConfig(radius = 22f, downsampleFactor = 5f, isLive = true)
+        initialConfig = BlurOverlayConfig(radius = 18f, downsampleFactor = 6f, isLive = true)
             .withTint(Color(0xFF0B1220).copy(alpha = 0.12f))
     )
     val fabBlurState = rememberBlurOverlayState(
-        initialConfig = BlurOverlayConfig(radius = 20f, downsampleFactor = 5f, isLive = true)
+        initialConfig = BlurOverlayConfig(radius = 18f, downsampleFactor = 6f, isLive = true)
             .withTint(Color(0xFF0B1220).copy(alpha = 0.18f))
     )
-    SideEffect {
-        navigationBlurState.isEnabled = !liveBlurDisabledState.value
-        fabBlurState.isEnabled = !liveBlurDisabledState.value
+    // Update the capture only when the preference changes, not on every recomposition.
+    LaunchedEffect(liveBlurDisabledState.value) {
+        val enabled = !liveBlurDisabledState.value
+        navigationBlurState.isEnabled = enabled
+        fabBlurState.isEnabled = enabled
     }
     if (currentRoute != "edit") BlurOverlay(
         state = navigationBlurState,
@@ -379,7 +381,7 @@ class MainActivity:ComponentActivity() {
                 val tabWidth = (maxWidth - 6.dp) / 3
                 val animatedPillPosition by animateFloatAsState(
                     targetValue = primaryTab.toFloat(),
-                    animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.84f, stiffness = 720f),
+                    animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.92f, stiffness = 420f),
                     label = "navigationPillPosition"
                 )
                 val pillPosition = if (draggedTab.isNaN()) animatedPillPosition else draggedTab
@@ -394,13 +396,15 @@ class MainActivity:ComponentActivity() {
                     Modifier.fillMaxSize().pointerInput(currentRoute, primaryTab) {
                         detectDragGestures(
                             onDragStart = { offset ->
-                                val slot = size.width.toFloat() / 3f
-                                draggedTab = (offset.x / slot).coerceIn(0f, 2f)
+                                // Include the 3 dp inter-tab gaps in the stride so the
+                                // drag target matches the visible tab/pill geometry.
+                                val stride = (size.width - 6.dp.toPx()) / 3f + 3.dp.toPx()
+                                draggedTab = (offset.x / stride).coerceIn(0f, 2f)
                             },
                             onDrag = { change, dragAmount ->
                                 change.consume()
-                                val slot = size.width.toFloat() / 3f
-                                draggedTab = ((if (draggedTab.isNaN()) primaryTab.toFloat() else draggedTab) + dragAmount.x / slot).coerceIn(0f, 2f)
+                                val stride = (size.width - 6.dp.toPx()) / 3f + 3.dp.toPx()
+                                draggedTab = ((if (draggedTab.isNaN()) primaryTab.toFloat() else draggedTab) + dragAmount.x / stride).coerceIn(0f, 2f)
                             },
                             onDragEnd = {
                                 val destination = draggedTab.roundToInt().coerceIn(0, 2)
@@ -718,7 +722,7 @@ private fun SettingsScreen(
                     Spacer(Modifier.weight(1f))
                     Icon(if ("profile" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("profile" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "profile" in expandedSettingsSections) {
+                AnimatedVisibility(visible = "profile" in expandedSettingsSections, enter = fadeIn(tween(110)) + expandVertically(tween(150)), exit = fadeOut(tween(80)) + shrinkVertically(tween(120))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Account: $displayName", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
                 Text("I ricordi vengono salvati sul dispositivo prima della sincronizzazione.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
@@ -786,7 +790,7 @@ private fun SettingsScreen(
                     Spacer(Modifier.weight(1f))
                     Icon(if ("appearance" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("appearance" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "appearance" in expandedSettingsSections) {
+                AnimatedVisibility(visible = "appearance" in expandedSettingsSections, enter = fadeIn(tween(110)) + expandVertically(tween(150)), exit = fadeOut(tween(80)) + shrinkVertically(tween(120))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Tema scuro AMOLED sempre attivo, con accento dinamico.", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
                 Text("Anteprima in tempo reale", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -982,7 +986,7 @@ private fun SettingsScreen(
                     Spacer(Modifier.weight(1f))
                     Icon(if ("date" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("date" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "date" in expandedSettingsSections) {
+                AnimatedVisibility(visible = "date" in expandedSettingsSections, enter = fadeIn(tween(110)) + expandVertically(tween(150)), exit = fadeOut(tween(80)) + shrinkVertically(tween(120))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Tenete a portata di mano una data importante", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(value = specialDateLabel, onValueChange = { specialDateLabel = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Nome (es. compleanno)") })
@@ -1025,7 +1029,7 @@ private fun SettingsScreen(
                     Spacer(Modifier.weight(1f))
                     Icon(if ("sync" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("sync" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "sync" in expandedSettingsSections) {
+                AnimatedVisibility(visible = "sync" in expandedSettingsSections, enter = fadeIn(tween(110)) + expandVertically(tween(150)), exit = fadeOut(tween(80)) + shrinkVertically(tween(120))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(if (pendingSyncCount == 0) Icons.Default.CloudDone else Icons.Default.CloudUpload, contentDescription = null, tint = accentText, modifier = Modifier.size(26.dp))
@@ -1093,11 +1097,11 @@ private fun SettingsScreen(
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth().clickable { expandedSettingsSections = if ("invites" in expandedSettingsSections) expandedSettingsSections - "invites" else expandedSettingsSections + "invites" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.MarkEmailRead, contentDescription = null, tint = accentText, modifier = Modifier.size(22.dp))
-                    Text("INVITI", color = accentText, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Text("INVITI", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.weight(1f))
                     Icon(if ("invites" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("invites" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "invites" in expandedSettingsSections) {
+                AnimatedVisibility(visible = "invites" in expandedSettingsSections, enter = fadeIn(tween(110)) + expandVertically(tween(150)), exit = fadeOut(tween(80)) + shrinkVertically(tween(120))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Crea un codice monouso valido 7 giorni e condividilo direttamente dal telefono.", color = secondaryText)
 
