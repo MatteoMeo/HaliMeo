@@ -357,7 +357,6 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
         )
         Box(
             Modifier.align(Alignment.BottomEnd).offset(x = 190.dp, y = 150.dp).size(400.dp)
-                .blur(104.dp)
                 .background(
                     Brush.radialGradient(
                         0.0f to palette.secondary.copy(alpha = 0.065f),
