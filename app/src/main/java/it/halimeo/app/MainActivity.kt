@@ -100,6 +100,9 @@ private val FrostedEdge = Color.White.copy(alpha = 0.17f)
 private val themeModeState = mutableStateOf("system")
 private val customBackgroundColorState = mutableStateOf("default")
 private val customBackgroundUriState = mutableStateOf<String?>(null)
+private val backgroundBlurState = mutableStateOf(0f)
+private val backgroundOverlayState = mutableStateOf(0.48f)
+private val backgroundBrightnessState = mutableStateOf(0f)
 private fun parseHaliMeoDate(value: String): java.time.LocalDate? {
     val trimmed = value.trim()
     return runCatching { java.time.LocalDate.parse(trimmed, java.time.format.DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull()
@@ -137,6 +140,9 @@ private val TextPrimary = Color(0xFFF5F7FA)
         val prefs = context.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
         customBackgroundColorState.value = prefs.getString("background_color", "default") ?: "default"
         customBackgroundUriState.value = prefs.getString("background_photo", null)
+        backgroundBlurState.value = prefs.getFloat("background_blur", 0f)
+        backgroundOverlayState.value = prefs.getFloat("background_overlay", 0.48f)
+        backgroundBrightnessState.value = prefs.getFloat("background_brightness", 0f)
     }
     val staticFontWidth = 100f
     val staticFontRoundness = 28f
@@ -281,6 +287,9 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val backgroundChoice = customBackgroundColorState.value
     val backgroundUri = customBackgroundUriState.value
+    val photoBlur = backgroundBlurState.value
+    val overlayStrength = backgroundOverlayState.value
+    val brightnessAdjustment = backgroundBrightnessState.value
     val customBase = when (backgroundChoice) {
         "blue" -> Color(0xFFDFEEFA)
         "lavender" -> Color(0xFFECE7FA)
@@ -293,8 +302,24 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     }
     Box(modifier = modifier.clipToBounds().background(customBase)) {
         if (backgroundBitmap != null && backgroundChoice == "photo") {
-            Image(bitmap = backgroundBitmap.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color.Black.copy(alpha = 0.56f) else Color.White.copy(alpha = 0.42f)))
+            Image(bitmap = backgroundBitmap.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize().blur(photoBlur.dp), contentScale = ContentScale.Crop)
+            val averageLuminance = remember(backgroundBitmap) {
+                runCatching {
+                    var total = 0L
+                    var samples = 0
+                    val stepX = (backgroundBitmap.width / 24).coerceAtLeast(1)
+                    val stepY = (backgroundBitmap.height / 24).coerceAtLeast(1)
+                    for (y in 0 until backgroundBitmap.height step stepY) for (x in 0 until backgroundBitmap.width step stepX) {
+                        val pixel = backgroundBitmap.getPixel(x, y)
+                        total += (0.2126 * android.graphics.Color.red(pixel) + 0.7152 * android.graphics.Color.green(pixel) + 0.0722 * android.graphics.Color.blue(pixel)).toLong()
+                        samples++
+                    }
+                    if (samples == 0) 128f else total.toFloat() / samples
+                }.getOrDefault(128f)
+            }
+            val useDarkOverlay = if (brightnessAdjustment == 0f) averageLuminance < 128f else brightnessAdjustment < 0f
+            val overlayColor = if (useDarkOverlay) Color.Black else Color.White
+            Box(Modifier.fillMaxSize().background(overlayColor.copy(alpha = overlayStrength)))
         } else if (backgroundChoice == "default") {
             Box(
                 Modifier.fillMaxSize().background(
@@ -426,6 +451,15 @@ private fun SettingsScreen(
     var specialDate by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date", "")?.let { displayHaliMeoDate(it) } ?: "") }
     var backgroundColor by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("background_color", "default") ?: "default") }
     var backgroundPhoto by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("background_photo", null)) }
+    var backgroundBlur by remember { mutableFloatStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getFloat("background_blur", 0f)) }
+    var backgroundOverlay by remember { mutableFloatStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getFloat("background_overlay", 0.48f)) }
+    var backgroundBrightness by remember { mutableFloatStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getFloat("background_brightness", 0f)) }
+    fun saveBackgroundTuning() {
+        ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putFloat("background_blur", backgroundBlur).putFloat("background_overlay", backgroundOverlay).putFloat("background_brightness", backgroundBrightness).apply()
+        backgroundBlurState.value = backgroundBlur
+        backgroundOverlayState.value = backgroundOverlay
+        backgroundBrightnessState.value = backgroundBrightness
+    }
     val backgroundPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             runCatching { ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
@@ -536,6 +570,29 @@ private fun SettingsScreen(
                     }
                 }
                 Text("Puoi scegliere un colore oppure una foto dalla galleria.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                AnimatedVisibility(visible = backgroundColor == "photo") {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Sfocatura", color = primaryText, style = MaterialTheme.typography.labelLarge)
+                            Spacer(Modifier.weight(1f))
+                            Text("${backgroundBlur.toInt()} dp", color = secondaryText, style = MaterialTheme.typography.labelMedium)
+                        }
+                        Slider(value = backgroundBlur, onValueChange = { backgroundBlur = it; saveBackgroundTuning() }, valueRange = 0f..24f)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Intensità overlay", color = primaryText, style = MaterialTheme.typography.labelLarge)
+                            Spacer(Modifier.weight(1f))
+                            Text("${(backgroundOverlay * 100).toInt()}%", color = secondaryText, style = MaterialTheme.typography.labelMedium)
+                        }
+                        Slider(value = backgroundOverlay, onValueChange = { backgroundOverlay = it; saveBackgroundTuning() }, valueRange = 0.12f..0.82f)
+                        Text("Luminosità e contrasto", color = primaryText, style = MaterialTheme.typography.labelLarge)
+                        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                            listOf(-1f to "Più scuro", 0f to "Auto", 1f to "Più chiaro").forEachIndexed { index, option ->
+                                SegmentedButton(selected = backgroundBrightness == option.first, onClick = { backgroundBrightness = option.first; saveBackgroundTuning() }, shape = SegmentedButtonDefaults.itemShape(index, 3)) { Text(option.second, maxLines = 1) }
+                            }
+                        }
+                        Text("Auto sceglie un velo chiaro o scuro in base alla luminosità media della foto.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
             }
         }
 
