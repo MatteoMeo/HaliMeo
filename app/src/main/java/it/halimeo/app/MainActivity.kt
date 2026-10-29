@@ -867,22 +867,6 @@ private fun SettingsScreen(
                     }
                 }
                 Text("Puoi scegliere un colore oppure una foto dalla galleria.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
-                AnimatedVisibility(visible = backgroundColor == "photo") {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Sfocatura", color = primaryText, style = MaterialTheme.typography.labelLarge)
-                            Spacer(Modifier.weight(1f))
-                            Text("${backgroundBlur.toInt()} dp", color = secondaryText, style = MaterialTheme.typography.labelMedium)
-                        }
-                        Slider(value = backgroundBlur, onValueChange = { backgroundBlur = it; saveBackgroundTuning() }, valueRange = 0f..24f)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Luminosità sfondo", color = primaryText, style = MaterialTheme.typography.labelLarge)
-                            Spacer(Modifier.weight(1f))
-                            Text(when { backgroundBrightness < -0.15f -> "Più scuro"; backgroundBrightness > 0.15f -> "Più chiaro"; else -> "Neutro" }, color = secondaryText, style = MaterialTheme.typography.labelMedium)
-                        }
-                        Slider(value = backgroundBrightness, onValueChange = { backgroundBrightness = it; saveBackgroundTuning() }, valueRange = -1f..1f)
-                    }
-                }
                 Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
                 Text("Prestazioni e movimento", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
