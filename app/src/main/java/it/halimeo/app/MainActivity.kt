@@ -543,6 +543,20 @@ private fun SettingsScreen(
     val primaryText = MaterialTheme.colorScheme.onSurface
     val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
     val accentText = MaterialTheme.colorScheme.primary
+    val profilePrefs = remember { ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE) }
+    var profilePhotoUri by remember { mutableStateOf(profilePrefs.getString("profile_photo_uri", null)) }
+    var profileNickname by remember { mutableStateOf(profilePrefs.getString("profile_nickname", displayName) ?: displayName) }
+    var profileAbout by remember { mutableStateOf(profilePrefs.getString("profile_about", "") ?: "") }
+    val profilePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching { ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            profilePhotoUri = uri.toString()
+            profilePrefs.edit().putString("profile_photo_uri", uri.toString()).apply()
+        }
+    }
+    val profilePhotoBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, profilePhotoUri, ctx) {
+        value = profilePhotoUri?.let { decodeScaledBitmap(ctx, it, maxDimension = 320) }
+    }
     var specialDateLabel by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date_label", "") ?: "") }
     var specialDate by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date", "")?.let { displayHaliMeoDate(it) } ?: "") }
     var specialDates by remember { mutableStateOf(readHaliMeoSpecialDates(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE))) }
@@ -603,6 +617,50 @@ private fun SettingsScreen(
                 }
                 Text(displayName, color = primaryText, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 Text("I ricordi vengono salvati localmente prima della sincronizzazione.", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth().shadow(6.dp, RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
+        ) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.AccountCircle, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
+                    Text("IL VOSTRO PROFILO", color = accentText, style = MaterialTheme.typography.labelLarge)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Surface(
+                        modifier = Modifier.size(76.dp).clickable { profilePhotoPicker.launch(arrayOf("image/*")) },
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.55f))
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            if (profilePhotoBitmap != null) {
+                                Image(bitmap = profilePhotoBitmap!!.asImageBitmap(), contentDescription = "Foto profilo", modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
+                            } else {
+                                Icon(Icons.Default.AddAPhoto, contentDescription = "Aggiungi foto profilo", tint = accentText, modifier = Modifier.size(30.dp))
+                            }
+                        }
+                    }
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(if (profileNickname.isBlank()) displayName else profileNickname, color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Tocca la foto per cambiarla", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                OutlinedTextField(value = profileNickname, onValueChange = { profileNickname = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Nome o soprannome") }, singleLine = true)
+                OutlinedTextField(value = profileAbout, onValueChange = { profileAbout = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Una piccola descrizione") }, placeholder = { Text("Es. collezionisti di ricordi dal 2024") }, minLines = 2, maxLines = 3)
+                Button(onClick = {
+                    profilePrefs.edit().putString("profile_nickname", profileNickname.trim()).putString("profile_about", profileAbout.trim()).apply()
+                    Toast.makeText(ctx, "Profilo salvato su questo dispositivo", Toast.LENGTH_SHORT).show()
+                }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Check, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Salva profilo")
+                }
+                Text("Foto e dettagli sono salvati su questo dispositivo; non modificano ancora il profilo online.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
             }
         }
 
