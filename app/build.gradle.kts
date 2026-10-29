@@ -3,6 +3,15 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
+
+val alphaVersionCode = providers.gradleProperty("HALIMEO_VERSION_CODE")
+    .orElse("1")
+    .get()
+    .toInt()
+val alphaVersionName = providers.gradleProperty("HALIMEO_VERSION_NAME")
+    .orElse("1.0.$alphaVersionCode")
+    .get()
+
 android {
     namespace = "it.halimeo.app"
     compileSdk = 37
@@ -10,10 +19,10 @@ android {
         applicationId = "it.halimeo.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
-        buildConfigField("String", "API_BASE_URL", "\"${project.findProperty("HALIMEO_API_BASE_URL") ?: "https://halimeo.example/"}\"")
-        buildConfigField("int", "APP_VERSION_CODE", "1")
+        versionCode = alphaVersionCode
+        versionName = alphaVersionName
+        buildConfigField("String", "API_BASE_URL", "\"\u0024{project.findProperty("HALIMEO_API_BASE_URL") ?: "https://halimeo.example/"}\"")
+        buildConfigField("int", "APP_VERSION_CODE", alphaVersionCode.toString())
     }
     buildFeatures { compose = true; buildConfig = true }
     compileOptions {
@@ -25,11 +34,13 @@ android {
         release { isMinifyEnabled = false; proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro") }
     }
 }
+
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
+
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2026.08.00"))
     implementation("androidx.activity:activity-compose:1.10.0")
