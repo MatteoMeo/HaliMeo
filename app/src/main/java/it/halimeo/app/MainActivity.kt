@@ -36,6 +36,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.clickable
@@ -242,6 +244,12 @@ class MainActivity:ComponentActivity() {
         favoritesPrefs.edit().putStringSet("ids", updated.toSet()).apply()
     }
     val nav= rememberNavController(); val backStackEntry by nav.currentBackStackEntryAsState(); val currentRoute=backStackEntry?.destination?.route
+    val primaryTab = when (currentRoute) {
+        "trips", "tripMonaco" -> 1
+        "settings" -> 2
+        else -> 0
+    }
+    val primaryRoutes = listOf("diary", "trips", "settings")
     Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA))) {
     HaliMeoAmbientBackdrop(Modifier.fillMaxSize())
     Scaffold(containerColor=Color.Transparent,topBar={TopAppBar(
@@ -253,7 +261,37 @@ class MainActivity:ComponentActivity() {
             IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.AutoMirrored.Filled.Logout,"Esci")}
         }
     )},bottomBar={}, floatingActionButton = {}, content = { padding ->
-        NavHost(nav,startDestination="diary",modifier=Modifier.padding(padding),enterTransition={fadeIn(tween(220, easing = OneUiMotionEasing))+slideInHorizontally(tween(260, easing = OneUiMotionEasing)){it/18}},exitTransition={fadeOut(tween(160, easing = OneUiMotionEasing))+slideOutHorizontally(tween(190, easing = OneUiMotionEasing)){ -it/24}},popEnterTransition={fadeIn(tween(240))+slideInHorizontally(spring(dampingRatio=0.88f, stiffness=420f)){ -it/18}},popExitTransition={fadeOut(tween(160))+slideOutHorizontally(tween(200)){it/24}}){
+        NavHost(
+            nav,
+            startDestination = "diary",
+            modifier = Modifier.padding(padding).pointerInput(currentRoute) {
+                var horizontalTravel = 0f
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { change, amount ->
+                        horizontalTravel += amount
+                        change.consume()
+                    },
+                    onDragEnd = {
+                        // A deliberate horizontal fling switches primary sections. Vertical
+                        // diary scrolling remains handled by LazyColumn's own gesture system.
+                        if (kotlin.math.abs(horizontalTravel) > 84f && currentRoute != "edit") {
+                            val targetIndex = (primaryTab + if (horizontalTravel < 0f) 1 else -1).coerceIn(0, 2)
+                            val target = primaryRoutes[targetIndex]
+                            if (target != currentRoute) nav.navigate(target) {
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                        horizontalTravel = 0f
+                    },
+                    onDragCancel = { horizontalTravel = 0f }
+                )
+            },
+            enterTransition = { fadeIn(tween(220, easing = OneUiMotionEasing)) + slideInHorizontally(tween(260, easing = OneUiMotionEasing)) { it / 18 } },
+            exitTransition = { fadeOut(tween(160, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(190, easing = OneUiMotionEasing)) { -it / 24 } },
+            popEnterTransition = { fadeIn(tween(240, easing = OneUiMotionEasing)) + slideInHorizontally(spring(dampingRatio = 0.88f, stiffness = 420f)) { -it / 18 } },
+            popExitTransition = { fadeOut(tween(160, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(200, easing = OneUiMotionEasing)) { it / 24 } }
+        ) {
             composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,{t,b,c,d,photo->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id,photo);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
             composable("trips"){TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })}
@@ -263,10 +301,28 @@ class MainActivity:ComponentActivity() {
     })
     Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         Surface(modifier = Modifier.weight(1f).shadow(6.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = frostedSurfaceColor(), tonalElevation = 0.dp) {
-            Row(Modifier.fillMaxWidth().height(58.dp).background(Brush.linearGradient(listOf(Color.White.copy(alpha = if (isHaliMeoDark()) 0.13f else 0.62f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.14f else 0.20f)))).padding(horizontal = 3.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
-                FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
-                FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
-                FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) { nav.navigate("settings") { launchSingleTop = true; restoreState = true } }
+            BoxWithConstraints(
+                Modifier.fillMaxWidth().height(58.dp)
+                    .background(Brush.linearGradient(listOf(Color.White.copy(alpha = if (isHaliMeoDark()) 0.13f else 0.62f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.14f else 0.20f))))
+                    .padding(horizontal = 3.dp, vertical = 3.dp)
+            ) {
+                val tabWidth = (maxWidth - 6.dp) / 3
+                val pillOffset by animateDpAsState(
+                    targetValue = (tabWidth + 3.dp) * primaryTab,
+                    animationSpec = tween(durationMillis = 320, easing = OneUiMotionEasing),
+                    label = "navigationPillOffset"
+                )
+                Box(
+                    Modifier.offset(x = pillOffset).width(tabWidth).fillMaxHeight()
+                        .clip(RoundedCornerShape(50))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f))
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.58f), RoundedCornerShape(50))
+                )
+                Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) { nav.navigate("settings") { launchSingleTop = true; restoreState = true } }
+                }
             }
         }
         AnimatedVisibility(visible = currentRoute == "diary", enter = fadeIn(tween(180)) + slideInHorizontally(tween(220)) { it / 3 }, exit = fadeOut(tween(120)) + slideOutHorizontally(tween(160)) { it / 3 }) {
@@ -358,11 +414,6 @@ private fun FloatingNavItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit
 ) {
-    val animatedContainer by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.24f) else Color.Transparent,
-        animationSpec = tween(durationMillis = 180),
-        label = "navItemContainer"
-    )
     val animatedIcon by animateColorAsState(
         targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = tween(durationMillis = 180),
@@ -374,16 +425,13 @@ private fun FloatingNavItem(
         label = "navItemLabel"
     )
     val itemScale by animateFloatAsState(targetValue = if (selected) 1f else 0.94f, animationSpec = spring(dampingRatio = 0.72f, stiffness = 420f), label = "navItemScale")
-    val indicatorAlpha by animateFloatAsState(targetValue = if (selected) 1f else 0f, animationSpec = tween(220), label = "navIndicatorAlpha")
     Column(
         modifier = modifier.fillMaxHeight().graphicsLayer { scaleX = itemScale; scaleY = itemScale }
-            .clip(RoundedCornerShape(50)).background(animatedContainer)
-            .then(if (selected) Modifier.border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50)) else Modifier)
+            .clip(RoundedCornerShape(50))
             .clickable(onClick = onClick).padding(horizontal = 2.dp, vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Box(Modifier.size(width = 30.dp, height = 23.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f * indicatorAlpha)))
             Icon(icon, contentDescription = label, modifier = Modifier.size(19.dp), tint = animatedIcon)
         }
         Spacer(Modifier.height(1.dp))
