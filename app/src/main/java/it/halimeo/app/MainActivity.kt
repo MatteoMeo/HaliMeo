@@ -329,7 +329,7 @@ class MainActivity:ComponentActivity() {
         initialConfig = BlurOverlayConfig(radius = 34f, downsampleFactor = 3f, isLive = true)
             .withTint(Color(0xFF0B1220).copy(alpha = 0.055f))
     )
-    if (currentRoute != "edit" && !liveBlurDisabledState.value) BlurOverlay(
+    if (currentRoute != "edit") BlurOverlay(
         state = navigationBlurState,
         modifier = Modifier.align(Alignment.BottomStart)
             .padding(start = 12.dp, end = 78.dp)
@@ -344,12 +344,12 @@ class MainActivity:ComponentActivity() {
             modifier = Modifier.fillMaxSize()
                 .border(1.dp, Color.White.copy(alpha = 0.32f), RoundedCornerShape(50)),
             shape = RoundedCornerShape(50),
-            color = Color.Transparent,
+            color = if (liveBlurDisabledState.value) Color(0xE6101724) else Color.Transparent,
             tonalElevation = 0.dp
         ) {
             BoxWithConstraints(
                 Modifier.fillMaxSize()
-                    .background(Color(0xFF0B1220).copy(alpha = 0.045f))
+                    .background(if (liveBlurDisabledState.value) Color(0xFF101827).copy(alpha = 0.98f) else Color(0xFF0B1220).copy(alpha = 0.025f))
                     .padding(horizontal = 3.dp, vertical = 3.dp)
             ) {
                 val tabWidth = (maxWidth - 6.dp) / 3
@@ -376,20 +376,6 @@ class MainActivity:ComponentActivity() {
                 }
             }
         }
-    }
-    if (currentRoute != "edit" && liveBlurDisabledState.value) {
-        Surface(
-            modifier = Modifier.align(Alignment.BottomStart)
-                .padding(start = 12.dp, end = 78.dp)
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(vertical = 4.dp)
-                .height(68.dp),
-            shape = RoundedCornerShape(50),
-            color = Color(0xE6101724),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.22f)),
-            tonalElevation = 0.dp
-        ) {}
     }
     Box(
         Modifier.align(Alignment.BottomEnd)
