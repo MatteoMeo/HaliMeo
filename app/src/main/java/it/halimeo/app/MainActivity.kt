@@ -325,10 +325,19 @@ class MainActivity:ComponentActivity() {
             composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,)}
         }
     })
+    var draggedTab by remember { mutableFloatStateOf(Float.NaN) }
     val navigationBlurState = rememberBlurOverlayState(
-        initialConfig = BlurOverlayConfig(radius = 34f, downsampleFactor = 3f, isLive = true)
-            .withTint(Color(0xFF0B1220).copy(alpha = 0.055f))
+        initialConfig = BlurOverlayConfig(radius = 22f, downsampleFactor = 5f, isLive = true)
+            .withTint(Color(0xFF0B1220).copy(alpha = 0.12f))
     )
+    val fabBlurState = rememberBlurOverlayState(
+        initialConfig = BlurOverlayConfig(radius = 20f, downsampleFactor = 5f, isLive = true)
+            .withTint(Color(0xFF0B1220).copy(alpha = 0.18f))
+    )
+    SideEffect {
+        navigationBlurState.isEnabled = !liveBlurDisabledState.value
+        fabBlurState.isEnabled = !liveBlurDisabledState.value
+    }
     if (currentRoute != "edit") BlurOverlay(
         state = navigationBlurState,
         modifier = Modifier.align(Alignment.BottomStart)
@@ -353,11 +362,12 @@ class MainActivity:ComponentActivity() {
                     .padding(horizontal = 3.dp, vertical = 3.dp)
             ) {
                 val tabWidth = (maxWidth - 6.dp) / 3
-                val pillPosition by animateFloatAsState(
+                val animatedPillPosition by animateFloatAsState(
                     targetValue = primaryTab.toFloat(),
-                    animationSpec = spring(dampingRatio = 0.84f, stiffness = 520f),
+                    animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.84f, stiffness = 720f),
                     label = "navigationPillPosition"
                 )
+                val pillPosition = if (draggedTab.isNaN()) animatedPillPosition else draggedTab
                 Box(
                     Modifier.graphicsLayer { translationX = (tabWidth + 3.dp).toPx() * pillPosition }
                         .width(tabWidth).fillMaxHeight()
@@ -366,30 +376,59 @@ class MainActivity:ComponentActivity() {
                         .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50))
                 )
                 Row(
-                    Modifier.fillMaxSize(),
+                    Modifier.fillMaxSize().pointerInput(currentRoute, primaryTab) {
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                val slot = size.width.toFloat() / 3f
+                                draggedTab = (offset.x / slot).coerceIn(0f, 2f)
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                val slot = size.width.toFloat() / 3f
+                                draggedTab = ((if (draggedTab.isNaN()) primaryTab.toFloat() else draggedTab) + dragAmount.x / slot).coerceIn(0f, 2f)
+                            },
+                            onDragEnd = {
+                                val destination = draggedTab.roundToInt().coerceIn(0, 2)
+                                draggedTab = Float.NaN
+                                when (destination) {
+                                    0 -> nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } }
+                                    1 -> nav.navigate("trips") { launchSingleTop = true; restoreState = true }
+                                    else -> nav.navigate("settings") { launchSingleTop = true; restoreState = true }
+                                }
+                            },
+                            onDragCancel = { draggedTab = Float.NaN }
+                        )
+                    },
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) { nav.navigate("settings") { launchSingleTop = true; restoreState = true } }
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { draggedTab = Float.NaN; nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { draggedTab = Float.NaN; nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) { draggedTab = Float.NaN; nav.navigate("settings") { launchSingleTop = true; restoreState = true } }
                 }
             }
         }
     }
-    Box(
-        Modifier.align(Alignment.BottomEnd)
+    BlurOverlay(
+        state = fabBlurState,
+        modifier = Modifier.align(Alignment.BottomEnd)
             .padding(end = 12.dp)
             .navigationBarsPadding()
             .padding(bottom = 11.dp)
-            .size(54.dp)
-            .shadow(7.dp, RoundedCornerShape(23.dp))
-            .clip(RoundedCornerShape(23.dp))
-            .background(MaterialTheme.colorScheme.primary)
-            .clickable { editing = null; nav.navigate("edit") },
-        contentAlignment = Alignment.Center
+            .size(58.dp)
+            .clip(RoundedCornerShape(24.dp))
     ) {
-        Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(25.dp), tint = MaterialTheme.colorScheme.onPrimary)
+        Box(
+            Modifier.fillMaxSize()
+                .border(1.dp, Color.White.copy(alpha = 0.32f), RoundedCornerShape(24.dp))
+                .shadow(7.dp, RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(24.dp))
+                .background(if (liveBlurDisabledState.value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.80f))
+                .clickable { editing = null; nav.navigate("edit") },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(25.dp), tint = MaterialTheme.colorScheme.onPrimary)
+        }
     }
 
 }
@@ -408,8 +447,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     val overlayStrength = backgroundOverlayState.value
     val brightnessAdjustment = backgroundBrightnessState.value
     val motion = rememberInfiniteTransition(label = "ambientGradientMotion")
-    val driftX by motion.animateFloat(initialValue = if (reduceAnimationsState.value) 0f else -24f, targetValue = if (reduceAnimationsState.value) 0f else 24f, animationSpec = infiniteRepeatable(animation = tween(18000, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "ambientGradientDriftX")
-    val driftY by motion.animateFloat(initialValue = if (reduceAnimationsState.value) 0f else 16f, targetValue = if (reduceAnimationsState.value) 0f else -16f, animationSpec = infiniteRepeatable(animation = tween(23000, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "ambientGradientDriftY")
+    val driftX = if (reduceAnimationsState.value) 0f else motion.animateFloat(initialValue = -24f, targetValue = 24f, animationSpec = infiniteRepeatable(animation = tween(18000, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "ambientGradientDriftX").value
+    val driftY = if (reduceAnimationsState.value) 0f else motion.animateFloat(initialValue = 16f, targetValue = -16f, animationSpec = infiniteRepeatable(animation = tween(23000, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "ambientGradientDriftY").value
     val customBase = when (backgroundChoice) {
         "blue" -> Color(0xFF071522)
         "lavender" -> Color(0xFF120E20)
