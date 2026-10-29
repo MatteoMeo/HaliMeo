@@ -338,9 +338,12 @@ class MainActivity:ComponentActivity() {
             composable("settings"){SettingsScreen(displayName=displayName,session=session,repo=repo,activity=activity,ctx=ctx,)}
         }
     })
-    var draggedTab by remember { mutableFloatStateOf(Float.NaN) }
-    var settledTab by remember { mutableFloatStateOf(primaryTab.toFloat()) }
-    LaunchedEffect(primaryTab) { settledTab = primaryTab.toFloat(); draggedTab = Float.NaN }
+    val animatedPillPosition by animateFloatAsState(
+        targetValue = primaryTab.toFloat(),
+        animationSpec = if (reduceAnimationsState.value) tween(0)
+        else spring(dampingRatio = 0.82f, stiffness = 950f),
+        label = "navigationPillPosition"
+    )
     if (currentRoute != "edit") Surface(
         modifier = Modifier.align(Alignment.BottomStart)
             .padding(start = 12.dp, end = 78.dp)
@@ -355,58 +358,56 @@ class MainActivity:ComponentActivity() {
         tonalElevation = 0.dp
     ) {
         BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp)) {
-                val tabWidth = (maxWidth - 6.dp) / 3
-                val animatedPillPosition by animateFloatAsState(
-                    targetValue = settledTab,
-                    animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.82f, stiffness = 950f),
-                    label = "navigationPillPosition"
-                )
-                val pillPosition = if (draggedTab.isNaN()) animatedPillPosition else draggedTab
-                // Gesture handling stays on a stable parent while the pill moves beneath it.
-                // This avoids cancelling the drag when the pill crosses a tab boundary.
-                Box(
-                    Modifier.fillMaxSize()
-                        .pointerInput(Unit) {
-                            detectDragGestures(
-                                onDragStart = {
-                                    // Begin at the selected tab; the pill then follows the finger continuously.
-                                    draggedTab = primaryTab.toFloat()
-                                },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    val stride = (size.width + 3.dp.toPx()) / 3f
-                                    draggedTab = ((if (draggedTab.isNaN()) primaryTab.toFloat() else draggedTab) + dragAmount.x / stride).coerceIn(0f, 2f)
-                                },
-                                onDragEnd = {
-                                    val destination = draggedTab.roundToInt().coerceIn(0, 2)
-                                    settledTab = destination.toFloat()
-                                    draggedTab = Float.NaN
-                                    when (destination) {
-                                        0 -> nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } }
-                                        1 -> nav.navigate("trips") { launchSingleTop = true; restoreState = true }
-                                        else -> nav.navigate("settings") { launchSingleTop = true; restoreState = true }
-                                    }
-                                },
-                                onDragCancel = { draggedTab = Float.NaN }
-                            )
-                        }
-                ) {
-                    Box(
-                        Modifier.graphicsLayer { translationX = (tabWidth + 3.dp).toPx() * pillPosition }
-                            .width(tabWidth).fillMaxHeight()
-                            .clip(RoundedCornerShape(50))
-                            .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.18f), MaterialTheme.colorScheme.primary.copy(alpha = 0.22f), MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))))
-                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50))
-                    )
+            val tabWidth = (maxWidth - 6.dp) / 3
+            // The indicator is purely visual; only each tab handles taps, so it cannot steal or
+            // reinterpret a click while moving between destinations.
+            Box(
+                Modifier.graphicsLayer {
+                    translationX = (tabWidth + 3.dp).toPx() * animatedPillPosition
                 }
-                Row(
-                    Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.spacedBy(3.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    .width(tabWidth)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(50))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.18f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                            )
+                        )
+                    )
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50))
+            )
+            Row(
+                Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FloatingNavItem(
+                    Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book
                 ) {
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { settledTab = 0f; draggedTab = Float.NaN; nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { settledTab = 1f; draggedTab = Float.NaN; nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) { settledTab = 2f; draggedTab = Float.NaN; nav.navigate("settings") { launchSingleTop = true; restoreState = true } }
+                    nav.navigate("diary") {
+                        launchSingleTop = true
+                        popUpTo("diary") { saveState = true }
+                    }
+                }
+                FloatingNavItem(
+                    Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco",
+                    "Viaggi", Icons.Default.FlightTakeoff
+                ) {
+                    nav.navigate("trips") {
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+                FloatingNavItem(
+                    Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings
+                ) {
+                    nav.navigate("settings") {
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 }
             }
         }
@@ -429,7 +430,6 @@ class MainActivity:ComponentActivity() {
         }
     }
 
-}
 }
 /**
  * Subtle Monet-tinted ambient light behind translucent surfaces.
