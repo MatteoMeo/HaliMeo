@@ -604,6 +604,14 @@ private fun SettingsScreen(
     var profilePhotoUri by remember { mutableStateOf(profilePrefs.getString("profile_photo_uri", null)) }
     var profileNickname by remember { mutableStateOf(profilePrefs.getString("profile_nickname", displayName) ?: displayName) }
     var profileAbout by remember { mutableStateOf(profilePrefs.getString("profile_about", "") ?: "") }
+    var isProfileEditing by remember {
+        mutableStateOf(
+            !profilePrefs.getBoolean(
+                "profile_saved",
+                profilePrefs.contains("profile_nickname") || profilePrefs.contains("profile_about") || profilePrefs.contains("profile_photo_uri")
+            )
+        )
+    }
     val profilePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             runCatching { ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
@@ -735,17 +743,33 @@ private fun SettingsScreen(
                         Text("Tocca la foto per cambiarla", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                OutlinedTextField(value = profileNickname, onValueChange = { profileNickname = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Nome o soprannome") }, singleLine = true)
-                OutlinedTextField(value = profileAbout, onValueChange = { profileAbout = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Una piccola descrizione") }, placeholder = { Text("Es. collezionisti di ricordi dal 2024") }, minLines = 2, maxLines = 3)
-                Button(onClick = {
-                    profilePrefs.edit().putString("profile_nickname", profileNickname.trim()).putString("profile_about", profileAbout.trim()).apply()
-                    Toast.makeText(ctx, "Profilo salvato su questo dispositivo", Toast.LENGTH_SHORT).show()
-                }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Check, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Salva profilo")
+                if (isProfileEditing) {
+                    OutlinedTextField(value = profileNickname, onValueChange = { profileNickname = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Nome o soprannome") }, singleLine = true)
+                    OutlinedTextField(value = profileAbout, onValueChange = { profileAbout = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Una piccola descrizione") }, placeholder = { Text("Es. collezionisti di ricordi dal 2024") }, minLines = 2, maxLines = 3)
+                    Button(onClick = {
+                        profilePrefs.edit()
+                            .putString("profile_nickname", profileNickname.trim())
+                            .putString("profile_about", profileAbout.trim())
+                            .putBoolean("profile_saved", true)
+                            .apply()
+                        isProfileEditing = false
+                        Toast.makeText(ctx, "Profilo salvato su questo dispositivo", Toast.LENGTH_SHORT).show()
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Check, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Salva profilo")
+                    }
+                    Text("Foto e dettagli sono salvati su questo dispositivo; non modificano ancora il profilo online.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                } else {
+                    if (profileAbout.isNotBlank()) {
+                        Text(profileAbout, color = secondaryText, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    OutlinedButton(onClick = { isProfileEditing = true }, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Edit, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Modifica profilo")
+                    }
                 }
-                Text("Foto e dettagli sono salvati su questo dispositivo; non modificano ancora il profilo online.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
             }
         }
 
