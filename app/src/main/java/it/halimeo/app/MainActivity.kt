@@ -300,12 +300,14 @@ class MainActivity:ComponentActivity() {
             .withTint(Color(0xFF0B1220).copy(alpha = 0.32f))
     )
     var draggedTab by remember { mutableStateOf<Float?>(null) }
-    if (!liveBlurDisabledState.value) {
-        BlurOverlay(
-            state = navigationBlurState,
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp)
-        ) {}
-    }
+    SideEffect { navigationBlurState.isEnabled = !liveBlurDisabledState.value }
+    BlurOverlay(
+        state = navigationBlurState,
+        modifier = Modifier.align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+    ) {
     Row(
         Modifier.fillMaxWidth()
             .pointerInput(primaryTab, currentRoute) {
@@ -385,6 +387,7 @@ class MainActivity:ComponentActivity() {
                 Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(25.dp))
             }
         }
+    }
     }
 }
 /**
