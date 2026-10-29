@@ -5,6 +5,7 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <group android:scaleX="0.86" android:scaleY="0.86" android:translateX="7.56" android:translateY="7.56">
 
     <!-- Keep the foreground art fixed inside Android's 66dp adaptive-icon safe zone. -->
     <!-- Layered cover gives the notebook a restrained, glass-like 3D edge. -->
@@ -51,4 +52,5 @@
     <!-- Specular top edge and tiny glints -->
     <path android:fillColor="#DFFFFFFF" android:pathData="M35,18 L67,18 C69,18 70,19 71,20 L36,20 C34.5,20 33,21 33,23 L33,73 C31.8,73 31,72 31,70 L31,23 C31,20.2 32.8,18 35,18 Z" />
     <path android:fillColor="#00FFFFFF" android:strokeColor="#E8FFFFFF" android:strokeWidth="1.1" android:strokeLineCap="round" android:pathData="M72,26 L72,63" />
+    </group>
 </vector>
