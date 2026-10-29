@@ -26,6 +26,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.clickable
@@ -558,6 +562,21 @@ private fun DiaryScreen(
     var favoritesOnly by remember { mutableStateOf(false) }
     var newestFirst by remember { mutableStateOf(true) }
     var pendingDelete by remember { mutableStateOf<DiaryEntry?>(null) }
+    var headerCollapsed by remember { mutableStateOf(false) }
+    val diaryNestedScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y < -8f) headerCollapsed = true
+                else if (available.y > 8f) headerCollapsed = false
+                return Offset.Zero
+            }
+        }
+    }
+    val headerTitleSize by animateFloatAsState(
+        targetValue = if (headerCollapsed) 23f else 31f,
+        animationSpec = tween(180),
+        label = "diaryHeaderTitleSize"
+    )
     val categories = listOf("Tutte") + entries.map { it.category.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
     val filtered = entries.filter {
         (it.title.contains(query, true) || it.body.contains(query, true) || it.category.contains(query, true)) &&
@@ -568,10 +587,11 @@ private fun DiaryScreen(
     Column(
         Modifier
             .fillMaxSize()
+            .nestedScroll(diaryNestedScroll)
             .background(Color.Transparent)
             .padding(horizontal = 16.dp)
     ) {
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(if (headerCollapsed) 2.dp else 8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -579,9 +599,11 @@ private fun DiaryScreen(
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     "Il vostro diario",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = headerTitleSize.sp, letterSpacing = (-0.65).sp),
                     color = Color.White,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
