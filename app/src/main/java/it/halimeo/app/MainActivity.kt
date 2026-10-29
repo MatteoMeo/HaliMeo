@@ -192,9 +192,10 @@ private val TextPrimary = Color(0xFFF5F7FA)
             typography = rememberHaliMeoTypography(staticFontWidth, staticFontRoundness),
             motionScheme = MotionScheme.expressive(),
             shapes = Shapes(
-                small = RoundedCornerShape(14.dp),
-                medium = RoundedCornerShape(22.dp),
-                large = RoundedCornerShape(28.dp)
+                // More compact, precise One UI-inspired controls instead of oversized expressive pills.
+                small = RoundedCornerShape(10.dp),
+                medium = RoundedCornerShape(14.dp),
+                large = RoundedCornerShape(20.dp)
             ),
             content = content
         )
@@ -283,22 +284,23 @@ class MainActivity:ComponentActivity() {
         modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(76.dp)
     ) {}
     Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        var draggedTab by remember { mutableStateOf<Float?>(null) }
         Surface(modifier = Modifier.weight(1f).shadow(8.dp, RoundedCornerShape(50), clip = false).clip(RoundedCornerShape(50)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.34f), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = Color(0x700B1220), tonalElevation = 0.dp) {
             BoxWithConstraints(
                 Modifier.fillMaxWidth().height(58.dp)
                     .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.07f), Color(0xFF0F1A2B).copy(alpha = 0.55f), Color(0xFF101827).copy(alpha = 0.66f))))
                     .padding(horizontal = 3.dp, vertical = 3.dp)
-                    .pointerInput(primaryTab, maxWidth) {
+                    .pointerInput(primaryTab) {
                         var dragPosition = primaryTab.toFloat()
                         detectDragGestures(
                             onDragStart = { offset ->
-                                val step = ((maxWidth - 6.dp) / 3 + 3.dp).toPx().coerceAtLeast(1f)
+                                val step = ((size.width - 6.dp.toPx()) / 3f + 3.dp.toPx()).coerceAtLeast(1f)
                                 dragPosition = ((offset.x - 3.dp.toPx()) / step).coerceIn(0f, 2f)
                                 draggedTab = dragPosition
                             },
                             onDrag = { change, dragAmount ->
                                 change.consume()
-                                val step = ((maxWidth - 6.dp) / 3 + 3.dp).toPx().coerceAtLeast(1f)
+                                val step = ((size.width - 6.dp.toPx()) / 3f + 3.dp.toPx()).coerceAtLeast(1f)
                                 dragPosition = (dragPosition + dragAmount.x / step).coerceIn(0f, 2f)
                                 draggedTab = dragPosition
                             },
@@ -316,7 +318,6 @@ class MainActivity:ComponentActivity() {
                     }
             ) {
                 val tabWidth = (maxWidth - 6.dp) / 3
-                var draggedTab by remember { mutableStateOf<Float?>(null) }
                 // Keep the pill in the graphics layer: no per-frame layout work.
                 val pillPosition by animateFloatAsState(
                     targetValue = draggedTab ?: primaryTab.toFloat(),
