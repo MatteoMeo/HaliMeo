@@ -319,6 +319,7 @@ private fun FloatingNavItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SettingsScreen(
     displayName: String,
