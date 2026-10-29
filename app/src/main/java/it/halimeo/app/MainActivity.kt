@@ -85,7 +85,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
 private val Ink = Color.Black
-private val Panel = Color(0xFF101114)
+private val Panel = Color(0xFF0D1420)
 private val Mint = Color(0xFF3E91FF)
 private val Muted = Color(0xFFB8C4D6)
 private val Elevated = Color(0xFF111827)
@@ -122,7 +122,7 @@ private fun displayHaliMeoDate(value: String): String {
     return date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yy"))
 }
 private val lastSyncAtState = mutableStateOf(0L)
-@Composable private fun haliMeoAuthBackdrop(): Brush = if (isHaliMeoDark()) Brush.verticalGradient(listOf(Color(0xFF050608), Color(0xFF0B1119), Color(0xFF080D16))) else Brush.verticalGradient(listOf(Color(0xFFF4F8FC), Color(0xFFE7F0F8), Color(0xFFF5F0FA)))
+@Composable private fun haliMeoAuthBackdrop(): Brush = if (isHaliMeoDark()) Brush.verticalGradient(listOf(Color(0xFF0A1426), Color(0xFF0B1220), Color(0xFF080D16))) else Brush.verticalGradient(listOf(Color(0xFFF4F8FC), Color(0xFFE7F0F8), Color(0xFFF5F0FA)))
 private val TextPrimary = Color(0xFFF5F7FA)
 
 
@@ -160,7 +160,7 @@ private val TextPrimary = Color(0xFFF5F7FA)
     val scheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         dynamicDarkColorScheme(context).copy(
             background = Color.Black,
-            surface = Color(0xFF080A0C),
+            surface = Color(0xFF080D16),
             surfaceVariant = Color(0xFF121B2A),
             onBackground = Color(0xFFF5F7FA),
             onSurface = Color(0xFFF5F7FA),
@@ -171,14 +171,14 @@ private val TextPrimary = Color(0xFFF5F7FA)
         darkColorScheme(
             primary = Mint, onPrimary = Color(0xFF102A3A), secondary = Color(0xFF61D9E8), onSecondary = Color(0xFF06272D),
             background = Ink, onBackground = TextPrimary, surface = Panel, onSurface = TextPrimary,
-            surfaceVariant = Elevated, onSurfaceVariant = Muted, outline = Color(0xFF30383E)
+            surfaceVariant = Elevated, onSurfaceVariant = Muted, outline = Color(0xFF334155)
         )
     }
     val backgroundAccent = when (customBackgroundColorState.value) {
-        "blue" -> Color(0xFF397CA6)
-        "lavender" -> Color(0xFF7961B5)
-        "mint" -> Color(0xFF287D65)
-        "rose" -> Color(0xFFB34F75)
+        "blue" -> Color(0xFF3E91FF)
+        "lavender" -> Color(0xFF8878FF)
+        "mint" -> Color(0xFF2F9DAB)
+        "rose" -> Color(0xFFD66A9B)
         else -> scheme.primary
     }
     val adaptiveScheme = scheme.copy(primary = backgroundAccent, secondary = backgroundAccent.copy(alpha = 0.88f))
@@ -541,10 +541,10 @@ private fun SettingsScreen(
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     backgroundOptions.forEach { option ->
                         val swatch = when (option.first) {
-                            "blue" -> if (isHaliMeoDark()) Color(0xFF397CA6) else Color(0xFF8CCFFF)
-                            "lavender" -> if (isHaliMeoDark()) Color(0xFF7961B5) else Color(0xFFC2B2FF)
-                            "mint" -> if (isHaliMeoDark()) Color(0xFF287D65) else Color(0xFF8EDFC3)
-                            "rose" -> if (isHaliMeoDark()) Color(0xFFB34F75) else Color(0xFFFFAFC8)
+                            "blue" -> if (isHaliMeoDark()) Color(0xFF3E91FF) else Color(0xFF8CCFFF)
+                            "lavender" -> if (isHaliMeoDark()) Color(0xFF8878FF) else Color(0xFFC2B2FF)
+                            "mint" -> if (isHaliMeoDark()) Color(0xFF2F9DAB) else Color(0xFF8EDFC3)
+                            "rose" -> if (isHaliMeoDark()) Color(0xFFD66A9B) else Color(0xFFFFAFC8)
                             else -> MaterialTheme.colorScheme.primary
                         }
                         FilterChip(
