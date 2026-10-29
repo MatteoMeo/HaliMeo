@@ -917,6 +917,22 @@ private fun DiaryScreen(
     var expandedEntryIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     val feedbackView = LocalView.current
     val listState = rememberLazyListState()
+    // Cache diary header data instead of sorting favourites and parsing special dates
+    // again whenever Compose recomposes the LazyColumn.
+    val featuredMemories = remember(entries, favoriteIds) {
+        entries.asSequence().filter { it.id in favoriteIds }.sortedByDescending { it.memoryDate }.take(2).toList()
+    }
+    val upcomingSpecial = remember(entries, favoriteIds) {
+        val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+        readHaliMeoSpecialDates(prefs).mapNotNull { item ->
+            parseHaliMeoDate(item.date)?.let { date ->
+                val today = java.time.LocalDate.now()
+                var next = date.withYear(today.year)
+                if (next.isBefore(today)) next = next.plusYears(1)
+                Triple(item, next, java.time.temporal.ChronoUnit.DAYS.between(today, next))
+            }
+        }.minByOrNull { it.third }
+    }
     var headerCollapsed by remember { mutableStateOf(false) }
     val diaryNestedScroll = remember {
         object : NestedScrollConnection {
@@ -1149,9 +1165,7 @@ private fun DiaryScreen(
                 ) {
                     if (!favoritesOnly && query.isBlank() && selectedCategory == "Tutte") {
                         item(key = "featured_memories") {
-                            val featured = entries.filter { it.id in favoriteIds }.sortedByDescending { it.memoryDate }.take(2)
-                            val prefs = LocalContext.current.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
-                            val upcomingSpecial = readHaliMeoSpecialDates(prefs).mapNotNull { item -> parseHaliMeoDate(item.date)?.let { date -> val today=java.time.LocalDate.now(); var next=date.withYear(today.year); if(next.isBefore(today)) next=next.plusYears(1); Triple(item,next,java.time.temporal.ChronoUnit.DAYS.between(today,next)) } }.minByOrNull { it.third }
+                            val featured = featuredMemories
                             if (featured.isNotEmpty() || upcomingSpecial != null) {
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 4.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
