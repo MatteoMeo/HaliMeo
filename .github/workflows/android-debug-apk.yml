@@ -23,13 +23,25 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+
+      # Keep Android's debug signing key between CI runs. Without this cache,
+      # each fresh runner creates a different key and Android rejects updates
+      # over the previously installed APK as a signature mismatch.
+      - name: Restore stable debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: halimeo-debug-signing-key-v1
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
       - name: Restore Gradle task output cache
         uses: actions/cache@v4
         with:
@@ -37,20 +49,33 @@ jobs:
           key: ${{ runner.os }}-halimeo-gradle-build-cache-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle.properties') }}
           restore-keys: |
             ${{ runner.os }}-halimeo-gradle-build-cache-
+
       - name: Build debug APK
         env:
           HALIMEO_VERSION_CODE: ${{ github.run_number }}
           HALIMEO_VERSION_NAME: 1.0.${{ github.run_number }}
         run: chmod +x gradlew && ./gradlew --build-cache --parallel -PHALIMEO_VERSION_CODE="$HALIMEO_VERSION_CODE" -PHALIMEO_VERSION_NAME="$HALIMEO_VERSION_NAME" assembleDebug
-      - name: Prepare APK
-        run: cp app/build/outputs/apk/debug/*.apk HaliMeo-alpha-debug.apk
+
+      - name: Prepare versioned APK
+        env:
+          HALIMEO_VERSION_NAME: 1.0.${{ github.run_number }}
+          HALIMEO_VERSION_CODE: ${{ github.run_number }}
+        run: |
+          APK="$(find app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' -print -quit)"
+          test -n "$APK"
+          cp "$APK" "HaliMeo-${HALIMEO_VERSION_NAME}-build${HALIMEO_VERSION_CODE}-debug.apk"
+          cp "$APK" HaliMeo-alpha-debug.apk
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: halimeo-debug-apk
-          path: HaliMeo-alpha-debug.apk
+          name: halimeo-${{ github.run_number }}-debug-apk
+          path: |
+            HaliMeo-*-build*-debug.apk
+            HaliMeo-alpha-debug.apk
           if-no-files-found: error
           retention-days: 14
+
       - name: Publish latest alpha release
         uses: softprops/action-gh-release@v2
         with:
@@ -59,7 +84,12 @@ jobs:
           body: |
             Latest automatically built HaliMeo alpha debug APK from the feature/ui-ux-refresh branch.
 
+            Build: ${{ github.run_number }}
+            Version: 1.0.${{ github.run_number }}
+
             This is a prerelease build for testing. Install only if you understand it may contain bugs.
           prerelease: true
           make_latest: false
-          files: HaliMeo-alpha-debug.apk
+          files: |
+            HaliMeo-alpha-debug.apk
+            HaliMeo-*-build*-debug.apk
