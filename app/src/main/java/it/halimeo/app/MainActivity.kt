@@ -280,6 +280,7 @@ class MainActivity:ComponentActivity() {
         initialConfig = BlurOverlayConfig(radius = 22f, downsampleFactor = 5f, isLive = true)
             .withTint(Color(0xFF0B1220).copy(alpha = 0.32f))
     )
+    var draggedTab by remember { mutableStateOf<Float?>(null) }
     BlurOverlay(
         state = navigationBlurState,
         modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp)
@@ -317,7 +318,6 @@ class MainActivity:ComponentActivity() {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        var draggedTab by remember { mutableStateOf<Float?>(null) }
         Surface(modifier = Modifier.weight(1f).shadow(8.dp, RoundedCornerShape(50), clip = false).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.34f), RoundedCornerShape(50)), shape = RoundedCornerShape(50), color = Color(0x500B1220), tonalElevation = 0.dp) {
             BoxWithConstraints(
                 Modifier.fillMaxWidth().height(58.dp)
