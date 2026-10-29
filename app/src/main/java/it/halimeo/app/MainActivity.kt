@@ -158,6 +158,12 @@ private val TextPrimary = Color(0xFFF5F7FA)
         backgroundBlurState.value = prefs.getFloat("background_blur", 0f)
         backgroundOverlayState.value = prefs.getFloat("background_overlay", 0.48f)
         backgroundBrightnessState.value = prefs.getFloat("background_brightness", 0f)
+        reduceAnimationsState.value = prefs.getBoolean("reduce_animations", false)
+        liveBlurDisabledState.value = prefs.getBoolean("disable_live_blur", false)
+        val preferredHz = prefs.getInt("preferred_refresh_rate", 120).coerceIn(48, 120)
+        (context as? ComponentActivity)?.window?.let { window ->
+            window.attributes = window.attributes.apply { preferredRefreshRate = preferredHz.toFloat() }
+        }
     }
     val staticFontWidth = 100f
     val staticFontRoundness = 28f
@@ -277,10 +283,10 @@ class MainActivity:ComponentActivity() {
             startDestination = "diary",
             modifier = Modifier.padding(padding),
             // Page changes should feel like a deliberate Android page swipe, not a barely visible fade.
-            enterTransition = { fadeIn(tween(260, easing = OneUiMotionEasing)) + slideInHorizontally(tween(320, easing = OneUiMotionEasing)) { it / 7 } },
-            exitTransition = { fadeOut(tween(210, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(280, easing = OneUiMotionEasing)) { -it / 12 } },
-            popEnterTransition = { fadeIn(tween(280, easing = OneUiMotionEasing)) + slideInHorizontally(spring(dampingRatio = 0.9f, stiffness = 360f)) { -it / 7 } },
-            popExitTransition = { fadeOut(tween(210, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(280, easing = OneUiMotionEasing)) { it / 12 } }
+            enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(70)) else fadeIn(tween(260, easing = OneUiMotionEasing)) + slideInHorizontally(tween(320, easing = OneUiMotionEasing)) { it / 7 } },
+            exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(50)) else fadeOut(tween(210, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(280, easing = OneUiMotionEasing)) { -it / 12 } },
+            popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(70)) else fadeIn(tween(280, easing = OneUiMotionEasing)) + slideInHorizontally(spring(dampingRatio = 0.9f, stiffness = 360f)) { -it / 7 } },
+            popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(50)) else fadeOut(tween(210, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(280, easing = OneUiMotionEasing)) { it / 12 } }
         ) {
             composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable("edit"){EditScreen(editing,{t,b,c,d,photo->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id,photo);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()})}
@@ -294,10 +300,12 @@ class MainActivity:ComponentActivity() {
             .withTint(Color(0xFF0B1220).copy(alpha = 0.32f))
     )
     var draggedTab by remember { mutableStateOf<Float?>(null) }
-    BlurOverlay(
-        state = navigationBlurState,
-        modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp)
-    ) {
+    if (!liveBlurDisabledState.value) {
+        BlurOverlay(
+            state = navigationBlurState,
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp)
+        ) {}
+    }
     Row(
         Modifier.fillMaxWidth()
             .pointerInput(primaryTab, currentRoute) {
@@ -377,8 +385,6 @@ class MainActivity:ComponentActivity() {
                 Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(25.dp))
             }
         }
-    }
-    }
     }
 }
 /**
