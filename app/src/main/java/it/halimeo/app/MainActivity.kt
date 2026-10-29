@@ -50,6 +50,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -342,6 +343,7 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
                     )
                 )
             )
+        }
         Box(
             Modifier.align(Alignment.TopCenter).offset(y = (-170).dp).size(560.dp)
                 .blur(150.dp)
