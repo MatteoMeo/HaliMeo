@@ -84,6 +84,7 @@ private val FrostedSurface = Color(0xC8101419)
 private val FrostedSurfaceStrong = Color(0xD9101419)
 private val FrostedEdge = Color.White.copy(alpha = 0.17f)
 private val themeModeState = mutableStateOf("system")
+private val lastSyncAtState = mutableStateOf(0L)
 private val HaliMeoBackdrop = Brush.verticalGradient(listOf(Color.Black, Color.Black, Color.Black))
 private val TextPrimary = Color(0xFFF5F7FA)
 
@@ -143,6 +144,7 @@ class MainActivity:ComponentActivity() {
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) window.isNavigationBarContrastEnforced = false
         themeModeState.value = getSharedPreferences("halimeo_preferences", MODE_PRIVATE).getString("theme_mode", "system") ?: "system"
+        lastSyncAtState.value = getSharedPreferences("halimeo_preferences", MODE_PRIVATE).getLong("last_sync_at", 0L)
         setContent { HaliMeoTheme { HaliMeoRoot() } }
     }
 }
@@ -173,7 +175,7 @@ class MainActivity:ComponentActivity() {
         modifier=Modifier.heightIn(min=56.dp),
         colors=TopAppBarDefaults.topAppBarColors(containerColor=Color.Transparent, scrolledContainerColor=Color.Transparent, titleContentColor=TextPrimary,actionIconContentColor=TextPrimary),
         actions={
-            IconButton(onClick={activity.lifecycleScope.launch{runCatching{repo.syncNow()}.onSuccess{Toast.makeText(ctx,"Sincronizzazione completata",Toast.LENGTH_SHORT).show()}.onFailure{Toast.makeText(ctx,"Offline: dati conservati sul dispositivo",Toast.LENGTH_LONG).show()}}}){Icon(Icons.Default.CloudSync,"Sincronizza")}
+            IconButton(onClick={activity.lifecycleScope.launch{runCatching{repo.syncNow()}.onSuccess{val now=System.currentTimeMillis();ctx.getSharedPreferences("halimeo_preferences",android.content.Context.MODE_PRIVATE).edit().putLong("last_sync_at",now).apply();lastSyncAtState.value=now;Toast.makeText(ctx,"Sincronizzazione completata",Toast.LENGTH_SHORT).show()}.onFailure{Toast.makeText(ctx,"Offline: dati conservati sul dispositivo",Toast.LENGTH_LONG).show()}}}){Icon(Icons.Default.CloudSync,"Sincronizza")}
             IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.AutoMirrored.Filled.Logout,"Esci")}
         }
     )},bottomBar={
@@ -314,6 +316,7 @@ private fun SettingsScreen(
 ) {
     val diaryEntries by repo.entries.collectAsState(initial = emptyList())
     val pendingSyncCount = diaryEntries.count { it.syncState != "SYNCED" }
+    val lastSyncAt by lastSyncAtState
     var isOwner by remember { mutableStateOf<Boolean?>(null) }
     var inviteCode by remember { mutableStateOf("") }
     var inviteBusy by remember { mutableStateOf(false) }
@@ -437,13 +440,19 @@ private fun SettingsScreen(
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text(if (pendingSyncCount == 0) "Tutto aggiornato" else "$pendingSyncCount ricordi in attesa", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text(if (pendingSyncCount == 0) "Non ci sono modifiche da inviare." else "I dati restano sul dispositivo finché la sincronizzazione non riesce.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                        Text(if (lastSyncAt > 0L) "Ultimo tentativo riuscito: " + java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(lastSyncAt)) else "Nessuna sincronizzazione riuscita in questa installazione.", color = secondaryText, style = MaterialTheme.typography.labelSmall)
                     }
                 }
                 Button(
                     onClick = {
                         activity.lifecycleScope.launch {
                             runCatching { repo.syncNow() }
-                                .onSuccess { Toast.makeText(ctx, "Sincronizzazione completata", Toast.LENGTH_SHORT).show() }
+                                .onSuccess {
+                                    val now = System.currentTimeMillis()
+                                    ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putLong("last_sync_at", now).apply()
+                                    lastSyncAtState.value = now
+                                    Toast.makeText(ctx, "Sincronizzazione completata", Toast.LENGTH_SHORT).show()
+                                }
                                 .onFailure { Toast.makeText(ctx, "Server non raggiungibile: dati conservati sul dispositivo", Toast.LENGTH_LONG).show() }
                         }
                     },
