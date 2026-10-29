@@ -46,7 +46,6 @@ dependencies {
     // Haze: blur of the content behind floating glass surfaces, following Morphe’s pattern.
     implementation("dev.chrisbanes.haze:haze:2.0.1")
     implementation("dev.chrisbanes.haze:haze-blur:2.0.1")
-    implementation("io.github.ezoushen:blur-cmp-android:0.10.3")
     implementation(platform("androidx.compose:compose-bom:2026.09.00"))
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.compose.ui:ui")
