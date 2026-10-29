@@ -95,7 +95,7 @@ jobs:
         env:
           HALIMEO_VERSION_CODE: ${{ github.run_number }}
           HALIMEO_VERSION_NAME: 1.0.${{ github.run_number }}
-        run: chmod +x gradlew && ./gradlew --build-cache --parallel --max-workers=4 --configuration-cache -PHALIMEO_VERSION_CODE="$HALIMEO_VERSION_CODE" -PHALIMEO_VERSION_NAME="$HALIMEO_VERSION_NAME" assembleDebug
+        run: chmod +x gradlew && ./gradlew --build-cache --parallel -PHALIMEO_VERSION_CODE="$HALIMEO_VERSION_CODE" -PHALIMEO_VERSION_NAME="$HALIMEO_VERSION_NAME" assembleDebug
 
       - name: Verifica la firma e prepara l'APK versionato
         env:
@@ -159,8 +159,7 @@ jobs:
             echo "## ✨ Modifiche incluse"
             echo
 
-            # Describe all changes since the last successfully published Alpha,
-            # including commits whose earlier builds were cancelled or failed.
+            # Include every change since the last successfully published Alpha.
             LATEST_ALPHA_TAG="$(git tag --list 'alpha-build-*' | sort -V | tail -n 1)"
             if [ -n "$LATEST_ALPHA_TAG" ]; then
               RANGE="${LATEST_ALPHA_TAG}..${CURRENT_SHA}"
@@ -170,7 +169,7 @@ jobs:
               RANGE="-1 ${CURRENT_SHA}"
             fi
 
-            git log --reverse --format='%h%x09%s' "$RANGE" | while IFS="$(printf '\t')" read -r hash subject; do
+            git log --reverse --format='%h%x09%s' $RANGE | while IFS=
               case "$subject" in
                 "Stabilize alpha signing key"*)
                   description="Firma dell'app resa persistente e verifica automatica del certificato prima della pubblicazione." ;;
@@ -214,20 +213,24 @@ jobs:
                   description="Collegati i nuovi interruttori alle funzioni reali: riduci animazioni accorcia i passaggi tra pagine, disattiva blur nasconde il livello di sfocatura live, mentre la frequenza selezionata viene applicata alla finestra dell'app." ;;
                 "Keep live blur aligned to navbar content and use the library's native enable toggle"*)
                   description="Corretto il posizionamento del vetro: il blur ora segue l'area effettiva della barra invece di creare una fascia larga separata. Il comando Disattiva blur usa il controllo nativo della libreria per spegnere davvero l'effetto." ;;
+                "Expand accent palette and add appearance performance controls"*)
+                  description="Aggiunti 16 colori di accento. In Aspetto si possono scegliere 48/60/90/120 Hz, ridurre le animazioni e disattivare il blur; la frequenza reale dipende dallo schermo e da Android." ;;
+                "Wire appearance performance settings to blur, animations and display refresh rate"*)
+                  description="Collegati gli interruttori Aspetto: le animazioni ridotte velocizzano i passaggi tra pagine e la scelta del blur aggiorna l'effetto live. La frequenza selezionata viene applicata alla finestra dell'app." ;;
                 "Stabilize live blur state and unify frosted card styling"*)
-                  description="Separata l'area sfocata della navbar dal pulsante +, così il blur non si allarga sotto il pulsante. Aggiornati anche il bordo e l'ombra della scheda Viaggi e della scheda vuota del Diario." ;;
+                  description="Separata la sfocatura della navbar dal pulsante + per evitare che il blur si estenda sotto di esso. Aggiornati bordo e ombra della scheda Viaggi e della scheda vuota del Diario." ;;
                 "Restore balanced navbar structure and fix reduced motion and switch contrast"*)
-                  description="Ripristinata la struttura delle schermate dopo un errore di parentesi che impediva la compilazione. L'opzione Riduci animazioni interviene anche sull'ingresso dei titoli e sulla pressione delle schede Viaggi; gli interruttori disattivati hanno un cursore chiaro e una traccia più leggibile." ;;
+                  description="Ripristinata la struttura delle schermate dopo un errore di parentesi che impediva la compilazione. Riduci animazioni interviene anche su titoli e pressione delle schede; gli interruttori OFF hanno più contrasto." ;;
                 "Add subtle motion to ambient gradient background"*)
-                  description="Le tre luci gradienti dello sfondo si spostano lentamente in direzioni diverse, con cicli di circa 18–23 secondi, per rendere l'interfaccia meno statica senza animazioni rapide." ;;
+                  description="Aggiunto un movimento lento alle tre luci gradienti dello sfondo, con cicli di 18–23 secondi per rendere l'interfaccia meno statica senza animazioni rapide." ;;
                 "Add profile photo and editable local profile details"*)
-                  description="Aggiunta in Impostazioni la scheda Il vostro profilo: permette di scegliere una foto, modificare nome/soprannome e scrivere una descrizione. Foto e dettagli vengono salvati sul dispositivo e non sono ancora sincronizzati online." ;;
+                  description="Aggiunta in Impostazioni la scheda profilo: si può scegliere una foto, modificare nome/soprannome e scrivere una descrizione. I dati restano sul dispositivo e non sono ancora sincronizzati online." ;;
                 "Fix malformed appearance switch callbacks blocking Kotlin compilation"*)
-                  description="Corretta la sintassi dei due interruttori Aspetto: mancava la chiusura delle funzioni di modifica dello stato prima dei colori del componente. Questo errore Kotlin interrompeva la compilazione dell'APK." ;;
+                  description="Corretta la sintassi dei due interruttori Aspetto: mancava la chiusura delle funzioni di modifica dello stato prima dei colori del componente, impedendo la compilazione Kotlin." ;;
                 "Import animateFloat for the animated gradient backdrop"*)
-                  description="Aggiunto l'import mancante per l'animazione dei gradienti: senza questo riferimento Kotlin non riconosceva animateFloat e interrompeva la compilazione." ;;
+                  description="Aggiunto l'import mancante per l'animazione dei gradienti: senza di esso Kotlin non riconosceva animateFloat e interrompeva la compilazione." ;;
                 "Respect reduced motion for ambient gradient animation"*)
-                  description="L'opzione Riduci animazioni ora ferma anche il movimento lento delle luci gradienti sullo sfondo, oltre a ridurre le animazioni di titoli, transizioni e schede." ;;
+                  description="Riduci animazioni ferma ora anche il movimento delle luci gradienti sullo sfondo, oltre a ridurre le animazioni di titoli, transizioni e schede." ;;
                 "Align navigation drag calculations with actual touch coordinates"*)
                   description="Affinata la precisione del trascinamento della barra: il punto di partenza ora corrisponde alla posizione reale del tocco, riducendo gli spostamenti imprevisti." ;;
                 "Restore stable app structure and add live blur plus finger-tracking nav pill"*)
@@ -239,7 +242,7 @@ jobs:
                 "Remove blur prototype dependency until overlay integration is fixed"*)
                   description="Rimossa temporaneamente la libreria di sfocatura dopo un problema d'integrazione, per evitare di distribuire una versione instabile." ;;
                 *)
-                  description="Modifica registrata: ${subject}. Non è stata ancora aggiunta una descrizione dedicata; il titolo identifica il cambiamento incluso." ;;
+                  description="Modifica inclusa nel commit: ${subject}. Per questa voce manca ancora una descrizione specifica." ;;
               esac
               echo "- ${description} (`${hash}`)"
             done
@@ -324,16 +327,6 @@ jobs:
                   description="Collegati i nuovi interruttori alle funzioni reali: riduci animazioni accorcia i passaggi tra pagine, disattiva blur nasconde il livello di sfocatura live, mentre la frequenza selezionata viene applicata alla finestra dell'app." ;;
                 "Keep live blur aligned to navbar content and use the library's native enable toggle"*)
                   description="Corretto il posizionamento del vetro: il blur ora segue l'area effettiva della barra invece di creare una fascia larga separata. Il comando Disattiva blur usa il controllo nativo della libreria per spegnere davvero l'effetto." ;;
-                "Stabilize live blur state and unify frosted card styling"*)
-                  description="Separata l'area sfocata della navbar dal pulsante +, così il blur non si allarga sotto il pulsante. Aggiornati anche il bordo e l'ombra della scheda Viaggi e della scheda vuota del Diario." ;;
-                "Restore balanced navbar structure and fix reduced motion and switch contrast"*)
-                  description="Ripristinata la struttura delle schermate dopo un errore di parentesi che impediva la compilazione. L'opzione Riduci animazioni interviene anche sull'ingresso dei titoli e sulla pressione delle schede Viaggi; gli interruttori disattivati hanno un cursore chiaro e una traccia più leggibile." ;;
-                "Add subtle motion to ambient gradient background"*)
-                  description="Le tre luci gradienti dello sfondo si spostano lentamente in direzioni diverse, con cicli di circa 18–23 secondi, per rendere l'interfaccia meno statica senza animazioni rapide." ;;
-                "Add profile photo and editable local profile details"*)
-                  description="Aggiunta in Impostazioni la scheda Il vostro profilo: permette di scegliere una foto, modificare nome/soprannome e scrivere una descrizione. Foto e dettagli vengono salvati sul dispositivo e non sono ancora sincronizzati online." ;;
-                "Fix malformed appearance switch callbacks blocking Kotlin compilation"*)
-                  description="Corretta la sintassi dei due interruttori Aspetto: mancava la chiusura delle funzioni di modifica dello stato prima dei colori del componente. Questo errore Kotlin interrompeva la compilazione dell'APK." ;;
                 "Align navigation drag calculations with actual touch coordinates"*)
                   description="Affinata la precisione del trascinamento della barra: il punto di partenza ora corrisponde alla posizione reale del tocco, riducendo gli spostamenti imprevisti." ;;
                 "Restore stable app structure and add live blur plus finger-tracking nav pill"*)
