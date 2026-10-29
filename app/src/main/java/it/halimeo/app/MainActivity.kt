@@ -390,6 +390,7 @@ class MainActivity:ComponentActivity() {
     }
     }
 }
+}
 /**
  * Subtle Monet-tinted ambient light behind translucent surfaces.
  * The actual content remains crisp; the glow is a separate, non-interactive layer.
