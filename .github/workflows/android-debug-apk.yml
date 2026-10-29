@@ -95,7 +95,7 @@ jobs:
         env:
           HALIMEO_VERSION_CODE: ${{ github.run_number }}
           HALIMEO_VERSION_NAME: 1.0.${{ github.run_number }}
-        run: chmod +x gradlew && ./gradlew --build-cache --parallel -PHALIMEO_VERSION_CODE="$HALIMEO_VERSION_CODE" -PHALIMEO_VERSION_NAME="$HALIMEO_VERSION_NAME" assembleDebug
+        run: chmod +x gradlew && ./gradlew --build-cache --parallel --configuration-cache -PHALIMEO_VERSION_CODE="$HALIMEO_VERSION_CODE" -PHALIMEO_VERSION_NAME="$HALIMEO_VERSION_NAME" assembleDebug
 
       - name: Verifica la firma e prepara l'APK versionato
         env:
