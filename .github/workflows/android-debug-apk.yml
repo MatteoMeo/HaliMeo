@@ -169,7 +169,7 @@ jobs:
               RANGE="-1 ${CURRENT_SHA}"
             fi
 
-            git log --reverse --format='%h%x09%s' $RANGE | while IFS=
+            git log --reverse --format='%h|%s' $RANGE | while IFS='|' read -r hash subject; do
               case "$subject" in
                 "Stabilize alpha signing key"*)
                   description="Firma dell'app resa persistente e verifica automatica del certificato prima della pubblicazione." ;;
