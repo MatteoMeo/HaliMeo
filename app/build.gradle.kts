@@ -18,7 +18,7 @@ android {
     defaultConfig {
         applicationId = "it.halimeo.app"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 37
         versionCode = alphaVersionCode
         versionName = alphaVersionName
         val apiBaseUrl = (project.findProperty("HALIMEO_API_BASE_URL") as String?) ?: "https://halimeo.example/"
