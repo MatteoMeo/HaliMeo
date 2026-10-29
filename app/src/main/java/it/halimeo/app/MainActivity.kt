@@ -25,7 +25,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.ui.draw.blur
@@ -37,8 +36,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.clickable
@@ -257,29 +254,7 @@ class MainActivity:ComponentActivity() {
         NavHost(
             nav,
             startDestination = "diary",
-            modifier = Modifier.padding(padding).pointerInput(currentRoute) {
-                var horizontalTravel = 0f
-                detectHorizontalDragGestures(
-                    onHorizontalDrag = { change, amount ->
-                        horizontalTravel += amount
-                        change.consume()
-                    },
-                    onDragEnd = {
-                        // A deliberate horizontal fling switches primary sections. Vertical
-                        // diary scrolling remains handled by LazyColumn's own gesture system.
-                        if (kotlin.math.abs(horizontalTravel) > 84f && currentRoute != "edit") {
-                            val targetIndex = (primaryTab + if (horizontalTravel < 0f) 1 else -1).coerceIn(0, 2)
-                            val target = primaryRoutes[targetIndex]
-                            if (target != currentRoute) nav.navigate(target) {
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
-                        horizontalTravel = 0f
-                    },
-                    onDragCancel = { horizontalTravel = 0f }
-                )
-            },
+            modifier = Modifier.padding(padding),
             enterTransition = { fadeIn(tween(220, easing = OneUiMotionEasing)) + slideInHorizontally(tween(260, easing = OneUiMotionEasing)) { it / 18 } },
             exitTransition = { fadeOut(tween(160, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(190, easing = OneUiMotionEasing)) { -it / 24 } },
             popEnterTransition = { fadeIn(tween(240, easing = OneUiMotionEasing)) + slideInHorizontally(spring(dampingRatio = 0.88f, stiffness = 420f)) { -it / 18 } },
@@ -300,13 +275,17 @@ class MainActivity:ComponentActivity() {
                     .padding(horizontal = 3.dp, vertical = 3.dp)
             ) {
                 val tabWidth = (maxWidth - 6.dp) / 3
-                val pillOffset by animateDpAsState(
-                    targetValue = (tabWidth + 3.dp) * primaryTab,
-                    animationSpec = tween(durationMillis = 320, easing = OneUiMotionEasing),
-                    label = "navigationPillOffset"
+                // Animate the selection in the draw phase so the pill can glide without
+                // triggering a fresh layout pass on every animation frame.
+                val pillPosition by animateFloatAsState(
+                    targetValue = primaryTab.toFloat(),
+                    animationSpec = spring(dampingRatio = 0.84f, stiffness = 520f),
+                    label = "navigationPillPosition"
                 )
                 Box(
-                    Modifier.offset(x = pillOffset).width(tabWidth).fillMaxHeight()
+                    Modifier.graphicsLayer {
+                        translationX = (tabWidth + 3.dp).toPx() * pillPosition
+                    }.width(tabWidth).fillMaxHeight()
                         .clip(RoundedCornerShape(50))
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f))
                         .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.58f), RoundedCornerShape(50))
