@@ -306,10 +306,10 @@ class MainActivity:ComponentActivity() {
             startDestination = "diary",
             modifier = Modifier.padding(padding),
             // Page changes should feel like a deliberate Android page swipe, not a barely visible fade.
-            enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(25)) else fadeIn(tween(65, easing = OneUiMotionEasing)) + slideInHorizontally(tween(90, easing = OneUiMotionEasing)) { it / 7 } },
-            exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(20)) else fadeOut(tween(45, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(70, easing = OneUiMotionEasing)) { -it / 12 } },
-            popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(25)) else fadeIn(tween(65, easing = OneUiMotionEasing)) + slideInHorizontally(spring(dampingRatio = 0.9f, stiffness = 900f)) { -it / 7 } },
-            popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(20)) else fadeOut(tween(45, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(70, easing = OneUiMotionEasing)) { it / 12 } }
+            enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(25)) else fadeIn(tween(35, easing = OneUiMotionEasing)) + slideInHorizontally(tween(55, easing = OneUiMotionEasing)) { it / 7 } },
+            exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(20)) else fadeOut(tween(25, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(45, easing = OneUiMotionEasing)) { -it / 12 } },
+            popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(25)) else fadeIn(tween(35, easing = OneUiMotionEasing)) + slideInHorizontally(spring(dampingRatio = 0.88f, stiffness = 1100f)) { -it / 7 } },
+            popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(20)) else fadeOut(tween(25, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(45, easing = OneUiMotionEasing)) { it / 12 } }
         ) {
             composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable(
@@ -344,11 +344,11 @@ class MainActivity:ComponentActivity() {
     var settledTab by remember { mutableFloatStateOf(primaryTab.toFloat()) }
     LaunchedEffect(primaryTab) { settledTab = primaryTab.toFloat(); draggedTab = Float.NaN }
     val navigationBlurState = rememberBlurOverlayState(
-        initialConfig = BlurOverlayConfig(radius = 18f, downsampleFactor = 6f, isLive = true)
+        initialConfig = BlurOverlayConfig(radius = 16f, downsampleFactor = 8f, isLive = true)
             .withTint(Color(0xFF0B1220).copy(alpha = 0.24f))
     )
     val fabBlurState = rememberBlurOverlayState(
-        initialConfig = BlurOverlayConfig(radius = 18f, downsampleFactor = 6f, isLive = true)
+        initialConfig = BlurOverlayConfig(radius = 16f, downsampleFactor = 8f, isLive = true)
             .withTint(Color(0xFF0B1220).copy(alpha = 0.24f))
     )
     // Update the capture only when the preference changes, not on every recomposition.
@@ -361,7 +361,7 @@ class MainActivity:ComponentActivity() {
         if (liveBlurDisabledState.value) return@LaunchedEffect
         navigationBlurState.config = navigationBlurState.config.copy(isLive = false)
         fabBlurState.config = fabBlurState.config.copy(isLive = false)
-        kotlinx.coroutines.delay(110)
+        kotlinx.coroutines.delay(70)
         navigationBlurState.config = navigationBlurState.config.copy(isLive = true)
         fabBlurState.config = fabBlurState.config.copy(isLive = true)
     }
