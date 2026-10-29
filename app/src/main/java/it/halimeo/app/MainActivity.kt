@@ -306,33 +306,33 @@ class MainActivity:ComponentActivity() {
             startDestination = "diary",
             modifier = Modifier.padding(padding),
             // Page changes should feel like a deliberate Android page swipe, not a barely visible fade.
-            enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(70)) else fadeIn(tween(260, easing = OneUiMotionEasing)) + slideInHorizontally(tween(320, easing = OneUiMotionEasing)) { it / 7 } },
-            exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(50)) else fadeOut(tween(210, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(280, easing = OneUiMotionEasing)) { -it / 12 } },
-            popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(70)) else fadeIn(tween(280, easing = OneUiMotionEasing)) + slideInHorizontally(spring(dampingRatio = 0.9f, stiffness = 360f)) { -it / 7 } },
-            popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(50)) else fadeOut(tween(210, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(280, easing = OneUiMotionEasing)) { it / 12 } }
+            enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(50)) else fadeIn(tween(130, easing = OneUiMotionEasing)) + slideInHorizontally(tween(130, easing = OneUiMotionEasing)) { it / 7 } },
+            exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(35)) else fadeOut(tween(100, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(150, easing = OneUiMotionEasing)) { -it / 12 } },
+            popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(50)) else fadeIn(tween(140, easing = OneUiMotionEasing)) + slideInHorizontally(spring(dampingRatio = 0.92f, stiffness = 520f)) { -it / 7 } },
+            popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(35)) else fadeOut(tween(100, easing = OneUiMotionEasing)) + slideOutHorizontally(tween(150, easing = OneUiMotionEasing)) { it / 12 } }
         ) {
             composable("diary"){DiaryScreen(entries,favoriteIds,{editing=it;nav.navigate("edit")},{toggleFavorite(it.id)},{entry->activity.lifecycleScope.launch{repo.delete(entry.id)}})}
             composable(
                 route = "edit",
                 enterTransition = {
                     if (reduceAnimationsState.value) fadeIn(tween(90))
-                    else fadeIn(tween(220, easing = OneUiMotionEasing)) +
-                        scaleIn(initialScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(360, easing = OneUiMotionEasing))
+                    else fadeIn(tween(150, easing = OneUiMotionEasing)) +
+                        scaleIn(initialScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(220, easing = OneUiMotionEasing))
                 },
                 exitTransition = {
                     if (reduceAnimationsState.value) fadeOut(tween(80))
-                    else fadeOut(tween(180, easing = OneUiMotionEasing)) +
-                        scaleOut(targetScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(300, easing = OneUiMotionEasing))
+                    else fadeOut(tween(130, easing = OneUiMotionEasing)) +
+                        scaleOut(targetScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(130, easing = OneUiMotionEasing))
                 },
                 popEnterTransition = {
                     if (reduceAnimationsState.value) fadeIn(tween(80))
-                    else fadeIn(tween(180, easing = OneUiMotionEasing)) +
-                        scaleIn(initialScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(300, easing = OneUiMotionEasing))
+                    else fadeIn(tween(130, easing = OneUiMotionEasing)) +
+                        scaleIn(initialScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(130, easing = OneUiMotionEasing))
                 },
                 popExitTransition = {
                     if (reduceAnimationsState.value) fadeOut(tween(80))
-                    else fadeOut(tween(220, easing = OneUiMotionEasing)) +
-                        scaleOut(targetScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(360, easing = OneUiMotionEasing))
+                    else fadeOut(tween(150, easing = OneUiMotionEasing)) +
+                        scaleOut(targetScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(220, easing = OneUiMotionEasing))
                 }
             ) { EditScreen(editing,{t,b,c,d,photo->activity.lifecycleScope.launch{repo.save(t,b,c,d,editing?.id,photo);editing=null;nav.popBackStack();runCatching{repo.syncNow()}}},{editing=null;nav.popBackStack()}) }
             composable("trips"){TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })}
@@ -341,16 +341,15 @@ class MainActivity:ComponentActivity() {
         }
     })
     var draggedTab by remember { mutableFloatStateOf(Float.NaN) }
-    // Reset only after the selected destination has actually changed; never let the
-    // pill spring back to the old tab between gesture release and NavController update.
-    LaunchedEffect(primaryTab) { draggedTab = Float.NaN }
+    var settledTab by remember { mutableFloatStateOf(primaryTab.toFloat()) }
+    LaunchedEffect(primaryTab) { settledTab = primaryTab.toFloat(); draggedTab = Float.NaN }
     val navigationBlurState = rememberBlurOverlayState(
         initialConfig = BlurOverlayConfig(radius = 18f, downsampleFactor = 6f, isLive = false)
             .withTint(Color(0xFF0B1220).copy(alpha = 0.30f))
     )
     val fabBlurState = rememberBlurOverlayState(
-        initialConfig = BlurOverlayConfig(radius = 18f, downsampleFactor = 6f, isLive = true)
-            .withTint(Color(0xFF0B1220).copy(alpha = 0.18f))
+        initialConfig = BlurOverlayConfig(radius = 18f, downsampleFactor = 6f, isLive = false)
+            .withTint(Color(0xFF0B1220).copy(alpha = 0.30f))
     )
     // Update the capture only when the preference changes, not on every recomposition.
     LaunchedEffect(liveBlurDisabledState.value) {
@@ -383,8 +382,8 @@ class MainActivity:ComponentActivity() {
             ) {
                 val tabWidth = (maxWidth - 6.dp) / 3
                 val animatedPillPosition by animateFloatAsState(
-                    targetValue = primaryTab.toFloat(),
-                    animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.92f, stiffness = 420f),
+                    targetValue = settledTab,
+                    animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.86f, stiffness = 620f),
                     label = "navigationPillPosition"
                 )
                 val pillPosition = if (draggedTab.isNaN()) animatedPillPosition else draggedTab
@@ -405,7 +404,8 @@ class MainActivity:ComponentActivity() {
                                 },
                                 onDragEnd = {
                                     val destination = draggedTab.roundToInt().coerceIn(0, 2)
-                                    draggedTab = destination.toFloat()
+                                    settledTab = destination.toFloat()
+                                    draggedTab = Float.NaN
                                     when (destination) {
                                         0 -> nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } }
                                         1 -> nav.navigate("trips") { launchSingleTop = true; restoreState = true }
@@ -429,9 +429,9 @@ class MainActivity:ComponentActivity() {
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { draggedTab = Float.NaN; nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { draggedTab = Float.NaN; nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
-                    FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) { draggedTab = Float.NaN; nav.navigate("settings") { launchSingleTop = true; restoreState = true } }
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "diary", "Diario", Icons.Default.Book) { settledTab = 0f; draggedTab = Float.NaN; nav.navigate("diary") { launchSingleTop = true; popUpTo("diary") { saveState = true } } }
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "trips" || currentRoute == "tripMonaco", "Viaggi", Icons.Default.FlightTakeoff) { settledTab = 1f; draggedTab = Float.NaN; nav.navigate("trips") { launchSingleTop = true; restoreState = true } }
+                    FloatingNavItem(Modifier.weight(1f), currentRoute == "settings", "Impostazioni", Icons.Default.Settings) { settledTab = 2f; draggedTab = Float.NaN; nav.navigate("settings") { launchSingleTop = true; restoreState = true } }
                 }
             }
         }
@@ -681,7 +681,7 @@ private fun SettingsScreen(
     val settingsHeaderCollapsed by remember { derivedStateOf { settingsScrollState.value > 48 } }
     val settingsTitleScale by animateFloatAsState(
         targetValue = if (settingsHeaderCollapsed) 0.76f else 1f,
-        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(220, easing = OneUiMotionEasing),
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(150, easing = OneUiMotionEasing),
         label = "settingsTitleScale"
     )
     Column(Modifier.fillMaxSize().background(Color.Transparent)) {
@@ -724,11 +724,11 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(Modifier.fillMaxWidth().clickable { expandedSettingsSections = if ("profile" in expandedSettingsSections) expandedSettingsSections - "profile" else expandedSettingsSections + "profile" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.AccountCircle, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
                     Text("PROFILO E ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.weight(1f))
-                    Icon(if ("profile" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("profile" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
+                    Icon(Icons.Default.ExpandLess, contentDescription = "Profilo sempre visibile", tint = accentText)
                 }
                 if ("profile" in expandedSettingsSections) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1357,7 +1357,7 @@ private fun DiaryScreen(
     // repeatedly measures the header while the diary is scrolling.
     val headerTitleScale by animateFloatAsState(
         targetValue = if (headerCollapsed) 0.76f else 1f,
-        animationSpec = tween(220, easing = OneUiMotionEasing),
+        animationSpec = tween(150, easing = OneUiMotionEasing),
         label = "diaryHeaderTitleScale"
     )
     val categories = remember(entries) {
@@ -1800,7 +1800,7 @@ private fun DiaryScreen(
     val editHeaderCollapsed by remember { derivedStateOf { editScrollState.value > 48 } }
     val editTitleScale by animateFloatAsState(
         targetValue = if (editHeaderCollapsed) 0.76f else 1f,
-        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(220, easing = OneUiMotionEasing),
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(150, easing = OneUiMotionEasing),
         label = "editTitleScale"
     )
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -1937,7 +1937,7 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
     val tripsHeaderCollapsed by remember { derivedStateOf { tripsScrollState.value > 48 } }
     val tripsTitleScale by animateFloatAsState(
         targetValue = if (tripsHeaderCollapsed) 0.76f else 1f,
-        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(220, easing = OneUiMotionEasing),
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(150, easing = OneUiMotionEasing),
         label = "tripsTitleScale"
     )
     Column(
