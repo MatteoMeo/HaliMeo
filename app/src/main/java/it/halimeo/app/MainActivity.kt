@@ -18,6 +18,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.scaleIn
@@ -67,6 +68,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
@@ -277,7 +279,7 @@ private val TextPrimary = Color(0xFFF5F7FA)
         }.getOrDefault(false)
         reduceAnimationsState.value = appReduceMotion || systemReduceMotion
         reduceStaticEffectsState.value = prefs.getBoolean("reduce_static_effects", false)
-        val preferredHz = prefs.getInt("preferred_refresh_rate", 120).coerceIn(48, 120)
+        val preferredHz = prefs.getInt("preferred_refresh_rate", 0).coerceIn(0, 120)
         (context as? ComponentActivity)?.window?.let { window ->
             window.attributes = window.attributes.apply { preferredRefreshRate = preferredHz.toFloat() }
         }
@@ -353,7 +355,7 @@ private val TextPrimary = Color(0xFFF5F7FA)
 class MainActivity:ComponentActivity() {
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW || level == android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
             trimScaledBitmapCache()
         }
     }
@@ -369,12 +371,8 @@ class MainActivity:ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
             window.isStatusBarContrastEnforced = false
         }
-        // Request a high interactive refresh rate, but do not pin a display mode:
-        // Samsung/Android can then adapt dynamically (e.g. 120/96/90Hz while active
-        // and 60/48Hz for quieter content), subject to device and system policy.
-        window.attributes = window.attributes.apply {
-            preferredRefreshRate = 120f
-        }
+        // Leave refresh-rate selection to Android by default. Samsung can then
+        // switch dynamically between 120/96/90/60Hz based on content and power.
         lastSyncAtState.value = getSharedPreferences("halimeo_preferences", MODE_PRIVATE).getLong("last_sync_at", 0L)
         setContent { HaliMeoTheme { HaliMeoRoot() } }
     }
@@ -393,7 +391,7 @@ class MainActivity:ComponentActivity() {
     val entries by repo.entries.collectAsState(initial= emptyList()); var editing by remember{mutableStateOf<DiaryEntry?>(null)}
     var syncInProgress by remember { mutableStateOf(false) }
     var syncFailed by remember { mutableStateOf(false) }
-    val pendingSyncCount = entries.count { it.syncState != "SYNCED" }
+    val pendingSyncCount = remember(entries) { entries.count { it.syncState != "SYNCED" } }
     fun syncDiary() {
         if (syncInProgress) return
         syncInProgress = true
@@ -830,7 +828,7 @@ private fun SettingsScreen(
 ) {
     val diaryEntries by repo.entries.collectAsState(initial = emptyList())
     val settingsFeedbackView = LocalView.current
-    val pendingSyncCount = diaryEntries.count { it.syncState != "SYNCED" }
+    val pendingSyncCount = remember(diaryEntries) { diaryEntries.count { it.syncState != "SYNCED" } }
     val lastSyncAt by lastSyncAtState
     var isOwner by remember { mutableStateOf<Boolean?>(null) }
     var inviteCode by remember { mutableStateOf("") }
@@ -1272,12 +1270,12 @@ private fun SettingsScreen(
                 Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
                 Text("Prestazioni e movimento", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
-                var selectedRefreshRate by remember { mutableIntStateOf(prefs.getInt("preferred_refresh_rate", 120)) }
+                var selectedRefreshRate by remember { mutableIntStateOf(prefs.getInt("preferred_refresh_rate", 0)) }
                 var reduceAnimations by remember { mutableStateOf(prefs.getBoolean("reduce_animations", false)) }
                 var reduceStaticEffects by remember { mutableStateOf(prefs.getBoolean("reduce_static_effects", false)) }
                 Text("Frequenza schermo", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    listOf(48, 60, 90, 120).forEachIndexed { index, hz ->
+                    listOf(0, 48, 60, 90, 120).forEachIndexed { index, hz ->
                         SegmentedButton(
                             selected = selectedRefreshRate == hz,
                             onClick = {
@@ -1289,7 +1287,7 @@ private fun SettingsScreen(
                         ) { Text("$hz", maxLines = 1) }
                     }
                 }
-                Text("Richiede uno schermo compatibile: Android può comunque scegliere una frequenza diversa in base al contenuto e al risparmio energetico.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                Text("Auto lascia a One UI la scelta dinamica della frequenza; i valori manuali possono aumentare i consumi.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("Riduci le animazioni", color = primaryText, style = MaterialTheme.typography.bodyLarge)
@@ -1941,12 +1939,11 @@ private fun DiaryScreen(
         label = "diaryHeaderTitleScale"
     )
     val filtered = remember(entries, query, selectedDate, favoritesOnly) {
-        val matches = entries.filter {
+        entries.asSequence().filter {
             (it.title.contains(query, true) || it.body.contains(query, true)) &&
                 (selectedDate == null || it.memoryDate == selectedDate) &&
                 (!favoritesOnly || it.isFavorite)
-        }
-        matches.sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }
+        }.sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }.toList()
     }
 
     if (showCalendar) {
@@ -2154,7 +2151,7 @@ private fun DiaryScreen(
                                                     value = highlight.photoUri?.let { decodeMemoryPhoto(diaryContext, it, maxDimension = 720) }
                                                 }
                                                 Surface(
-                                                    modifier = Modifier.size(62.dp).hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(CircleShape).clickable { onOpenMemory(highlight) },
+                                                    modifier = Modifier.size(62.dp).clip(CircleShape).clickable { onOpenMemory(highlight) },
                                                     shape = CircleShape,
                                                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
                                                     border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.8f))
@@ -2184,7 +2181,7 @@ private fun DiaryScreen(
                                     }
                                     memoriesToday.forEach { memory ->
                                         Surface(
-                                            modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(18.dp)).clickable { onOpenMemory(memory) },
+                                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { onOpenMemory(memory) },
                                             shape = RoundedCornerShape(18.dp), color = frostedSurfaceStrongColor(),
                                             border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor())
                                         ) {
@@ -2218,7 +2215,9 @@ private fun DiaryScreen(
                                 // the rectangular layer from leaking past rounded glass corners.
                                 
                                 .shadow(9.dp, MaterialTheme.shapes.large, ambientColor = accent.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.22f))
-                                .hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle)
+                                // Repeated scrolling cards use translucent surfaces rather than
+                                // per-item live blur; reserve Haze for the navigation and hero layers.
+                                .animateContentSize(if (reduceAnimationsState.value) tween(0) else tween(210, easing = OneUiMotionEasing))
                                 .clip(MaterialTheme.shapes.large)
                                 .border(1.dp, frostedEdgeColor().copy(alpha = 0.9f), MaterialTheme.shapes.large)
                                 .clickable(
@@ -2384,7 +2383,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
     }
     val context = LocalContext.current
     val bitmap by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri) {
-        value = entry.photoUri?.let { decodeMemoryPhoto(context, it, maxDimension = 2800) }
+        value = entry.photoUri?.let { decodeMemoryPhoto(context, it, maxDimension = 2200) }
     }
     Column(
         Modifier.fillMaxSize().hazeSource(detailHaze).verticalScroll(rememberScrollState())
@@ -2417,9 +2416,15 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
                     Icon(Icons.Default.CalendarToday, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
                     Text(displayHaliMeoDate(entry.memoryDate), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                if (bitmap != null) {
-                    Image(bitmap!!.asImageBitmap(), contentDescription = "Foto del ricordo", modifier = Modifier.fillMaxWidth()
-                        .heightIn(max = 620.dp).clip(RoundedCornerShape(18.dp)), contentScale = ContentScale.Fit)
+                AnimatedVisibility(
+                    visible = bitmap != null,
+                    enter = if (reduceAnimationsState.value) fadeIn(tween(0)) else fadeIn(tween(180, easing = OneUiMotionEasing)) + expandVertically(tween(220, easing = OneUiMotionEasing)),
+                    exit = fadeOut(tween(100))
+                ) {
+                    bitmap?.let { photo ->
+                        Image(photo.asImageBitmap(), contentDescription = "Foto del ricordo", modifier = Modifier.fillMaxWidth()
+                            .heightIn(max = 620.dp).clip(RoundedCornerShape(18.dp)), contentScale = ContentScale.Fit)
+                    }
                 }
                 SelectionContainer {
                     Text(entry.body, style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 26.sp), color = MaterialTheme.colorScheme.onSurface)
@@ -2474,7 +2479,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
         }.onFailure { Toast.makeText(context, "Fotocamera non disponibile: ${it.message}", Toast.LENGTH_LONG).show() }
     }
     val photoBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, photoUri, context) {
-        value = photoUri?.takeIf { it.isNotBlank() }?.let { decodeMemoryPhoto(context, it, maxDimension = 2400) }
+        value = photoUri?.takeIf { it.isNotBlank() }?.let { decodeMemoryPhoto(context, it, maxDimension = 2000) }
     }
 
     Column(
