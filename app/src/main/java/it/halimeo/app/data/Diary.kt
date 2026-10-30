@@ -61,10 +61,10 @@ interface DiaryDao {
     @Insert(onConflict=OnConflictStrategy.REPLACE) suspend fun upsertAll(entries: List<DiaryEntry>)
     @Query("UPDATE diary_entries SET syncState='SYNCED' WHERE id=:id AND updatedAt=:updatedAt")
     suspend fun markSynced(id: String, updatedAt: Long)
-    @Query("UPDATE diary_entries SET isFavorite=:favorite WHERE id=:id")
+    @Query("UPDATE diary_entries SET isFavorite = CASE WHEN isFavorite = 1 THEN 0 ELSE 1 END WHERE id=:id AND deletedAt IS NULL")
+    suspend fun toggleFavorite(id: String)
+    @Query("UPDATE diary_entries SET isFavorite=:favorite WHERE id=:id AND deletedAt IS NULL")
     suspend fun setFavorite(id: String, favorite: Boolean)
-    @Query("UPDATE diary_entries SET isFavorite = :favorite WHERE id=:id")
-    suspend fun setFavoriteExplicit(id: String, favorite: Boolean)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertSocialAction(action: PendingSocialAction)
     @Query("SELECT * FROM pending_social_actions ORDER BY createdAt ASC")
     suspend fun pendingSocialActions(): List<PendingSocialAction>
