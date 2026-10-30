@@ -2003,7 +2003,8 @@ private fun DiaryScreen(
     var query by remember { mutableStateOf("") }
     var searchExpanded by remember { mutableStateOf(false) }
     var favoritesOnly by remember { mutableStateOf(false) }
-    val favoriteIds by repo.favoriteIds.collectAsState(initial = entries.filter { it.isFavorite }.map { it.id }.toSet())
+    // Derive favourites from the same Room emission as the diary list. A second Flow can briefly lag behind entries and leave the filter empty during updates.
+    val favoriteIds = remember(entries) { entries.asSequence().filter { it.isFavorite }.map { it.id }.toSet() }
     var selectedDate by remember { mutableStateOf<String?>(null) }
     var showCalendar by remember { mutableStateOf(false) }
     val calendarState = rememberDatePickerState()
