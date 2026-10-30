@@ -223,6 +223,7 @@ class DiaryRepository(context: Context) {
                     "LIKE" -> api.likeEntry(auth, action.entryId)
                     "UNLIKE" -> api.unlikeEntry(auth, action.entryId)
                     "COMMENT" -> api.addComment(auth, action.entryId, SocialCommentRequest(action.payload, action.id))
+                    "DELETE_COMMENT" -> api.deleteComment(auth, action.payload)
                     else -> emptyMap<String, Any>()
                 }
             }.isSuccess
@@ -243,13 +244,15 @@ class DiaryRepository(context: Context) {
         return response.copy(entries = response.entries.map { entry ->
             val pending = actions[entry.id].orEmpty()
             val likeAction = pending.lastOrNull { it.type == "LIKE" || it.type == "UNLIKE" }
+            val deletedCommentIds = pending.filter { it.type == "DELETE_COMMENT" }.map { it.payload }.toSet()
             val comments = pending.filter { it.type == "COMMENT" }.map { action ->
                 SocialComment(action.id, action.payload, userId, authorName, action.createdAt, action.createdAt)
             }
+            val visibleComments = entry.comments.filterNot { it.id in deletedCommentIds } + comments
             when (likeAction?.type) {
-                "LIKE" -> entry.copy(likeCount = if (entry.likedByMe) entry.likeCount else entry.likeCount + 1, likedByMe = true, comments = entry.comments + comments)
-                "UNLIKE" -> entry.copy(likeCount = (entry.likeCount - if (entry.likedByMe) 1 else 0).coerceAtLeast(0), likedByMe = false, comments = entry.comments + comments)
-                else -> entry.copy(comments = entry.comments + comments)
+                "LIKE" -> entry.copy(likeCount = if (entry.likedByMe) entry.likeCount else entry.likeCount + 1, likedByMe = true, comments = visibleComments)
+                "UNLIKE" -> entry.copy(likeCount = (entry.likeCount - if (entry.likedByMe) 1 else 0).coerceAtLeast(0), likedByMe = false, comments = visibleComments)
+                else -> entry.copy(comments = visibleComments)
             }
         })
     }
@@ -282,14 +285,27 @@ class DiaryRepository(context: Context) {
     suspend fun loadEntryComments(entryId: String): List<SocialComment> {
         val auth = authorizedHeader()
         val remote = runCatching { ApiClient.api.comments(auth, entryId)["comments"].orEmpty() }.getOrDefault(emptyList())
-        val pending = dao.pendingComments(entryId).map { action ->
+        val actions = dao.pendingSocialActions().filter { it.entryId == entryId }
+        val deletedIds = actions.filter { it.type == "DELETE_COMMENT" }.map { it.payload }.toSet()
+        val pending = actions.filter { it.type == "COMMENT" }.map { action ->
             SocialComment(action.id, action.payload, session.userId(), session.name().ifBlank { "Tu" }, action.createdAt, action.createdAt)
         }
-        return remote + pending
+        return remote.filterNot { it.id in deletedIds } + pending
     }
 
-    suspend fun deleteEntryComment(commentId: String) =
-        ApiClient.api.deleteComment(authorizedHeader(), commentId)
+    suspend fun deleteEntryComment(entryId: String, commentId: String): Map<String, Boolean> {
+        val pending = dao.pendingComments(entryId).firstOrNull { it.id == commentId }
+        if (pending != null) {
+            dao.deleteSocialAction(commentId)
+            return mapOf("deleted" to true)
+        }
+        return runCatching { ApiClient.api.deleteComment(authorizedHeader(), commentId) }.getOrElse {
+            dao.upsertSocialAction(PendingSocialAction(UUID.randomUUID().toString(), entryId, "DELETE_COMMENT", commentId, System.currentTimeMillis()))
+            mapOf("deleted" to true)
+        }
+    }
+
+    suspend fun currentUserId() = session.userId()
 
     suspend fun loadAlbums(): SocialAlbumsResponse = ApiClient.api.albums(authorizedHeader())
 
