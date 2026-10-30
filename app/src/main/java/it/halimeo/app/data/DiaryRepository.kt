@@ -9,7 +9,6 @@ import it.halimeo.app.network.SyncRequest
 import it.halimeo.app.network.SocialFeedResponse
 import it.halimeo.app.network.SocialComment
 import it.halimeo.app.network.SocialFeedEntry
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
 import it.halimeo.app.network.SocialCommentRequest
 import it.halimeo.app.network.SocialCommentResponse
@@ -30,7 +29,6 @@ class DiaryRepository(context: Context) {
     private val session = SessionStore(appContext)
     private val photoDir = File(appContext.filesDir, "diary_photos").apply { mkdirs() }
     val entries: Flow<List<DiaryEntry>> = dao.observeAll()
-    val favoriteIds: Flow<Set<String>> = dao.observeFavoriteIds().map { it.toSet() }
 
     private fun importPhoto(uri: String, id: String): String {
         val source = Uri.parse(uri)
@@ -101,17 +99,8 @@ class DiaryRepository(context: Context) {
             syncState="PENDING", photoUri=storedPhoto,
             photoUpdatedAt=if (photoChanged || removedPhoto) now else old?.photoUpdatedAt ?: 0L,
             photoDeletedAt=if (removedPhoto) now else if (photoChanged) null else old?.photoDeletedAt,
-            photoSyncState=if (photoChanged || removedPhoto) "PENDING" else old?.photoSyncState ?: "SYNCED",
-            isFavorite=old?.isFavorite ?: false
+            photoSyncState=if (photoChanged || removedPhoto) "PENDING" else old?.photoSyncState ?: "SYNCED"
         ))
-    }
-
-    suspend fun toggleFavorite(id: String) {
-        dao.toggleFavorite(id)
-    }
-
-    suspend fun setFavorite(id: String, favorite: Boolean) {
-        dao.setFavorite(id, favorite)
     }
 
     suspend fun delete(id:String) {
@@ -150,8 +139,7 @@ class DiaryRepository(context: Context) {
                 photoUri = if (preserveLocalPhoto) local?.photoUri else null,
                 photoUpdatedAt = maxOf(dto.photoUpdatedAt, local?.photoUpdatedAt ?: 0L),
                 photoDeletedAt = if (remotePhotoIsNewer) dto.photoDeletedAt else local?.photoDeletedAt,
-                photoSyncState = if (preserveLocalPhoto) local?.photoSyncState ?: "SYNCED" else if (dto.photoUpdatedAt == 0L || dto.photoDeletedAt != null) "SYNCED" else "PENDING",
-                isFavorite = local?.isFavorite ?: false
+                photoSyncState = if (preserveLocalPhoto) local?.photoSyncState ?: "SYNCED" else if (dto.photoUpdatedAt == 0L || dto.photoDeletedAt != null) "SYNCED" else "PENDING"
             )
             dao.upsert(merged)
         }
