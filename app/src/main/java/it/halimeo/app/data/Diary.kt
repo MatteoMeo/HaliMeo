@@ -52,6 +52,8 @@ interface DiaryDao {
     suspend fun markSynced(id: String, updatedAt: Long)
     @Query("UPDATE diary_entries SET isFavorite=:favorite WHERE id=:id")
     suspend fun setFavorite(id: String, favorite: Boolean)
+    @Query("UPDATE diary_entries SET isFavorite = CASE WHEN isFavorite = 1 THEN 0 ELSE 1 END WHERE id=:id")
+    suspend fun toggleFavorite(id: String)
     @Query("SELECT * FROM diary_entries ORDER BY updatedAt DESC")
     suspend fun allForBackup(): List<DiaryEntry>
 }
