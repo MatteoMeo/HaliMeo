@@ -127,6 +127,24 @@ private suspend fun decodeMemoryPhoto(context: android.content.Context, uri: Str
     return runCatching { android.graphics.Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true) }.getOrDefault(decoded)
 }
 
+private fun applyLauncherIcon(context: android.content.Context, variant: String) {
+    val aliases = linkedMapOf(
+        "ocean" to "${context.packageName}.LauncherOcean",
+        "lavender" to "${context.packageName}.LauncherLavender",
+        "mint" to "${context.packageName}.LauncherMint",
+        "rose" to "${context.packageName}.LauncherRose"
+    )
+    val selected = if (variant in aliases) variant else "ocean"
+    aliases.forEach { (key, className) ->
+        context.packageManager.setComponentEnabledSetting(
+            android.content.ComponentName(context, className),
+            if (key == selected) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+            android.content.pm.PackageManager.DONT_KILL_APP
+        )
+    }
+}
+
 private val Ink = Color.Black
 private val Panel = Color(0xFF0D1420)
 private val Mint = Color(0xFF3E91FF)
@@ -734,6 +752,7 @@ private fun SettingsScreen(
     var specialDate by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date", "")?.let { displayHaliMeoDate(it) } ?: "") }
     var specialDates by remember { mutableStateOf(readHaliMeoSpecialDates(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE))) }
     var backgroundColor by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("background_color", "default") ?: "default") }
+    var selectedAppIcon by remember { mutableStateOf(profilePrefs.getString("app_icon_variant", "ocean") ?: "ocean") }
     var backgroundPhoto by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("background_photo", null)) }
     var backgroundBlur by remember { mutableFloatStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getFloat("background_blur", 0f)) }
     var backgroundOverlay by remember { mutableFloatStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getFloat("background_overlay", 0.48f)) }
@@ -910,7 +929,7 @@ private fun SettingsScreen(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.Palette, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("ASPETTO", color = accentText, style = MaterialTheme.typography.labelLarge)
+                        Text("PERSONALIZZAZIONE", color = accentText, style = MaterialTheme.typography.labelLarge)
                         if ("appearance" !in expandedSettingsSections) Text("Tema, colori, sfondo e prestazioni", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
                     Spacer(Modifier.weight(1f))
@@ -937,7 +956,7 @@ private fun SettingsScreen(
                         Text("Accento e gradienti seguono lo sfondo selezionato.", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                     }
                 }
-                Text("Sfondo", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text("Palette e colore d’accento", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 val backgroundOptions = listOf(
                     "default" to "Predefinito", "blue" to "Blu", "lavender" to "Lavanda",
                     "mint" to "Menta", "rose" to "Rosa", "amber" to "Ambra",
@@ -1045,6 +1064,46 @@ private fun SettingsScreen(
                 Text("Riduce gli effetti di sfocatura per privilegiare leggibilità e prestazioni.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
                 }
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
+                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
+        ) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Icon(Icons.Default.Apps, contentDescription = null, tint = accentText, modifier = Modifier.size(20.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("ICONA DELL’APP", color = accentText, style = MaterialTheme.typography.labelLarge)
+                        Text("Personalizza anche l’icona nella schermata Home.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                val iconChoices = listOf(
+                    Triple("ocean", "Oceano", Color(0xFF286A9E)),
+                    Triple("lavender", "Lavanda", Color(0xFF8063B6)),
+                    Triple("mint", "Menta", Color(0xFF258D7E)),
+                    Triple("rose", "Rosa", Color(0xFFB65B83))
+                )
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    iconChoices.forEach { (key, label, swatch) ->
+                        FilterChip(
+                            selected = selectedAppIcon == key,
+                            onClick = {
+                                selectedAppIcon = key
+                                profilePrefs.edit().putString("app_icon_variant", key).apply()
+                                runCatching { applyLauncherIcon(ctx, key) }
+                                    .onFailure { Toast.makeText(ctx, "Impossibile cambiare icona su questo launcher", Toast.LENGTH_LONG).show() }
+                            },
+                            label = { Text(label) },
+                            leadingIcon = { Box(Modifier.size(12.dp).clip(CircleShape).background(swatch)) },
+                            shape = RoundedCornerShape(18.dp)
+                        )
+                    }
+                }
+                Text("La nuova icona potrebbe comparire dopo qualche secondo, in base al launcher.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
             }
         }
 
