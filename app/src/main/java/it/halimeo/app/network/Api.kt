@@ -25,7 +25,7 @@ data class SocialFeedEntry(
     val likedByMe: Boolean, val comments: List<SocialComment> = emptyList()
 )
 data class SocialFeedResponse(val entries: List<SocialFeedEntry>, val serverTime: Long)
-data class SocialCommentRequest(val body: String)
+data class SocialCommentRequest(val body: String, val clientId: String? = null)
 data class SocialCommentResponse(
     val id: String, val entryId: String, val body: String, val userId: String,
     val authorName: String, val createdAt: Long, val updatedAt: Long
@@ -37,9 +37,13 @@ data class SocialAlbum(
     val createdBy: String, val createdAt: Long, val updatedAt: Long, val entryCount: Int
 )
 data class SocialAlbumsResponse(val albums: List<SocialAlbum>)
+data class SocialAlbumEntry(
+    val id: String, val title: String, val body: String, val category: String,
+    val memoryDate: String, val createdAt: Long, val updatedAt: Long, val authorName: String
+)
 data class SocialAlbumDetail(
     val id: String, val title: String, val description: String,
-    val createdBy: String, val entries: List<SocialFeedEntry> = emptyList()
+    val createdBy: String, val entries: List<SocialAlbumEntry> = emptyList()
 )
 
 interface HaliMeoApi {
