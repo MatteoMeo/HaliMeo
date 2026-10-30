@@ -2414,7 +2414,7 @@ private fun DiaryScreen(
                                 }
                                 socialScope.launch {
                                     runCatching { repo.setEntryLiked(entry.id, !wasLiked) }
-                                        .onFailure { socialEntries = socialEntries - entry.id }
+                                        .onFailure { if (social != null) socialEntries = socialEntries + (entry.id to social) }
                                         .onSuccess { runCatching { repo.loadSocialFeed().entries.associateBy { it.id } }.onSuccess { socialEntries = it } }
                                 }
                             },
