@@ -203,8 +203,8 @@ private val TextPrimary = Color(0xFFF5F7FA)
     }
     LaunchedEffect(context) {
         val prefs = context.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
-        customBackgroundColorState.value = prefs.getString("background_color", "default") ?: "default"
-        customBackgroundUriState.value = prefs.getString("background_photo", null)
+        customBackgroundColorState.value = (prefs.getString("background_color", "default") ?: "default").takeUnless { it == "photo" } ?: "default"
+        customBackgroundUriState.value = null
         backgroundBlurState.value = prefs.getFloat("background_blur", 0f)
         backgroundOverlayState.value = prefs.getFloat("background_overlay", 0.48f)
         backgroundBrightnessState.value = readBackgroundBrightness(prefs)
@@ -252,6 +252,15 @@ private val TextPrimary = Color(0xFFF5F7FA)
         "indigo" -> Color(0xFF6575F5)
         "violet" -> Color(0xFFB17CFF)
         "magenta" -> Color(0xFFE56CCB)
+        "plum" -> Color(0xFF9B59B6)
+        "turquoise" -> Color(0xFF20B8AA)
+        "lime" -> Color(0xFF9ACD32)
+        "gold" -> Color(0xFFD4A017)
+        "navy" -> Color(0xFF315A9B)
+        "sky" -> Color(0xFF62B6E8)
+        "peach" -> Color(0xFFFFB38A)
+        "fuchsia" -> Color(0xFFE84393)
+        "slate" -> Color(0xFF78909C)
         else -> scheme.primary
     }
     val adaptiveScheme = scheme.copy(primary = backgroundAccent, secondary = backgroundAccent.copy(alpha = 0.88f))
@@ -923,7 +932,9 @@ private fun SettingsScreen(
                     "coral" to "Corallo", "red" to "Rosso", "orange" to "Arancione",
                     "yellow" to "Giallo", "green" to "Verde", "teal" to "Ottanio",
                     "cyan" to "Ciano", "indigo" to "Indaco", "violet" to "Viola",
-                    "magenta" to "Magenta"
+                    "magenta" to "Magenta", "plum" to "Prugna", "turquoise" to "Turchese",
+                    "lime" to "Lime", "gold" to "Oro", "navy" to "Blu notte",
+                    "sky" to "Azzurro", "peach" to "Pesca", "fuchsia" to "Fucsia", "slate" to "Ardesia"
                 )
                 val accentSwatches = mapOf(
                     "blue" to Color(0xFF3E91FF), "lavender" to Color(0xFF8878FF),
@@ -933,7 +944,11 @@ private fun SettingsScreen(
                     "yellow" to Color(0xFFE3C84B), "green" to Color(0xFF58C98D),
                     "teal" to Color(0xFF31C7B3), "cyan" to Color(0xFF45C8E8),
                     "indigo" to Color(0xFF6575F5), "violet" to Color(0xFFB17CFF),
-                    "magenta" to Color(0xFFE56CCB)
+                    "magenta" to Color(0xFFE56CCB), "plum" to Color(0xFF9B59B6),
+                    "turquoise" to Color(0xFF20B8AA), "lime" to Color(0xFF9ACD32),
+                    "gold" to Color(0xFFD4A017), "navy" to Color(0xFF315A9B),
+                    "sky" to Color(0xFF62B6E8), "peach" to Color(0xFFFFB38A),
+                    "fuchsia" to Color(0xFFE84393), "slate" to Color(0xFF78909C)
                 )
                 backgroundOptions.chunked(4).forEach { optionRow ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1338,11 +1353,19 @@ private fun categoryAccent(category: String, memorySeed: String = category): Col
     val memoryPalette = if (dark) listOf(
         Color(0xFF83C9FF), Color(0xFFFF9FBD), Color(0xFFFFC878),
         Color(0xFFB9A5FF), Color(0xFF8DE0C1), Color(0xFF7FE1E8),
-        Color(0xFFFFA98F), Color(0xFFD5A6FF), Color(0xFFA9D77D)
+        Color(0xFFFFA98F), Color(0xFFD5A6FF), Color(0xFFA9D77D),
+        Color(0xFFCE93D8), Color(0xFF80CBC4), Color(0xFFDCE775),
+        Color(0xFFFFD54F), Color(0xFF90CAF9), Color(0xFFFFAB91),
+        Color(0xFFF48FB1), Color(0xFFB0BEC5), Color(0xFF80DEEA),
+        Color(0xFFC5E1A5), Color(0xFFB39DDB), Color(0xFFFFCC80)
     ) else listOf(
         Color(0xFF175E91), Color(0xFF9C3155), Color(0xFF855000),
         Color(0xFF5D42A3), Color(0xFF17694F), Color(0xFF126B73),
-        Color(0xFF9A4933), Color(0xFF7545A0), Color(0xFF4B6F24)
+        Color(0xFF9A4933), Color(0xFF7545A0), Color(0xFF4B6F24),
+        Color(0xFF7B3F8C), Color(0xFF087F75), Color(0xFF617D16),
+        Color(0xFF8A6500), Color(0xFF315A9B), Color(0xFFB85D35),
+        Color(0xFFAD456B), Color(0xFF546E7A), Color(0xFF007C91),
+        Color(0xFF527A32), Color(0xFF6650A4), Color(0xFF9A5A00)
     )
     return memoryPalette[(memorySeed.hashCode() and Int.MAX_VALUE) % memoryPalette.size]
 }
@@ -1560,7 +1583,14 @@ private fun DiaryScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically
             ) {
                 FilterChip(
-                    selected = favoritesOnly, onClick = { favoritesOnly = !favoritesOnly },
+                    selected = !favoritesOnly, onClick = { favoritesOnly = false },
+                    shape = RoundedCornerShape(50),
+                    label = { Text("Tutti", maxLines = 1) },
+                    leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                    colors = FilterChipDefaults.filterChipColors(containerColor = frostedSurfaceColor(), labelColor = MaterialTheme.colorScheme.onSurfaceVariant, iconColor = MaterialTheme.colorScheme.onSurfaceVariant, selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f), selectedLabelColor = MaterialTheme.colorScheme.onSurface, selectedLeadingIconColor = MaterialTheme.colorScheme.primary)
+                )
+                FilterChip(
+                    selected = favoritesOnly, onClick = { favoritesOnly = true },
                     shape = RoundedCornerShape(50),
                     label = { Text("Preferiti", maxLines = 1) },
                     leadingIcon = { Icon(if (favoritesOnly) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, modifier = Modifier.size(16.dp)) },
