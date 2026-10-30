@@ -144,16 +144,32 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
 private suspend fun fetchLatestRelease(channel: String): HaliMeoRelease? {
     val endpoint = "https://api.github.com/repos/$UPDATE_REPOSITORY/releases?per_page=100"
     val json = withContext(Dispatchers.IO) {
-        val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 15_000; readTimeout = 20_000
-            setRequestProperty("Accept", "application/vnd.github+json")
-            setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
-            setRequestProperty("User-Agent", "HaliMeo-Updater")
+        var response: String? = null
+        var lastError: Exception? = null
+        for (attempt in 1..3) {
+            val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 30_000
+                readTimeout = 30_000
+                instanceFollowRedirects = true
+                setRequestProperty("Accept", "application/vnd.github+json")
+                setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
+                setRequestProperty("User-Agent", "HaliMeo-Android-Updater")
+                setRequestProperty("Cache-Control", "no-cache")
+            }
+            try {
+                if (connection.responseCode !in 200..299) {
+                    error("GitHub ha risposto ${connection.responseCode}")
+                }
+                response = connection.inputStream.bufferedReader().use { it.readText() }
+                break
+            } catch (error: Exception) {
+                lastError = error
+                if (attempt < 3) Thread.sleep(800L * attempt)
+            } finally {
+                connection.disconnect()
+            }
         }
-        try {
-            if (connection.responseCode !in 200..299) error("GitHub ha risposto ${connection.responseCode}")
-            connection.inputStream.bufferedReader().use { it.readText() }
-        } finally { connection.disconnect() }
+        response ?: throw (lastError ?: java.io.IOException("Risposta GitHub non disponibile"))
     }
     val releases = JSONArray(json); val candidates = mutableListOf<HaliMeoRelease>()
     for (i in 0 until releases.length()) {
