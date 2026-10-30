@@ -2018,6 +2018,11 @@ private fun DiaryScreen(
     var albums by remember { mutableStateOf<List<it.halimeo.app.network.SocialAlbum>>(emptyList()) }
     var albumTitle by remember { mutableStateOf("") }
     var albumBusy by remember { mutableStateOf(false) }
+    var albumsBrowserOpen by remember { mutableStateOf(false) }
+    var albumBrowserTitle by remember { mutableStateOf("") }
+    var selectedAlbum by remember { mutableStateOf<it.halimeo.app.network.SocialAlbum?>(null) }
+    var albumDetail by remember { mutableStateOf<it.halimeo.app.network.SocialAlbumDetail?>(null) }
+    var albumDetailBusy by remember { mutableStateOf(false) }
     val socialScope = rememberCoroutineScope()
     LaunchedEffect(entries.map { it.updatedAt }) {
         runCatching { repo.loadSocialFeed().entries.associateBy { it.id } }
@@ -2274,6 +2279,16 @@ private fun DiaryScreen(
                     )
                 )
             }
+            IconButton(onClick = {
+                albumsBrowserOpen = true
+                albumBusy = true
+                socialScope.launch {
+                    albums = runCatching { repo.loadAlbums().albums }.getOrDefault(emptyList())
+                    albumBusy = false
+                }
+            }) {
+                Icon(Icons.Default.CollectionsBookmark, contentDescription = "Apri album", tint = MaterialTheme.colorScheme.primary)
+            }
         }
 
         Spacer(Modifier.height(4.dp))
@@ -2503,6 +2518,102 @@ private fun DiaryScreen(
                 }) { Text("Crea e aggiungi") }
             },
             dismissButton = { TextButton(onClick = { albumEntry = null }) { Text("Chiudi") } }
+        )
+    }
+    if (albumsBrowserOpen) {
+        AlertDialog(
+            onDismissRequest = { albumsBrowserOpen = false },
+            title = { Text("I vostri album") },
+            text = {
+                Column(Modifier.fillMaxWidth().heightIn(max = 430.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = albumBrowserTitle,
+                        onValueChange = { albumBrowserTitle = it.take(100) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Crea un album") },
+                        singleLine = true
+                    )
+                    if (albumBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
+                    else if (albums.isEmpty()) Text("Ancora nessun album. Create il primo per raccogliere i vostri momenti.")
+                    else Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        albums.forEach { album ->
+                            TextButton(onClick = {
+                                selectedAlbum = album
+                                albumsBrowserOpen = false
+                                albumDetailBusy = true
+                                socialScope.launch {
+                                    albumDetail = runCatching { repo.loadAlbum(album.id) }.getOrNull()
+                                    albumDetailBusy = false
+                                }
+                            }, modifier = Modifier.fillMaxWidth()) {
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.CollectionsBookmark, contentDescription = null)
+                                    Spacer(Modifier.width(10.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(album.title, fontWeight = FontWeight.SemiBold)
+                                        Text("${album.entryCount} ricordi", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = albumBrowserTitle.isNotBlank() && !albumBusy, onClick = {
+                    albumBusy = true
+                    socialScope.launch {
+                        runCatching { repo.createAlbum(albumBrowserTitle.trim()) }
+                            .onSuccess { created ->
+                                albumBrowserTitle = ""
+                                albums = runCatching { repo.loadAlbums().albums }.getOrDefault(albums + created)
+                            }
+                        albumBusy = false
+                    }
+                }) { Text("Crea album") }
+            },
+            dismissButton = { TextButton(onClick = { albumsBrowserOpen = false }) { Text("Chiudi") } }
+        )
+    }
+    if (selectedAlbum != null) {
+        AlertDialog(
+            onDismissRequest = { selectedAlbum = null; albumDetail = null },
+            title = { Text(albumDetail?.title ?: selectedAlbum?.title ?: "Album") },
+            text = {
+                Column(Modifier.fillMaxWidth().heightIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    if (albumDetailBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
+                    else if (albumDetail == null) Text("Impossibile caricare questo album. Controllate la connessione e riprovate.")
+                    else if (albumDetail!!.entries.isEmpty()) Text("Questo album è ancora vuoto.")
+                    else Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        albumDetail!!.entries.forEach { item ->
+                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(frostedSurfaceColor()).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f).clickable {
+                                    entries.firstOrNull { it.id == item.id }?.let(onOpenMemory)
+                                    selectedAlbum = null
+                                    albumDetail = null
+                                }) {
+                                    Text(item.title, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+                                    Text("${item.authorName} · ${displayHaliMeoDate(item.memoryDate)}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                                }
+                                IconButton(onClick = {
+                                    val target = selectedAlbum ?: return@IconButton
+                                    albumDetailBusy = true
+                                    socialScope.launch {
+                                        runCatching { repo.removeEntryFromAlbum(target.id, item.id) }
+                                        albumDetail = runCatching { repo.loadAlbum(target.id) }.getOrNull()
+                                        albums = runCatching { repo.loadAlbums().albums }.getOrDefault(albums)
+                                        albumDetailBusy = false
+                                    }
+                                }) {
+                                    Icon(Icons.Default.RemoveCircleOutline, contentDescription = "Rimuovi dall'album", tint = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { selectedAlbum = null; albumDetail = null }) { Text("Fatto") } }
         )
     }
     if (commentsEntry != null) {
