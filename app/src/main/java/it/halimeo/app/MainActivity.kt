@@ -1556,6 +1556,8 @@ private fun SettingsScreen(
             }
         }
 
+        UpdateCenterCard(activity)
+
         Card(
             modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
