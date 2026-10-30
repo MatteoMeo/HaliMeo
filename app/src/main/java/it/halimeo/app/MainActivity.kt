@@ -1345,7 +1345,7 @@ private fun DiaryScreen(
     // repeatedly measures the header while the diary is scrolling.
     val headerTitleScale by animateFloatAsState(
         targetValue = if (headerCollapsed) 0.76f else 1f,
-        animationSpec = tween(90, easing = OneUiMotionEasing),
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "diaryHeaderTitleScale"
     )
     val categories = remember(entries) {
@@ -1624,9 +1624,9 @@ private fun DiaryScreen(
                             modifier = Modifier.fillMaxWidth()
                                 // Keep list movement attached to each stable diary entry while filtering or deleting.
                                 .animateItem(
-                                    fadeInSpec = tween(150, easing = OneUiMotionEasing),
-                                    fadeOutSpec = tween(100, easing = OneUiMotionEasing),
-                                    placementSpec = spring(dampingRatio = 0.86f, stiffness = 420f)
+                                    fadeInSpec = if (reduceAnimationsState.value) tween(0) else tween(150, easing = OneUiMotionEasing),
+                                    fadeOutSpec = if (reduceAnimationsState.value) tween(0) else tween(100, easing = OneUiMotionEasing),
+                                    placementSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.86f, stiffness = 420f)
                                 )
                                 // Clip the whole card layer before drawing the outline. This prevents
                                 // the rectangular layer from leaking past rounded glass corners.
