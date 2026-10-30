@@ -836,6 +836,13 @@ private fun SettingsScreen(
     var inviteCode by remember { mutableStateOf("") }
     var inviteBusy by remember { mutableStateOf(false) }
     var inviteMessage by remember { mutableStateOf("") }
+    var developerUnlocked by remember { mutableStateOf(false) }
+    var showDeveloperPinDialog by remember { mutableStateOf(false) }
+    var developerPin by remember { mutableStateOf("") }
+    var developerPinError by remember { mutableStateOf(false) }
+    var serverDraft by remember { mutableStateOf(ApiClient.baseUrl()) }
+    var serverBusy by remember { mutableStateOf(false) }
+    var developerStatus by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         val token = session.token()
@@ -1444,6 +1451,192 @@ private fun SettingsScreen(
                     }
                 }
             }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
+                .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
+        ) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)) {
+                        Icon(Icons.Default.Info, contentDescription = null, tint = accentText, modifier = Modifier.padding(9.dp).size(20.dp))
+                    }
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("INFORMAZIONI APP", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                        Text("Dettagli di HaliMeo e della build installata", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Text("v${BuildConfig.VERSION_NAME}", color = accentText, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Developer", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
+                    Text("MatteoMeo", color = primaryText, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Versione build", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
+                    Text("${BuildConfig.VERSION_CODE}", color = primaryText, style = MaterialTheme.typography.bodyMedium)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Canale", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
+                    Text(if (BuildConfig.DEBUG) "Debug" else "Alpha", color = primaryText, style = MaterialTheme.typography.bodyMedium)
+                }
+                Text("Package: ${BuildConfig.APPLICATION_ID}", color = secondaryText, style = MaterialTheme.typography.labelSmall)
+                Text("Diario privato condiviso · Android API 37", color = secondaryText, style = MaterialTheme.typography.labelSmall)
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
+                .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
+        ) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                        .clickable { if (developerUnlocked) developerUnlocked = false else { showDeveloperPinDialog = true; developerPin = ""; developerPinError = false } }
+                        .padding(vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)) {
+                        Icon(if (developerUnlocked) Icons.Default.Terminal else Icons.Default.Lock, contentDescription = null, tint = accentText, modifier = Modifier.padding(9.dp).size(20.dp))
+                    }
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("OPZIONI SVILUPPATORE", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                        Text(if (developerUnlocked) "Pannello sbloccato · tocca per bloccare" else "Strumenti avanzati e configurazione server", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Icon(if (developerUnlocked) Icons.Default.ExpandLess else Icons.Default.Lock, contentDescription = null, tint = accentText)
+                }
+                AnimatedVisibility(visible = developerUnlocked, enter = fadeIn(tween(130)) + expandVertically(tween(180)), exit = fadeOut(tween(90)) + shrinkVertically(tween(130))) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("SERVER API", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                        OutlinedTextField(
+                            value = serverDraft,
+                            onValueChange = { serverDraft = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("URL base del server") },
+                            placeholder = { Text("https://server.example/") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        Text("Il cambio server non esegue il logout e non cancella i dati locali. Il server di destinazione deve però riconoscere il token di sessione attuale.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                enabled = !serverBusy && serverDraft.isNotBlank(),
+                                onClick = {
+                                    runCatching { ApiClient.setBaseUrl(serverDraft) }
+                                        .onSuccess {
+                                            serverDraft = ApiClient.baseUrl()
+                                            serverBusy = true
+                                            developerStatus = "Indirizzo salvato. Verifico la sessione…"
+                                            activity.lifecycleScope.launch {
+                                                val token = session.token()
+                                                if (token.isNullOrBlank()) {
+                                                    developerStatus = "Server salvato. Nessuna sessione attiva da verificare."
+                                                } else {
+                                                    runCatching { ApiClient.api.me("Bearer $token") }
+                                                        .onSuccess { developerStatus = "Connessione e sessione verificate." }
+                                                        .onFailure { developerStatus = "URL salvato, verifica non riuscita: ${it.message ?: "errore di rete"}" }
+                                                }
+                                                serverBusy = false
+                                            }
+                                        }
+                                        .onFailure { developerStatus = it.message ?: "URL non valido." }
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                if (serverBusy) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                else Icon(Icons.Default.Save, contentDescription = null)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Applica")
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    ApiClient.setBaseUrl(BuildConfig.API_BASE_URL)
+                                    serverDraft = ApiClient.baseUrl()
+                                    developerStatus = "Ripristinato il server predefinito."
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(16.dp)
+                            ) { Text("Predefinito") }
+                        }
+                        Text("Attivo: ${ApiClient.baseUrl()}", color = secondaryText, style = MaterialTheme.typography.labelSmall)
+                        if (developerStatus.isNotBlank()) Text(developerStatus, color = accentText, style = MaterialTheme.typography.bodySmall)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                        Text("STRUMENTI", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                        OutlinedButton(
+                            onClick = {
+                                serverBusy = true
+                                activity.lifecycleScope.launch {
+                                    runCatching { repo.syncNow() }
+                                        .onSuccess { developerStatus = "Richiesta di sincronizzazione completata." }
+                                        .onFailure { developerStatus = "Sincronizzazione non riuscita: ${it.message ?: "errore"}" }
+                                    serverBusy = false
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !serverBusy,
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(Icons.Default.Sync, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Forza sincronizzazione")
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                val report = "HaliMeo ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\nPackage: ${BuildConfig.APPLICATION_ID}\nServer: ${ApiClient.baseUrl()}\nRicordi locali: ${diaryEntries.size}\nIn attesa di sync: $pendingSyncCount"
+                                ctx.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Diagnostica HaliMeo", report))
+                                Toast.makeText(ctx, "Diagnostica copiata", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Copia diagnostica")
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showDeveloperPinDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeveloperPinDialog = false; developerPin = "" },
+                title = { Text("Opzioni sviluppatore") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Inserisci il PIN per sbloccare gli strumenti avanzati.")
+                        OutlinedTextField(
+                            value = developerPin,
+                            onValueChange = { developerPin = it.filter(Char::isDigit).take(4); developerPinError = false },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text("PIN") },
+                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword),
+                            isError = developerPinError,
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        if (developerPinError) Text("PIN non corretto.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (developerPin == "0802") {
+                            developerUnlocked = true
+                            showDeveloperPinDialog = false
+                            developerPin = ""
+                        } else developerPinError = true
+                    }) { Text("Sblocca") }
+                },
+                dismissButton = { TextButton(onClick = { showDeveloperPinDialog = false; developerPin = "" }) { Text("Annulla") } }
+            )
         }
 
         Card(
