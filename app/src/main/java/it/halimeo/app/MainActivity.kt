@@ -50,6 +50,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.clickable
@@ -556,7 +557,7 @@ class MainActivity:ComponentActivity() {
                     key = { it }
                 ) { page ->
                     when (page) {
-                        0 -> DiaryScreen(entries,
+                        0 -> DiaryScreen(entries, displayName,
                             { editing = it; nav.navigate("edit") },
                             { entry -> activity.lifecycleScope.launch { repo.toggleFavorite(entry.id) } },
                             { entry -> activity.lifecycleScope.launch { repo.delete(entry.id) } },
@@ -1972,6 +1973,7 @@ private fun categoryIcon(category: String): androidx.compose.ui.graphics.vector.
 @Composable
 private fun DiaryScreen(
     entries: List<DiaryEntry>,
+    authorName: String,
     onEdit: (DiaryEntry) -> Unit,
     onToggleFavorite: (DiaryEntry) -> Unit,
     onDelete: (DiaryEntry) -> Unit,
@@ -2354,13 +2356,21 @@ private fun DiaryScreen(
                         val expanded = entry.id in expandedEntryIds
                         val accent = MaterialTheme.colorScheme.primary
                         val photoContext = LocalContext.current
-                        val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext, expanded) {
-                            // Decode only after opening a card; eagerly decoding every visible photo
-                            // causes avoidable IO, allocations and frame drops while scrolling.
-                            value = if (expanded) entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 1600) } else null
+                        val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext) {
+                            // Lightweight feed preview; the shared decoder/cache avoids full-size allocations.
+                            value = entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 1080) }
                         }
-                        Card(
-                            modifier = Modifier.fillMaxWidth()
+                        SocialMemoryPost(
+                            entry = entry,
+                            authorName = authorName,
+                            photo = entryPhoto,
+                            expanded = expanded,
+                            onOpen = { onOpenMemory(entry) },
+                            onToggleFavorite = { onToggleFavorite(entry) },
+                            onToggleCaption = { expandedEntryIds = if (expanded) expandedEntryIds - entry.id else expandedEntryIds + entry.id },
+                            onEdit = { onEdit(entry) },
+                            onDelete = { pendingDelete = entry }
+                        )
                                 // Keep list movement attached to each stable diary entry while filtering or deleting.
                                 .animateItem(
                                     fadeInSpec = if (reduceAnimationsState.value) tween(0) else tween(150, easing = OneUiMotionEasing),
@@ -2527,6 +2537,93 @@ private fun DiaryScreen(
             confirmButton = { TextButton(onClick = { pendingDelete?.let(onDelete); pendingDelete = null }) { Text("Elimina", color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Annulla") } }
         )
+    }
+}
+
+
+@Composable
+private fun SocialMemoryPost(
+    entry: DiaryEntry, authorName: String, photo: android.graphics.Bitmap?, expanded: Boolean,
+    onOpen: () -> Unit, onToggleFavorite: () -> Unit, onToggleCaption: () -> Unit,
+    onEdit: () -> Unit, onDelete: () -> Unit
+) {
+    val accent = MaterialTheme.colorScheme.primary
+    val initials = authorName.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+        .take(2).mapNotNull { it.firstOrNull()?.uppercaseChar() }.joinToString("").ifBlank { "H" }
+    val dateLabel = displayHaliMeoDate(entry.memoryDate)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp))
+        .background(frostedSurfaceStrongColor())
+        .border(1.dp, frostedEdgeColor(), RoundedCornerShape(28.dp))) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(42.dp).clip(CircleShape)
+                .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.30f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.22f))))
+                .border(1.dp, accent.copy(alpha = 0.35f), CircleShape), contentAlignment = Alignment.Center) {
+                Text(initials, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.width(11.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(authorName.ifBlank { "HaliMeo" }, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text(dateLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                    Text("·", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(entry.category, color = accent, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            if (entry.syncState != "SYNCED" || entry.photoSyncState != "SYNCED")
+                Icon(Icons.Default.CloudUpload, contentDescription = "In attesa di sincronizzazione", tint = accent, modifier = Modifier.size(19.dp))
+            else Icon(Icons.Default.MoreHoriz, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
+        }
+        Text(entry.title, Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+            color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleLarge.copy(letterSpacing = (-0.35).sp),
+            fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        if (photo != null) {
+            Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp).clip(RoundedCornerShape(22.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
+                .pointerInput(entry.id) { detectTapGestures(onTap = { onOpen() }, onDoubleTap = { onToggleFavorite() }) }) {
+                Image(photo.asImageBitmap(), contentDescription = "Foto del ricordo: ${entry.title}",
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)), contentScale = ContentScale.FillWidth)
+            }
+        } else {
+            Surface(Modifier.fillMaxWidth().padding(horizontal = 10.dp).clip(RoundedCornerShape(22.dp)).clickable(onClick = onOpen),
+                shape = RoundedCornerShape(22.dp), color = accent.copy(alpha = 0.10f)) {
+                Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = accent, modifier = Modifier.size(30.dp))
+                    Text("Un momento da ricordare", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onToggleFavorite, modifier = Modifier.size(44.dp)) {
+                Icon(if (entry.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = if (entry.isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti",
+                    tint = if (entry.isFavorite) Color(0xFFE66F8B) else MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(25.dp))
+            }
+            Text(if (entry.isFavorite) "Tra i vostri preferiti" else "Aggiungi ai preferiti",
+                color = if (entry.isFavorite) Color(0xFFE66F8B) else MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelMedium)
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = onOpen) {
+                Text("Apri ricordo", color = accent, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(4.dp))
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp), tint = accent)
+            }
+        }
+        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(entry.body, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
+                maxLines = if (expanded) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis)
+            if (entry.body.length > 140) TextButton(onClick = onToggleCaption, contentPadding = PaddingValues(0.dp), modifier = Modifier.height(30.dp)) {
+                Text(if (expanded) "Mostra meno" else "Leggi tutto", color = accent, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+            }
+            Text(dateLabel.uppercase(), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+                style = MaterialTheme.typography.labelSmall, letterSpacing = 0.8.sp)
+            if (expanded) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f), Modifier.padding(top = 5.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onEdit) { Icon(Icons.Default.Edit, null, Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text("Modifica") }
+                    TextButton(onClick = onDelete) { Icon(Icons.Default.DeleteOutline, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text("Elimina", color = MaterialTheme.colorScheme.error) }
+                }
+            }
+        }
     }
 }
 
