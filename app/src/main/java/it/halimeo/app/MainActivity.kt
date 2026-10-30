@@ -932,7 +932,7 @@ private fun SettingsScreen(
     val primaryText = MaterialTheme.colorScheme.onSurface
     val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
     val accentText = MaterialTheme.colorScheme.primary
-    var expandedSettingsSections by remember { mutableStateOf(setOf("profile", "appearance")) }
+    var expandedSettingsSections by remember { mutableStateOf(emptySet<String>()) }
     val profilePrefs = remember { ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE) }
     var profilePhotoUri by remember { mutableStateOf(profilePrefs.getString("profile_photo_uri", null)) }
     var profileNickname by remember { mutableStateOf(profilePrefs.getString("profile_nickname", displayName) ?: displayName) }
