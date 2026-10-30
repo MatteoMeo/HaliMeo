@@ -351,22 +351,22 @@ class MainActivity:ComponentActivity() {
                 enterTransition = {
                     if (reduceAnimationsState.value) fadeIn(tween(90))
                     else fadeIn(tween(90, easing = OneUiMotionEasing)) +
-                        scaleIn(initialScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(220, easing = OneUiMotionEasing))
+                        scaleIn(initialScale = 0.92f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(220, easing = OneUiMotionEasing))
                 },
                 exitTransition = {
                     if (reduceAnimationsState.value) fadeOut(tween(80))
                     else fadeOut(tween(130, easing = OneUiMotionEasing)) +
-                        scaleOut(targetScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(130, easing = OneUiMotionEasing))
+                        scaleOut(targetScale = 1.03f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(130, easing = OneUiMotionEasing))
                 },
                 popEnterTransition = {
                     if (reduceAnimationsState.value) fadeIn(tween(80))
                     else fadeIn(tween(130, easing = OneUiMotionEasing)) +
-                        scaleIn(initialScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(130, easing = OneUiMotionEasing))
+                        scaleIn(initialScale = 1.03f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(130, easing = OneUiMotionEasing))
                 },
                 popExitTransition = {
                     if (reduceAnimationsState.value) fadeOut(tween(80))
                     else fadeOut(tween(90, easing = OneUiMotionEasing)) +
-                        scaleOut(targetScale = 0.10f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(220, easing = OneUiMotionEasing))
+                        scaleOut(targetScale = 0.92f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(220, easing = OneUiMotionEasing))
                 }
             ) { EditScreen(editing, { t, b, c, d, photo ->
                 activity.lifecycleScope.launch {
@@ -1619,6 +1619,12 @@ private fun DiaryScreen(
                         }
                         Card(
                             modifier = Modifier.fillMaxWidth()
+                                // Keep list movement attached to each stable diary entry while filtering or deleting.
+                                .animateItem(
+                                    fadeInSpec = tween(150, easing = OneUiMotionEasing),
+                                    fadeOutSpec = tween(100, easing = OneUiMotionEasing),
+                                    placementSpec = spring(dampingRatio = 0.86f, stiffness = 420f)
+                                )
                                 // Clip the whole card layer before drawing the outline. This prevents
                                 // the rectangular layer from leaking past rounded glass corners.
                                 .clip(MaterialTheme.shapes.large)
