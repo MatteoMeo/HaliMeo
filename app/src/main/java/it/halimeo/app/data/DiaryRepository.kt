@@ -5,6 +5,13 @@ import android.net.Uri
 import android.graphics.BitmapFactory
 import it.halimeo.app.network.ApiClient
 import it.halimeo.app.network.SyncRequest
+import it.halimeo.app.network.SocialFeedResponse
+import it.halimeo.app.network.SocialCommentRequest
+import it.halimeo.app.network.SocialCommentResponse
+import it.halimeo.app.network.SocialAlbum
+import it.halimeo.app.network.SocialAlbumsResponse
+import it.halimeo.app.network.AlbumRequest
+import it.halimeo.app.network.AlbumEntryRequest
 import kotlinx.coroutines.flow.Flow
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -201,6 +208,40 @@ class DiaryRepository(context: Context) {
                 photoUpdatedAt=dto.photoUpdatedAt, photoDeletedAt=null, photoSyncState="SYNCED"))
         }
     }
+
+    private suspend fun authorizedHeader(): String {
+        val token = session.token() ?: throw IllegalStateException("Accedi per usare le funzioni social.")
+        return "Bearer $token"
+    }
+
+    suspend fun loadSocialFeed(): SocialFeedResponse = ApiClient.api.socialFeed(authorizedHeader())
+
+    suspend fun setEntryLiked(entryId: String, liked: Boolean): Map<String, Any> {
+        val auth = authorizedHeader()
+        return if (liked) ApiClient.api.likeEntry(auth, entryId) else ApiClient.api.unlikeEntry(auth, entryId)
+    }
+
+    suspend fun addEntryComment(entryId: String, body: String): SocialCommentResponse {
+        require(body.isNotBlank()) { "Scrivi un commento prima di inviarlo." }
+        return ApiClient.api.addComment(authorizedHeader(), entryId, SocialCommentRequest(body.trim()))
+    }
+
+    suspend fun loadEntryComments(entryId: String) =
+        ApiClient.api.comments(authorizedHeader(), entryId)["comments"].orEmpty()
+
+    suspend fun deleteEntryComment(commentId: String) =
+        ApiClient.api.deleteComment(authorizedHeader(), commentId)
+
+    suspend fun loadAlbums(): SocialAlbumsResponse = ApiClient.api.albums(authorizedHeader())
+
+    suspend fun createAlbum(title: String, description: String = ""): SocialAlbum =
+        ApiClient.api.createAlbum(authorizedHeader(), AlbumRequest(title, description))
+
+    suspend fun addEntryToAlbum(albumId: String, entryId: String) =
+        ApiClient.api.addAlbumEntry(authorizedHeader(), albumId, AlbumEntryRequest(entryId))
+
+    suspend fun removeEntryFromAlbum(albumId: String, entryId: String) =
+        ApiClient.api.removeAlbumEntry(authorizedHeader(), albumId, entryId)
 
     suspend fun allForBackup()=dao.allForBackup()
 }
