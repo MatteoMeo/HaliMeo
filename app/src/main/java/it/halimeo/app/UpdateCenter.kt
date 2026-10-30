@@ -5,6 +5,9 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
@@ -107,37 +110,54 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
         }
     }
 
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
-            Text("AGGIORNAMENTI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-            Text("Scegli quale versione ricevere", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                listOf("alpha" to "Alpha", "stable" to "Stabile").forEachIndexed { index, option ->
-                    SegmentedButton(selected = channel == option.first, onClick = {
-                        channel = option.first; prefs.edit().putString("update_channel", channel).apply()
-                        release = null; status = if (channel == "stable") "Canale Stabile selezionato." else "Canale Alpha selezionato."
-                    }, shape = SegmentedButtonDefaults.itemShape(index, 2)) { Text(option.second) }
-                }
+    Column(
+        Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.62f))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(11.dp)
+    ) {
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.13f)) {
+                Icon(Icons.Default.Download, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(9.dp).size(19.dp))
             }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
-            Text(status, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (busy && downloading) LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
-            release?.let { item ->
-                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text("v${item.versionName} · Build ${item.versionCode}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    if (item.changelog.isNotBlank()) Text(item.changelog.take(1800), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (item.versionCode > BuildConfig.VERSION_CODE.toLong()) Button(onClick = { downloadAndInstall(item) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.Download, contentDescription = null); Text("Scarica e installa", Modifier.padding(start = 8.dp))
-                    }
-                }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("AGGIORNAMENTI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                Text("Canale di rilascio e nuove versioni", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            OutlinedButton(onClick = { checkUpdates() }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-                if (busy && !downloading) CircularProgressIndicator() else Icon(Icons.Default.Refresh, contentDescription = null)
-                Text("Controlla aggiornamenti", Modifier.padding(start = 8.dp))
-            }
-            Text("Il controllo è manuale. L'installazione richiede sempre la conferma di Android.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            listOf("alpha" to "Alpha", "stable" to "Stabile").forEachIndexed { index, option ->
+                SegmentedButton(selected = channel == option.first, onClick = {
+                    channel = option.first; prefs.edit().putString("update_channel", channel).apply()
+                    release = null; status = if (channel == "stable") "Canale Stabile selezionato." else "Canale Alpha selezionato."
+                }, shape = SegmentedButtonDefaults.itemShape(index, 2)) { Text(option.second) }
+            }
+        }
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(13.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+        ) {
+            Text(status, Modifier.padding(horizontal = 12.dp, vertical = 10.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (busy && downloading) LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+        release?.let { item ->
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(item.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text("v${item.versionName} · Build ${item.versionCode}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                if (item.changelog.isNotBlank()) Text(item.changelog.take(1800), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (item.versionCode > BuildConfig.VERSION_CODE.toLong()) Button(onClick = { downloadAndInstall(item) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Download, contentDescription = null); Text("Scarica e installa", Modifier.padding(start = 8.dp))
+                }
+            }
+        }
+        OutlinedButton(onClick = { checkUpdates() }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+            if (busy && !downloading) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp) else Icon(Icons.Default.Refresh, contentDescription = null)
+            Text("Controlla aggiornamenti", Modifier.padding(start = 8.dp))
+        }
+        Text("Il controllo è manuale. L'installazione richiede sempre la conferma di Android.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
