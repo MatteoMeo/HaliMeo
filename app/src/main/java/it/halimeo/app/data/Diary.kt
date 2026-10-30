@@ -32,10 +32,21 @@ data class DiaryEntryDto(
 fun DiaryEntry.toDto() = DiaryEntryDto(id,title,body,category,memoryDate,createdAt,updatedAt,deletedAt,photoUpdatedAt,photoDeletedAt)
 fun DiaryEntryDto.toEntity() = DiaryEntry(id,title,body,category,memoryDate,createdAt,updatedAt,deletedAt,"SYNCED",null,photoUpdatedAt,photoDeletedAt,"PENDING")
 
+@Entity(tableName = "pending_social_actions", indices = [Index("entryId"), Index("createdAt")])
+data class PendingSocialAction(
+    @PrimaryKey val id: String,
+    val entryId: String,
+    val type: String,
+    val payload: String = "",
+    val createdAt: Long
+)
+
 @Dao
 interface DiaryDao {
     @Query("SELECT * FROM diary_entries WHERE deletedAt IS NULL ORDER BY memoryDate DESC, updatedAt DESC")
     fun observeAll(): Flow<List<DiaryEntry>>
+    @Query("SELECT id FROM diary_entries WHERE deletedAt IS NULL AND isFavorite = 1")
+    fun observeFavoriteIds(): Flow<List<String>>
     @Query("SELECT * FROM diary_entries WHERE id=:id LIMIT 1")
     suspend fun get(id: String): DiaryEntry?
     @Query("SELECT * FROM diary_entries WHERE syncState != 'SYNCED' ORDER BY updatedAt")
@@ -52,13 +63,22 @@ interface DiaryDao {
     suspend fun markSynced(id: String, updatedAt: Long)
     @Query("UPDATE diary_entries SET isFavorite=:favorite WHERE id=:id")
     suspend fun setFavorite(id: String, favorite: Boolean)
-    @Query("UPDATE diary_entries SET isFavorite = CASE WHEN isFavorite = 1 THEN 0 ELSE 1 END WHERE id=:id")
-    suspend fun toggleFavorite(id: String)
+    @Query("UPDATE diary_entries SET isFavorite = :favorite WHERE id=:id")
+    suspend fun setFavoriteExplicit(id: String, favorite: Boolean)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertSocialAction(action: PendingSocialAction)
+    @Query("SELECT * FROM pending_social_actions ORDER BY createdAt ASC")
+    suspend fun pendingSocialActions(): List<PendingSocialAction>
+    @Query("DELETE FROM pending_social_actions WHERE id=:id")
+    suspend fun deleteSocialAction(id: String)
+    @Query("DELETE FROM pending_social_actions WHERE entryId=:entryId AND type IN ('LIKE','UNLIKE')")
+    suspend fun clearPendingLikeActions(entryId: String)
+    @Query("SELECT * FROM pending_social_actions WHERE entryId=:entryId AND type='COMMENT' ORDER BY createdAt ASC")
+    suspend fun pendingComments(entryId: String)
     @Query("SELECT * FROM diary_entries ORDER BY updatedAt DESC")
     suspend fun allForBackup(): List<DiaryEntry>
 }
 
-@Database(entities=[DiaryEntry::class], version=4, exportSchema=true)
+@Database(entities=[DiaryEntry::class, PendingSocialAction::class], version=5, exportSchema=true)
 abstract class HaliMeoDatabase : RoomDatabase() {
     abstract fun diaryDao(): DiaryDao
     companion object {
@@ -79,10 +99,17 @@ abstract class HaliMeoDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE diary_entries ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0")
             }
         }
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("CREATE TABLE IF NOT EXISTS pending_social_actions (id TEXT NOT NULL PRIMARY KEY, entryId TEXT NOT NULL, type TEXT NOT NULL, payload TEXT NOT NULL DEFAULT '', createdAt INTEGER NOT NULL)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_pending_social_actions_entryId ON pending_social_actions(entryId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_pending_social_actions_createdAt ON pending_social_actions(createdAt)")
+            }
+        }
         @Volatile private var instance: HaliMeoDatabase? = null
         fun get(context: android.content.Context) = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, HaliMeoDatabase::class.java, "halimeo.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build().also { instance=it }
         }
     }
