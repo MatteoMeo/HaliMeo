@@ -560,7 +560,7 @@ class MainActivity:ComponentActivity() {
                     when (page) {
                         0 -> DiaryScreen(entries, repo,
                             { editing = it; nav.navigate("edit") },
-                            { entry -> activity.lifecycleScope.launch { repo.setFavorite(entry.id, entry.isFavorite) } },
+                            { entry -> activity.lifecycleScope.launch { repo.toggleFavorite(entry.id) } },
                             { entry -> activity.lifecycleScope.launch { repo.delete(entry.id) } },
                             { entry -> nav.navigate("memory/${entry.id}") }
                         )
@@ -2107,8 +2107,8 @@ private fun DiaryScreen(
     }
 
     fun toggleDiaryFavorite(entry: DiaryEntry) {
-        val next = entry.id !in favoriteIds
-        onToggleFavorite(entry.copy(isFavorite = next))
+        // Room performs the toggle atomically; don't derive the next value from a potentially stale Compose snapshot.
+        onToggleFavorite(entry)
     }
 
     if (showCalendar) {
