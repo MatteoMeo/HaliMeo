@@ -981,26 +981,40 @@ private fun SettingsScreen(
                     "sky" to Color(0xFF62B6E8), "peach" to Color(0xFFFFB38A),
                     "fuchsia" to Color(0xFFE84393), "slate" to Color(0xFF78909C)
                 )
-                backgroundOptions.chunked(4).forEach { optionRow ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        optionRow.forEach { option ->
-                            val swatch = accentSwatches[option.first] ?: MaterialTheme.colorScheme.primary
-                            FilterChip(
-                                modifier = Modifier.weight(1f),
-                                selected = backgroundColor == option.first,
-                                onClick = {
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    backgroundOptions.forEach { option ->
+                        val swatch = accentSwatches[option.first] ?: MaterialTheme.colorScheme.primary
+                        Column(
+                            modifier = Modifier.width(64.dp).clip(RoundedCornerShape(16.dp))
+                                .clickable {
                                     backgroundColor = option.first
                                     backgroundPhoto = null
                                     customBackgroundColorState.value = option.first
                                     customBackgroundUriState.value = null
-                                    ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putString("background_color", option.first).remove("background_photo").apply()
-                                },
-                                label = { Text(option.second, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                leadingIcon = { Box(Modifier.size(10.dp).clip(CircleShape).background(swatch)) },
-                                shape = RoundedCornerShape(18.dp)
-                            )
+                                    ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+                                        .edit().putString("background_color", option.first).remove("background_photo").apply()
+                                }.padding(vertical = 6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                Modifier.size(42.dp).clip(CircleShape).background(swatch)
+                                    .border(
+                                        width = if (backgroundColor == option.first) 2.dp else 1.dp,
+                                        color = if (backgroundColor == option.first) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (backgroundColor == option.first) {
+                                    Icon(Icons.Default.Check, contentDescription = "Selezionato", tint = Color.White, modifier = Modifier.size(19.dp))
+                                }
+                            }
+                            Text(option.second, maxLines = 1, overflow = TextOverflow.Ellipsis, color = if (backgroundColor == option.first) primaryText else secondaryText, style = MaterialTheme.typography.labelSmall)
                         }
-                        repeat(4 - optionRow.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
                 Text("Scegli il colore d'accento dell'app.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
