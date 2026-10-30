@@ -2003,7 +2003,6 @@ private fun DiaryScreen(
     var query by remember { mutableStateOf("") }
     var searchExpanded by remember { mutableStateOf(false) }
     var favoritesOnly by remember { mutableStateOf(false) }
-    var selectedCategory by remember { mutableStateOf<String?>(null) }
     // Derive favourites from the same Room emission as the diary list. A second Flow can briefly lag behind entries and leave the filter empty during updates.
     val favoriteIds = remember(entries) { entries.asSequence().filter { it.isFavorite }.map { it.id }.toSet() }
     var selectedDate by remember { mutableStateOf<String?>(null) }
@@ -2094,15 +2093,11 @@ private fun DiaryScreen(
         animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "diaryHeaderTitleScale"
     )
-    val categories = remember(entries) {
-        entries.map { it.category.trim() }.filter { it.isNotBlank() }.distinct().sorted()
-    }
-    val filtered = remember(entries, query, selectedDate, favoritesOnly, favoriteIds, selectedCategory) {
+    val filtered = remember(entries, query, selectedDate, favoritesOnly, favoriteIds) {
         entries.asSequence().filter { entry ->
             (entry.title.contains(query, true) || entry.body.contains(query, true)) &&
                 (selectedDate == null || entry.memoryDate == selectedDate) &&
                 (!favoritesOnly || entry.id in favoriteIds) &&
-                (selectedCategory == null || entry.category == selectedCategory)
         }.sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }.toList()
     }
 
@@ -2270,8 +2265,8 @@ private fun DiaryScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically
             ) {
                 FilterChip(
-                    selected = !favoritesOnly && selectedCategory == null,
-                    onClick = { favoritesOnly = false; selectedCategory = null },
+                    selected = !favoritesOnly,
+                    onClick = { favoritesOnly = false; query = ""; selectedDate = null },
                     shape = RoundedCornerShape(18.dp),
                     label = { Text("Tutti", maxLines = 1) },
                     leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp)) },
@@ -2279,7 +2274,7 @@ private fun DiaryScreen(
                 )
                 FilterChip(
                     selected = favoritesOnly,
-                    onClick = { favoritesOnly = true; selectedCategory = null },
+                    onClick = { favoritesOnly = true; query = ""; selectedDate = null },
                     shape = RoundedCornerShape(18.dp),
                     label = { Text("Preferiti", maxLines = 1) },
                     leadingIcon = { Icon(Icons.Default.Bookmark, contentDescription = null, modifier = Modifier.size(16.dp)) },
@@ -2289,20 +2284,7 @@ private fun DiaryScreen(
                         containerColor = frostedSurfaceColor(), labelColor = MaterialTheme.colorScheme.onSurfaceVariant, iconColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
-                categories.forEach { category ->
-                    FilterChip(
-                        selected = selectedCategory == category,
-                        onClick = { selectedCategory = if (selectedCategory == category) null else category; favoritesOnly = false },
-                        shape = RoundedCornerShape(18.dp),
-                        label = { Text(category, maxLines = 1) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
-                            selectedLabelColor = MaterialTheme.colorScheme.onSurface,
-                            containerColor = frostedSurfaceColor(),
-                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
-                }
+
             }
             IconButton(onClick = {
                 albumsBrowserOpen = true
@@ -2378,7 +2360,7 @@ private fun DiaryScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(top = 4.dp, bottom = 100.dp)
                 ) {
-                    if (!favoritesOnly && selectedCategory == null && query.isBlank()) {
+                    if (!favoritesOnly && query.isBlank()) {
                         if (photoHighlights.isNotEmpty()) {
                             item(key = "memory_highlights") {
                                 Column(verticalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.padding(bottom = 4.dp)) {
@@ -2940,11 +2922,20 @@ private fun MemoryDetailScreen(
     }
 }
 
-@Composable private fun EditScreen(existing: DiaryEntry?, onSave: (String,String,String,String,String?)->Unit, onCancel:()->Unit) {
+@Composable
+private fun EditScreen(
+    existing: DiaryEntry?,
+    onSave: (String, String, String, String, String?) -> Unit,
+    onCancel: () -> Unit
+) {
     var title by remember(existing?.id) { mutableStateOf(existing?.title.orEmpty()) }
     var body by remember(existing?.id) { mutableStateOf(existing?.body.orEmpty()) }
-    var cat by remember(existing?.id) { mutableStateOf(existing?.category ?: "Ricordo") }
-    var date by remember(existing?.id) { mutableStateOf(existing?.memoryDate?.let { displayHaliMeoDate(it) } ?: displayHaliMeoDate(java.time.LocalDate.now().toString())) }
+    // Categories are intentionally hidden: memories belong to one shared private diary.
+    val category = "Ricordo"
+    var date by remember(existing?.id) {
+        mutableStateOf(existing?.memoryDate?.let { displayHaliMeoDate(it) }
+            ?: displayHaliMeoDate(java.time.LocalDate.now().toString()))
+    }
     var photoUri by remember(existing?.id) { mutableStateOf(existing?.photoUri) }
     val context = LocalContext.current
     val editHaze = rememberHazeState()
@@ -2957,13 +2948,14 @@ private fun MemoryDetailScreen(
             fallbackColorEffect(HazeColorEffect.tint(editGlassTint))
         }
     }
-    val editScrollState = rememberScrollState()
-    val editHeaderCollapsed by remember { derivedStateOf { editScrollState.value > 48 } }
-    val editTitleScale by animateFloatAsState(
-        targetValue = if (editHeaderCollapsed) 0.76f else 1f,
-        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
-        label = "editTitleScale"
+    val scrollState = rememberScrollState()
+    val collapsed by remember { derivedStateOf { scrollState.value > 56 } }
+    val titleScale by animateFloatAsState(
+        targetValue = if (collapsed) 0.78f else 1f,
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(100, easing = OneUiMotionEasing),
+        label = "memoryEditorTitleScale"
     )
+
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
@@ -2981,98 +2973,239 @@ private fun MemoryDetailScreen(
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", target)
             pendingCameraUri = uri
             cameraCapture.launch(uri)
-        }.onFailure { Toast.makeText(context, "Fotocamera non disponibile: ${it.message}", Toast.LENGTH_LONG).show() }
+        }.onFailure {
+            Toast.makeText(context, "Fotocamera non disponibile: ${it.message}", Toast.LENGTH_LONG).show()
+        }
     }
     val photoBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, photoUri, context) {
         value = photoUri?.takeIf { it.isNotBlank() }?.let { decodeMemoryPhoto(context, it, maxDimension = 2000) }
     }
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.38f),
+        focusedContainerColor = frostedSurfaceStrongColor(),
+        unfocusedContainerColor = frostedSurfaceColor(),
+        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        cursorColor = MaterialTheme.colorScheme.primary
+    )
+    val cardShape = RoundedCornerShape(28.dp)
 
     Column(
-        Modifier.fillMaxSize().background(Color.Transparent).hazeSource(editHaze).verticalScroll(editScrollState).imePadding().padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 150.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        Modifier.fillMaxSize()
+            .background(Color.Transparent)
+            .hazeSource(editHaze)
+            .verticalScroll(scrollState)
+            .imePadding()
+            .padding(start = 18.dp, top = 10.dp, end = 18.dp, bottom = 36.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        Text(
-            if (existing == null) "Nuovo ricordo" else "Modifica ricordo",
-            modifier = Modifier.graphicsLayer {
-                scaleX = editTitleScale
-                scaleY = editTitleScale
-                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
-            },
-            color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.headlineMedium.copy(letterSpacing = (-0.7).sp),
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            "I momenti importanti, custoditi in un posto vostro.",
-            modifier = Modifier.height(if (editHeaderCollapsed) 0.dp else 24.dp).graphicsLayer { alpha = if (editHeaderCollapsed) 0f else 1f },
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium
-        )
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(
+                    if (existing == null) "Nuovo ricordo" else "Modifica ricordo",
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = titleScale
+                        scaleY = titleScale
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                    },
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = 32.sp, letterSpacing = (-0.8).sp),
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    "Un momento vostro, da custodire insieme.",
+                    modifier = Modifier.height(if (collapsed) 0.dp else 22.dp)
+                        .graphicsLayer { alpha = if (collapsed) 0f else 1f },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            IconButton(
+                onClick = onCancel,
+                modifier = Modifier.size(44.dp)
+                    .background(frostedSurfaceColor(), CircleShape)
+                    .border(1.dp, frostedEdgeColor(), CircleShape)
+            ) {
+                Icon(Icons.Default.Close, contentDescription = "Chiudi", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        // Photo-first composition: the memory image is the visual anchor, like a shared social post.
         Card(
-            modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(26.dp)).hazeBlur(HazeInput.Sources(editHaze), editGlassStyle).clip(RoundedCornerShape(26.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(26.dp)),
-            shape = RoundedCornerShape(26.dp),
+            modifier = Modifier.fillMaxWidth()
+                .shadow(7.dp, cardShape)
+                .clip(cardShape)
+                .border(1.dp, frostedEdgeColor(), cardShape),
+            shape = cardShape,
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
         ) {
-            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(title, { title = it }, label = { Text("Titolo") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), singleLine = true)
-                OutlinedTextField(date, { date = it.take(10) }, label = { Text("Data (gg/mm/aa)") }, placeholder = { Text("26/12/26") }, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth(), singleLine = true)
-
-                OutlinedTextField(body, { body = it }, label = { Text("Ricordo") }, modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp), shape = RoundedCornerShape(18.dp), minLines = 5)
-                Text("FOTO DEL RICORDO", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
-                if (photoBitmap != null) {
-                    Image(
-                        bitmap = photoBitmap!!.asImageBitmap(),
-                        contentDescription = "Foto allegata al ricordo",
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp).clip(RoundedCornerShape(20.dp)),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
-                    )
-                } else {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth().height(92.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        color = frostedSurfaceColor(),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor())
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                            Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
-                            Spacer(Modifier.height(5.dp))
-                            Text("Aggiungi una foto dalla galleria", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(
+                    Modifier.fillMaxWidth().height(238.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+                        .clickable { photoPicker.launch(arrayOf("image/*")) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (photoBitmap != null) {
+                        Image(
+                            bitmap = photoBitmap!!.asImageBitmap(),
+                            contentDescription = "Anteprima della foto del ricordo",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                        Box(
+                            Modifier.align(Alignment.BottomStart).fillMaxWidth().height(84.dp)
+                                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.62f))))
+                        )
+                        Row(
+                            Modifier.align(Alignment.BottomStart).padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(7.dp)
+                        ) {
+                            Icon(Icons.Default.PhotoCamera, contentDescription = null, tint = Color.White, modifier = Modifier.size(17.dp))
+                            Text("Foto del vostro ricordo", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                        }
+                    } else {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(9.dp),
+                            modifier = Modifier.padding(24.dp)
+                        ) {
+                            Box(
+                                Modifier.size(58.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(29.dp))
+                            }
+                            Text("Aggiungete una foto", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Il ricordo prende vita con un'immagine", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { photoPicker.launch(arrayOf("image/*")) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp)) {
-                        Icon(Icons.Default.PhotoLibrary, contentDescription = null)
-                        Spacer(Modifier.width(6.dp))
-                        Text(if (photoUri == null) "Galleria" else "Cambia foto", maxLines = 1)
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = { photoPicker.launch(arrayOf("image/*")) },
+                        modifier = Modifier.weight(1f).height(46.dp),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(7.dp))
+                        Text(if (photoUri.isNullOrBlank()) "Galleria" else "Cambia foto", maxLines = 1)
                     }
-                    OutlinedButton(onClick = { launchFullResolutionCamera() }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp)) {
-                        Icon(Icons.Default.PhotoCamera, contentDescription = null)
-                        Spacer(Modifier.width(6.dp))
+                    OutlinedButton(
+                        onClick = { launchFullResolutionCamera() },
+                        modifier = Modifier.weight(1f).height(46.dp),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Default.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(7.dp))
                         Text("Fotocamera", maxLines = 1)
                     }
                 }
-                if (photoUri != null) {
-                    OutlinedButton(onClick = { photoUri = "" }, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.DeleteOutline, contentDescription = null)
-                        Spacer(Modifier.width(6.dp))
+                if (!photoUri.isNullOrBlank()) {
+                    TextButton(
+                        onClick = { photoUri = "" },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Icon(Icons.Default.DeleteOutline, contentDescription = null, modifier = Modifier.size(17.dp))
+                        Spacer(Modifier.width(5.dp))
                         Text("Rimuovi foto")
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp)) { Text("Annulla") }
-                    Button(onClick = {
-                        val parsedDate = parseHaliMeoDate(date)
-                        if (title.isNotBlank() && body.isNotBlank() && parsedDate != null) onSave(title, body, cat, parsedDate.toString(), photoUri)
-                        else if (parsedDate == null) Toast.makeText(context, "Inserisci una data valida nel formato gg/mm/aa", Toast.LENGTH_SHORT).show()
-                    }, modifier = Modifier.weight(1f), enabled = title.isNotBlank() && body.isNotBlank(), shape = RoundedCornerShape(16.dp)) {
-                        Icon(Icons.Default.Check, contentDescription = null)
-                        Spacer(Modifier.width(6.dp))
-                        Text("Salva")
-                    }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("RACCONTATELO", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge, letterSpacing = 1.1.sp)
+            Card(
+                modifier = Modifier.fillMaxWidth().clip(cardShape)
+                    .border(1.dp, frostedEdgeColor(), cardShape),
+                shape = cardShape,
+                colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
+            ) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Dategli un titolo") },
+                        placeholder = { Text("Es. Quel weekend a Monaco") },
+                        shape = RoundedCornerShape(18.dp),
+                        singleLine = true,
+                        colors = fieldColors
+                    )
+                    OutlinedTextField(
+                        value = body,
+                        onValueChange = { body = it },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp),
+                        label = { Text("Cosa è successo?") },
+                        placeholder = { Text("Scrivete qui quello che volete ricordare…") },
+                        shape = RoundedCornerShape(18.dp),
+                        minLines = 5,
+                        colors = fieldColors
+                    )
                 }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("QUANDO È SUCCESSO?", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge, letterSpacing = 1.1.sp)
+            Card(
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
+                    .border(1.dp, frostedEdgeColor(), RoundedCornerShape(22.dp)),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
+            ) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = date,
+                        onValueChange = { date = it.take(10) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Data (gg/mm/aa)") },
+                        placeholder = { Text("30/10/26") },
+                        leadingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
+                        trailingIcon = {
+                            TextButton(onClick = { date = displayHaliMeoDate(java.time.LocalDate.now().toString()) }) {
+                                Text("Oggi")
+                            }
+                        },
+                        shape = RoundedCornerShape(18.dp),
+                        singleLine = true,
+                        colors = fieldColors
+                    )
+                    Text("La data apparirà sul ricordo nel vostro diario.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(
+                onClick = {
+                    val parsedDate = parseHaliMeoDate(date)
+                    if (title.isNotBlank() && body.isNotBlank() && parsedDate != null) {
+                        onSave(title.trim(), body.trim(), category, parsedDate.toString(), photoUri)
+                    } else if (parsedDate == null) {
+                        Toast.makeText(context, "Inserisci una data valida nel formato gg/mm/aa", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Aggiungi un titolo e racconta il vostro ricordo", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                enabled = title.isNotBlank() && body.isNotBlank(),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Icon(Icons.Default.Check, contentDescription = null)
+                Spacer(Modifier.width(9.dp))
+                Text(if (existing == null) "Salva ricordo" else "Salva modifiche", style = MaterialTheme.typography.titleMedium)
+            }
+            TextButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().height(44.dp)) {
+                Text("Annulla")
             }
         }
     }
