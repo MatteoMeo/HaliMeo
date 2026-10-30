@@ -532,13 +532,14 @@ class MainActivity:ComponentActivity() {
             .navigationBarsPadding()
             .padding(bottom = 11.dp)
             .size(58.dp)
-            .clip(RoundedCornerShape(24.dp)),
+            .clip(RoundedCornerShape(24.dp))
+            .then(if (reduceStaticEffectsState.value) Modifier else Modifier.hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)),
         shape = RoundedCornerShape(24.dp),
-        color = if (reduceStaticEffectsState.value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.80f),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.96f else 0.62f),
         border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor()),
         shadowElevation = 7.dp
     ) {
-        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)).clickable { editing = null; nav.navigate("edit") }, contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)).clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = "Nuovo ricordo") { editing = null; nav.navigate("edit") }, contentAlignment = Alignment.Center) {
             Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(25.dp), tint = MaterialTheme.colorScheme.onPrimary)
         }
     }
@@ -561,13 +562,13 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     // continuously invalidates the captured surface and can look like navbar flicker.
     val driftX = 0f
     val driftY = 0f
-    val customBase = when (backgroundChoice) {
-        "blue" -> Color(0xFF071522)
-        "lavender" -> Color(0xFF120E20)
-        "mint" -> Color(0xFF071A14)
-        "rose" -> Color(0xFF210D16)
-        else -> Color.Black
-    }
+    val accent = palette.primary
+    val customBase = Color(
+        red = (accent.red * 0.12f).coerceAtMost(0.12f),
+        green = (accent.green * 0.12f).coerceAtMost(0.12f),
+        blue = (accent.blue * 0.12f).coerceAtMost(0.12f),
+        alpha = 1f
+    )
     val backgroundBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, backgroundUri, context) {
         value = backgroundUri?.let { decodeScaledBitmap(context, it, maxDimension = 1600) }
     }
@@ -598,8 +599,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             Box(
                 Modifier.fillMaxSize().background(
                     Brush.verticalGradient(
-                        0.0f to Color(0xFF0A1426),
-                        0.42f to Color(0xFF080D16),
+                        0.0f to customBase.copy(red = (customBase.red + 0.035f).coerceAtMost(1f), green = (customBase.green + 0.035f).coerceAtMost(1f), blue = (customBase.blue + 0.035f).coerceAtMost(1f)),
+                        0.48f to customBase.copy(red = (customBase.red + 0.012f).coerceAtMost(1f), green = (customBase.green + 0.012f).coerceAtMost(1f), blue = (customBase.blue + 0.012f).coerceAtMost(1f)),
                         1.0f to Color(0xFF05070C)
                     )
                 )
@@ -609,8 +610,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             Modifier.align(Alignment.TopCenter).offset(x = driftX.dp, y = (-140).dp + driftY.dp).size(460.dp)
                 .background(
                     Brush.radialGradient(
-                        0.0f to palette.primary.copy(alpha = 0.15f),
-                        0.42f to Color(0xFF8878FF).copy(alpha = 0.055f),
+                        0.0f to palette.primary.copy(alpha = 0.28f),
+                        0.42f to palette.secondary.copy(alpha = 0.11f),
                         1.0f to Color.Transparent
                     ), RoundedCornerShape(50)
                 )
@@ -619,8 +620,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             Modifier.align(Alignment.CenterStart).offset(x = (-210).dp - driftX.dp * 0.55f, y = 40.dp + driftY.dp).size(380.dp)
                 .background(
                     Brush.radialGradient(
-                        0.0f to palette.tertiary.copy(alpha = 0.075f),
-                        0.48f to palette.tertiary.copy(alpha = 0.028f),
+                        0.0f to palette.tertiary.copy(alpha = 0.14f),
+                        0.48f to palette.tertiary.copy(alpha = 0.055f),
                         1.0f to Color.Transparent
                     ), RoundedCornerShape(50)
                 )
@@ -629,8 +630,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             Modifier.align(Alignment.BottomEnd).offset(x = 190.dp - driftX.dp * 0.45f, y = 150.dp - driftY.dp).size(400.dp)
                 .background(
                     Brush.radialGradient(
-                        0.0f to Color(0xFF55D8E8).copy(alpha = 0.075f),
-                        0.45f to palette.secondary.copy(alpha = 0.025f),
+                        0.0f to palette.secondary.copy(alpha = 0.14f),
+                        0.45f to palette.primary.copy(alpha = 0.05f),
                         1.0f to Color.Transparent
                     ), RoundedCornerShape(50)
                 )
@@ -1399,7 +1400,6 @@ private fun DiaryScreen(
 ) {
     var query by remember { mutableStateOf("") }
     var searchExpanded by remember { mutableStateOf(false) }
-    var selectedCategory by remember { mutableStateOf("Tutte") }
     var favoritesOnly by remember { mutableStateOf(false) }
     var selectedDate by remember { mutableStateOf<String?>(null) }
     var showCalendar by remember { mutableStateOf(false) }
@@ -1466,14 +1466,10 @@ private fun DiaryScreen(
         animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "diaryHeaderTitleScale"
     )
-    val categories = remember(entries) {
-        listOf("Tutte") + entries.asSequence().map { it.category.trim() }.filter { it.isNotEmpty() }.distinct().sorted().toList()
-    }
-    val filtered = remember(entries, query, selectedDate, selectedCategory, favoritesOnly, favoriteIds) {
+    val filtered = remember(entries, query, selectedDate, favoritesOnly, favoriteIds) {
         val matches = entries.filter {
-            (it.title.contains(query, true) || it.body.contains(query, true) || it.category.contains(query, true)) &&
+            (it.title.contains(query, true) || it.body.contains(query, true)) &&
                 (selectedDate == null || it.memoryDate == selectedDate) &&
-                (selectedCategory == "Tutte" || it.category.equals(selectedCategory, ignoreCase = true)) &&
                 (!favoritesOnly || it.id in favoriteIds)
         }
         matches.sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }
@@ -1594,7 +1590,7 @@ private fun DiaryScreen(
                     shape = RoundedCornerShape(50),
                     label = { Text("Tutti", maxLines = 1) },
                     leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    colors = FilterChipDefaults.filterChipColors(containerColor = frostedSurfaceColor(), labelColor = MaterialTheme.colorScheme.onSurfaceVariant, iconColor = MaterialTheme.colorScheme.onSurfaceVariant, selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f), selectedLabelColor = MaterialTheme.colorScheme.onSurface, selectedLeadingIconColor = MaterialTheme.colorScheme.primary)
+                    colors = FilterChipDefaults.filterChipColors(containerColor = frostedSurfaceColor(), labelColor = MaterialTheme.colorScheme.onSurfaceVariant, iconColor = MaterialTheme.colorScheme.onSurfaceVariant, selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f), selectedLabelColor = MaterialTheme.colorScheme.onSurface, selectedLeadingIconColor = MaterialTheme.colorScheme.primary)
                 )
                 FilterChip(
                     selected = favoritesOnly, onClick = { favoritesOnly = true },
@@ -1602,26 +1598,11 @@ private fun DiaryScreen(
                     label = { Text("Preferiti", maxLines = 1) },
                     leadingIcon = { Icon(if (favoritesOnly) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, modifier = Modifier.size(16.dp)) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = categoryAccent("momento").copy(alpha = if (isHaliMeoDark()) 0.28f else 0.16f),
-                        selectedLabelColor = MaterialTheme.colorScheme.onSurface, selectedLeadingIconColor = categoryAccent("momento"),
+                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
+                        selectedLabelColor = MaterialTheme.colorScheme.onSurface, selectedLeadingIconColor = MaterialTheme.colorScheme.primary,
                         containerColor = frostedSurfaceColor(), labelColor = MaterialTheme.colorScheme.onSurfaceVariant, iconColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
-                categories.forEach { category ->
-                    val categoryColor = if (category == "Tutte") MaterialTheme.colorScheme.primary else categoryAccent(category)
-                    FilterChip(
-                        selected = selectedCategory == category, onClick = { selectedCategory = category },
-                        shape = RoundedCornerShape(50),
-                        label = { Text(category, maxLines = 1) },
-                        leadingIcon = if (selectedCategory == category) ({ Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }) else ({ Icon(categoryIcon(category), contentDescription = null, modifier = Modifier.size(16.dp)) }),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = categoryColor.copy(alpha = if (isHaliMeoDark()) 0.28f else 0.16f),
-                            selectedLabelColor = MaterialTheme.colorScheme.onSurface, selectedLeadingIconColor = categoryColor,
-                            containerColor = frostedSurfaceColor(), labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            iconColor = if (isHaliMeoDark()) categoryColor else categoryColor.copy(alpha = 0.9f)
-                        )
-                    )
-                }
             }
         }
 
@@ -1687,7 +1668,7 @@ private fun DiaryScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(top = 4.dp, bottom = 100.dp)
                 ) {
-                    if (!favoritesOnly && query.isBlank() && selectedCategory == "Tutte") {
+                    if (!favoritesOnly && query.isBlank()) {
                         if (photoHighlights.isNotEmpty()) {
                             item(key = "memory_highlights") {
                                 Column(verticalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.padding(bottom = 4.dp)) {
@@ -2041,7 +2022,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(title, { title = it }, label = { Text("Titolo") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(date, { date = it.take(10) }, label = { Text("Data (gg/mm/aa)") }, placeholder = { Text("26/12/26") }, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(cat, { cat = it }, label = { Text("Categoria") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+
                 OutlinedTextField(body, { body = it }, label = { Text("Ricordo") }, modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp), minLines = 5)
                 Text("FOTO DEL RICORDO", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                 if (photoBitmap != null) {
