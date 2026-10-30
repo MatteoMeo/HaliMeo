@@ -113,7 +113,7 @@ class DiaryRepository(context: Context) {
                 photoUri = if (preserveLocalPhoto) local?.photoUri else null,
                 photoUpdatedAt = maxOf(dto.photoUpdatedAt, local?.photoUpdatedAt ?: 0L),
                 photoDeletedAt = if (remotePhotoIsNewer) dto.photoDeletedAt else local?.photoDeletedAt,
-                photoSyncState = if (preserveLocalPhoto) local?.photoSyncState ?: "SYNCED" else "PENDING"
+                photoSyncState = if (preserveLocalPhoto) local?.photoSyncState ?: "SYNCED" else if (dto.photoUpdatedAt == 0L || dto.photoDeletedAt != null) "SYNCED" else "PENDING"
             )
             dao.upsert(merged)
         }
