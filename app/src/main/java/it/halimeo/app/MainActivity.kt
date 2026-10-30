@@ -88,6 +88,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.HazeColorEffect
+import dev.chrisbanes.haze.blur.hazeBlur
 import androidx.compose.ui.graphics.compositeOver
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.*
@@ -323,7 +330,16 @@ class MainActivity:ComponentActivity() {
     val backStackEntry by nav.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { 3 })
+    val navigationHaze = rememberHazeState()
     val navigationGlassTint = frostedSurfaceColor()
+    val navigationGlassBackground = if (isHaliMeoDark()) Color(0xFF101419) else Color(0xFFF3F6FA)
+    val navigationGlassStyle = remember(navigationGlassTint, navigationGlassBackground) {
+        HazeBlurStyle {
+            backgroundColor(navigationGlassBackground)
+            colorEffects(listOf(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.55f))))
+            fallbackColorEffect(HazeColorEffect.tint(navigationGlassTint))
+        }
+    }
     val navigationScope = rememberCoroutineScope()
     val primaryTab = pagerState.currentPage
     fun selectPrimaryTab(index: Int) {
@@ -366,7 +382,7 @@ class MainActivity:ComponentActivity() {
             composable("main") {
                 androidx.compose.foundation.pager.HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().hazeSource(navigationHaze),
                     beyondViewportPageCount = 1,
                     key = { it }
                 ) { page ->
@@ -434,7 +450,7 @@ class MainActivity:ComponentActivity() {
             .height(68.dp)
             .then(
                 if (reduceStaticEffectsState.value) Modifier.background(navigationGlassTint, RoundedCornerShape(50))
-                else Modifier.clip(RoundedCornerShape(50))
+                else Modifier.clip(RoundedCornerShape(50)).hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)
             ),
         shape = RoundedCornerShape(50),
         color = Color.Transparent,
@@ -745,6 +761,15 @@ private fun SettingsScreen(
         }
     }
 
+    val settingsHaze = rememberHazeState()
+    val settingsGlassTint = frostedSurfaceColor()
+    val settingsGlassStyle = remember(settingsGlassTint) {
+        HazeBlurStyle {
+            backgroundColor(Color(0xFF101419))
+            colorEffects(listOf(HazeColorEffect.tint(settingsGlassTint.copy(alpha = 0.48f))))
+            fallbackColorEffect(HazeColorEffect.tint(settingsGlassTint))
+        }
+    }
     val settingsScrollState = rememberScrollState()
     var settingsHeaderCollapsed by remember { mutableStateOf(false) }
     LaunchedEffect(settingsScrollState) {
@@ -1258,6 +1283,15 @@ private fun SettingsScreen(
 }
 }
 @Composable private fun AuthScreen(onLogin:(String,String,(String)->Unit)->Unit,onRedeem:(String,String,String,String,(String)->Unit)->Unit){
+        val authHaze = rememberHazeState()
+    val authGlassTint = frostedSurfaceStrongColor()
+    val authGlassStyle = remember(authGlassTint) {
+        HazeBlurStyle {
+            backgroundColor(Color(0xFF101419))
+            colorEffects(listOf(HazeColorEffect.tint(authGlassTint.copy(alpha = 0.48f))))
+            fallbackColorEffect(HazeColorEffect.tint(authGlassTint))
+        }
+    }
     var redeem by remember{mutableStateOf(false)};var code by remember{mutableStateOf("")};var name by remember{mutableStateOf("")};var email by remember{mutableStateOf("")};var pass by remember{mutableStateOf("")};var error by remember{mutableStateOf("")};var busy by remember{mutableStateOf(false)}
     var serverUrl by remember { mutableStateOf(ApiClient.baseUrl().removeSuffix("/")) }
     // Separato dal testo digitato: controlliamo l'URL salvato, non quello ancora in modifica.
@@ -1372,6 +1406,15 @@ private fun DiaryScreen(
     val calendarState = rememberDatePickerState()
     var pendingDelete by remember { mutableStateOf<DiaryEntry?>(null) }
     var expandedEntryIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    val diaryHaze = rememberHazeState()
+    val diaryGlassTint = frostedSurfaceColor()
+    val diaryGlassStyle = remember(diaryGlassTint) {
+        HazeBlurStyle {
+            backgroundColor(Color(0xFF101419))
+            colorEffects(listOf(HazeColorEffect.tint(diaryGlassTint.copy(alpha = 0.48f))))
+            fallbackColorEffect(HazeColorEffect.tint(diaryGlassTint))
+        }
+    }
     val diaryContext = LocalContext.current
     val highlightsTitle = "Highlights"
     val feedbackView = LocalView.current
@@ -1872,6 +1915,15 @@ private fun DiaryScreen(
 
 @Composable
 private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: () -> Unit) {
+    val detailHaze = rememberHazeState()
+    val detailTint = frostedSurfaceColor()
+    val detailStyle = remember(detailTint) {
+        HazeBlurStyle {
+            backgroundColor(Color(0xFF101419))
+            colorEffects(listOf(HazeColorEffect.tint(detailTint.copy(alpha = 0.50f))))
+            fallbackColorEffect(HazeColorEffect.tint(detailTint))
+        }
+    }
     val context = LocalContext.current
     val bitmap by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri) {
         value = entry.photoUri?.let { decodeMemoryPhoto(context, it, maxDimension = 2800) }
@@ -1918,6 +1970,15 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
     var date by remember(existing?.id) { mutableStateOf(existing?.memoryDate?.let { displayHaliMeoDate(it) } ?: displayHaliMeoDate(java.time.LocalDate.now().toString())) }
     var photoUri by remember(existing?.id) { mutableStateOf(existing?.photoUri) }
     val context = LocalContext.current
+    val editHaze = rememberHazeState()
+    val editGlassTint = frostedSurfaceColor()
+    val editGlassStyle = remember(editGlassTint) {
+        HazeBlurStyle {
+            backgroundColor(Color(0xFF101419))
+            colorEffects(listOf(HazeColorEffect.tint(editGlassTint.copy(alpha = 0.48f))))
+            fallbackColorEffect(HazeColorEffect.tint(editGlassTint))
+        }
+    }
     val editScrollState = rememberScrollState()
     val editHeaderCollapsed by remember { derivedStateOf { editScrollState.value > 48 } }
     val editTitleScale by animateFloatAsState(
@@ -2073,6 +2134,15 @@ private fun AnimatedPageTitle(
 
 @Composable
 private fun TripsScreen(onOpenMonaco: () -> Unit) {
+    val tripsHaze = rememberHazeState()
+    val tripsGlassTint = frostedSurfaceColor()
+    val tripsGlassStyle = remember(tripsGlassTint) {
+        HazeBlurStyle {
+            backgroundColor(Color(0xFF101419))
+            colorEffects(listOf(HazeColorEffect.tint(tripsGlassTint.copy(alpha = 0.48f))))
+            fallbackColorEffect(HazeColorEffect.tint(tripsGlassTint))
+        }
+    }
     val tripsScrollState = rememberScrollState()
     val tripsHeaderCollapsed by remember { derivedStateOf { tripsScrollState.value > 48 } }
     val tripsTitleScale by animateFloatAsState(
