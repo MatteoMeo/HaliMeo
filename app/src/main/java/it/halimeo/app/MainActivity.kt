@@ -2547,7 +2547,7 @@ private fun DiaryScreen(
 private fun SocialMemoryPost(
     entry: DiaryEntry, authorName: String, photo: android.graphics.Bitmap?, expanded: Boolean,
     onOpen: () -> Unit, onToggleFavorite: () -> Unit, onToggleCaption: () -> Unit,
-    onEdit: () -> Unit, onDelete: () -> Unit
+    onEdit: () -> Unit, onDelete: () -> Unit, showManagement: Boolean = true
 ) {
     val accent = MaterialTheme.colorScheme.primary
     val initials = authorName.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
@@ -2618,7 +2618,7 @@ private fun SocialMemoryPost(
             }
             Text(dateLabel.uppercase(), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                 style = MaterialTheme.typography.labelSmall, letterSpacing = 0.8.sp)
-            if (expanded) {
+            if (expanded && showManagement) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f), Modifier.padding(top = 5.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onEdit) { Icon(Icons.Default.Edit, null, Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text("Modifica") }
@@ -2671,7 +2671,8 @@ private fun MemoryDetailScreen(
             onToggleFavorite = onToggleFavorite,
             onToggleCaption = {},
             onEdit = onEdit,
-            onDelete = {}
+            onDelete = {},
+            showManagement = false
         )
         Spacer(Modifier.height(100.dp))
     }
