@@ -370,14 +370,6 @@ class MainActivity:ComponentActivity() {
         super.onCreate(savedInstanceState)
         ApiClient.initialize(applicationContext)
         SyncScheduler.schedule(this)
-        if (BuildConfig.DEBUG) {
-            // Debug-only frame diagnostics: no per-frame logging in release builds.
-            frameStats = JankStats.createAndTrack(window) { frame ->
-                if (frame.isJank) {
-                    android.util.Log.d("HaliMeoFrames", "Janky frame: ${frame.frameDurationUiNanos / 1_000_000} ms")
-                }
-            }
-        }
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         window.statusBarColor = android.graphics.Color.TRANSPARENT
@@ -389,6 +381,27 @@ class MainActivity:ComponentActivity() {
         // switch dynamically between 120/96/90/60Hz based on content and power.
         lastSyncAtState.value = getSharedPreferences("halimeo_preferences", MODE_PRIVATE).getLong("last_sync_at", 0L)
         setContent { HaliMeoTheme { HaliMeoRoot() } }
+
+        if (BuildConfig.DEBUG) {
+            // Wait until Android has created the window decor before attaching JankStats.
+            // Keep diagnostics best-effort: they must never prevent the app from launching.
+            window.decorView.post {
+                if (!isFinishing && !isDestroyed && frameStats == null) {
+                    frameStats = runCatching {
+                        JankStats.createAndTrack(window) { frame ->
+                            if (frame.isJank) {
+                                android.util.Log.d(
+                                    "HaliMeoFrames",
+                                    "Janky frame: ${frame.frameDurationUiNanos / 1_000_000} ms"
+                                )
+                            }
+                        }
+                    }.onFailure { error ->
+                        android.util.Log.w("HaliMeoFrames", "Unable to start frame diagnostics", error)
+                    }.getOrNull()
+                }
+            }
+        }
     }
 
     override fun onDestroy() {
