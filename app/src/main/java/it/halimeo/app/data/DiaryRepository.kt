@@ -71,16 +71,23 @@ class DiaryRepository(context: Context) {
         val photosToDownload = mutableSetOf<String>()
         for (dto in response.changes) {
             val local = dao.get(dto.id)
-            if (local != null && local.updatedAt > dto.updatedAt) continue
+            val localTextIsNewer = local != null && local.updatedAt > dto.updatedAt
             val remotePhotoIsNewer = dto.photoUpdatedAt > (local?.photoUpdatedAt ?: 0L)
+            if (localTextIsNewer && !remotePhotoIsNewer) continue
             val preserveLocalPhoto = local != null && !remotePhotoIsNewer
             if (remotePhotoIsNewer && dto.photoDeletedAt == null) photosToDownload += dto.id
-            dao.upsert(dto.toEntity().copy(
+            val merged = if (localTextIsNewer && local != null) local.copy(
+                photoUri = if (preserveLocalPhoto) local.photoUri else null,
+                photoUpdatedAt = maxOf(dto.photoUpdatedAt, local.photoUpdatedAt),
+                photoDeletedAt = if (remotePhotoIsNewer) dto.photoDeletedAt else local.photoDeletedAt,
+                photoSyncState = if (preserveLocalPhoto) local.photoSyncState else "PENDING"
+            ) else dto.toEntity().copy(
                 photoUri = if (preserveLocalPhoto) local?.photoUri else null,
                 photoUpdatedAt = maxOf(dto.photoUpdatedAt, local?.photoUpdatedAt ?: 0L),
                 photoDeletedAt = if (remotePhotoIsNewer) dto.photoDeletedAt else local?.photoDeletedAt,
                 photoSyncState = if (preserveLocalPhoto) local?.photoSyncState ?: "SYNCED" else "PENDING"
-            ))
+            )
+            dao.upsert(merged)
         }
         pending.forEach { entry ->
             val remote = remoteById[entry.id]
