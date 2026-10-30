@@ -557,7 +557,7 @@ class MainActivity:ComponentActivity() {
                     key = { it }
                 ) { page ->
                     when (page) {
-                        0 -> DiaryScreen(entries, "Il vostro diario",
+                        0 -> DiaryScreen(entries,
                             { editing = it; nav.navigate("edit") },
                             { entry -> activity.lifecycleScope.launch { repo.toggleFavorite(entry.id) } },
                             { entry -> activity.lifecycleScope.launch { repo.delete(entry.id) } },
@@ -1975,7 +1975,6 @@ private fun categoryIcon(category: String): androidx.compose.ui.graphics.vector.
 @Composable
 private fun DiaryScreen(
     entries: List<DiaryEntry>,
-    authorName: String,
     onEdit: (DiaryEntry) -> Unit,
     onToggleFavorite: (DiaryEntry) -> Unit,
     onDelete: (DiaryEntry) -> Unit,
@@ -2356,35 +2355,15 @@ private fun DiaryScreen(
                         }
                     itemsIndexed(filtered, key = { _, entry -> entry.id }, contentType = { _, _ -> "diary_entry" }) { _, entry ->
                         val expanded = entry.id in expandedEntryIds
+                        val accent = MaterialTheme.colorScheme.primary
                         val photoContext = LocalContext.current
-                        val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext) {
-                            value = entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 1080) }
+                        val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext, expanded) {
+                            // Decode only after opening a card; eagerly decoding every visible photo
+                            // causes avoidable IO, allocations and frame drops while scrolling.
+                            value = if (expanded) entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 1600) } else null
                         }
-                        Column(Modifier.animateItem()) {
-                            SocialMemoryPost(
-                                entry = entry,
-                                authorName = authorName,
-                                photo = entryPhoto,
-                                expanded = expanded,
-                                onOpen = { onOpenMemory(entry) },
-                                onToggleFavorite = { onToggleFavorite(entry) },
-                                onToggleCaption = { expandedEntryIds = if (expanded) expandedEntryIds - entry.id else expandedEntryIds + entry.id },
-                                onEdit = { onEdit(entry) },
-                                onDelete = { pendingDelete = entry }
-                            )
-                        }
-                    }
-                        SocialMemoryPost(
-                            entry = entry,
-                            authorName = authorName,
-                            photo = entryPhoto,
-                            expanded = expanded,
-                            onOpen = { onOpenMemory(entry) },
-                            onToggleFavorite = { onToggleFavorite(entry) },
-                            onToggleCaption = { expandedEntryIds = if (expanded) expandedEntryIds - entry.id else expandedEntryIds + entry.id },
-                            onEdit = { onEdit(entry) },
-                            onDelete = { pendingDelete = entry }
-                        )
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
                                 // Keep list movement attached to each stable diary entry while filtering or deleting.
                                 .animateItem(
                                     fadeInSpec = if (reduceAnimationsState.value) tween(0) else tween(150, easing = OneUiMotionEasing),
