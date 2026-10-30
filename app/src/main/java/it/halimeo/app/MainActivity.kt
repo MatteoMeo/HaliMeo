@@ -2183,7 +2183,7 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
         Surface(
             modifier = Modifier.fillMaxWidth()
                  .graphicsLayer { scaleX = tripScale; scaleY = tripScale }
-                
+                .hazeBlur(HazeInput.Sources(tripsHaze), tripsGlassStyle)
                 .clip(RoundedCornerShape(26.dp))
                 .clickable(interactionSource = tripInteraction, indication = null, onClick = onOpenMonaco),
             shape = RoundedCornerShape(26.dp),
