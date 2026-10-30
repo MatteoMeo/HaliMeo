@@ -129,26 +129,42 @@ private suspend fun decodeMemoryPhoto(context: android.content.Context, uri: Str
 }
 
 private fun applyLauncherIcon(context: android.content.Context, variant: String) {
+    // Alias class names come from the manifest namespace, not applicationId.
+    // This matters for debug builds, whose applicationId has the ".debug" suffix.
     val aliases = linkedMapOf(
-        "ocean" to "${context.packageName}.LauncherOcean",
-        "lavender" to "${context.packageName}.LauncherLavender",
-        "mint" to "${context.packageName}.LauncherMint",
-        "rose" to "${context.packageName}.LauncherRose"
+        "ocean" to "it.halimeo.app.LauncherOcean",
+        "lavender" to "it.halimeo.app.LauncherLavender",
+        "mint" to "it.halimeo.app.LauncherMint",
+        "rose" to "it.halimeo.app.LauncherRose"
     )
     val selected = if (variant in aliases) variant else "ocean"
     val packageManager = context.packageManager
-    // Enable the destination first so the app never temporarily loses its launcher entry.
-    packageManager.setComponentEnabledSetting(
-        android.content.ComponentName(context, aliases.getValue(selected)),
-        android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-        android.content.pm.PackageManager.DONT_KILL_APP
-    )
-    aliases.filterKeys { it != selected }.values.forEach { className ->
-        packageManager.setComponentEnabledSetting(
-            android.content.ComponentName(context, className),
-            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+    val changes = aliases.map { (key, className) ->
+        android.content.pm.PackageManager.ComponentEnabledSetting(
+            android.content.ComponentName(context.packageName, className),
+            if (key == selected) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
             android.content.pm.PackageManager.DONT_KILL_APP
         )
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        // Android 13+: apply the alias switch atomically.
+        packageManager.setComponentEnabledSettings(changes)
+    } else {
+        // Older Android versions: enable the new entry before disabling the others.
+        val target = changes.first { it.componentName.className == aliases.getValue(selected) }
+        packageManager.setComponentEnabledSetting(
+            target.componentName,
+            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+            android.content.pm.PackageManager.DONT_KILL_APP
+        )
+        changes.filter { it.componentName != target.componentName }.forEach { setting ->
+            packageManager.setComponentEnabledSetting(
+                setting.componentName,
+                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                android.content.pm.PackageManager.DONT_KILL_APP
+            )
+        }
     }
 }
 
