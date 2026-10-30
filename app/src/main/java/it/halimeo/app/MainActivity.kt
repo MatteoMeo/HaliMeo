@@ -1072,8 +1072,9 @@ private fun SettingsScreen(
                                         profilePrefs.edit().putString("app_icon_variant", key).apply()
                                         Toast.makeText(ctx, "Icona $label selezionata", Toast.LENGTH_SHORT).show()
                                     }
-                                    .onFailure {
-                                        Toast.makeText(ctx, "Cambio icona non riuscito: ${it.localizedMessage ?: it.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+                                    .onFailure { error ->
+                                        android.util.Log.e("HaliMeoLauncher", "Cambio icona non riuscito per la variante $key", error)
+                                        Toast.makeText(ctx, "Non è stato possibile cambiare icona. Riprova.", Toast.LENGTH_LONG).show()
                                     }
                             }.padding(vertical = 6.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
