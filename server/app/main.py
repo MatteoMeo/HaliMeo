@@ -1,7 +1,7 @@
-import os, sqlite3, secrets, hashlib, time
+import os, sqlite3, secrets, hashlib, time, uuid, mimetypes
 from pathlib import Path
 from typing import Optional, List
-from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi import FastAPI, HTTPException, Depends, Header, UploadFile, File
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr, Field
 from passlib.context import CryptContext
@@ -10,6 +10,10 @@ from jose import jwt
 DATA_DIR = Path(os.getenv("HALIMEO_DATA_DIR", "/data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATA_DIR / "halimeo.sqlite3"
+PHOTO_DIR = DATA_DIR / "photos"
+PHOTO_DIR.mkdir(parents=True, exist_ok=True)
+MAX_PHOTO_BYTES = 15 * 1024 * 1024
+PHOTO_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 JWT_SECRET = os.getenv("HALIMEO_JWT_SECRET", "")
 OWNER_ID = os.getenv("HALIMEO_OWNER_USER_ID", "")
 pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -41,6 +45,13 @@ with db() as c:
     );
     CREATE INDEX IF NOT EXISTS idx_entries_updated ON entries(updated_at);
     """)
+    columns = {row[1] for row in c.execute("PRAGMA table_info(entries)").fetchall()}
+    if "photo_updated_at" not in columns:
+        c.execute("ALTER TABLE entries ADD COLUMN photo_updated_at INTEGER NOT NULL DEFAULT 0")
+    if "photo_deleted_at" not in columns:
+        c.execute("ALTER TABLE entries ADD COLUMN photo_deleted_at INTEGER")
+    if "photo_filename" not in columns:
+        c.execute("ALTER TABLE entries ADD COLUMN photo_filename TEXT")
 
 def now_ms(): return int(time.time() * 1000)
 def make_token(user):
@@ -80,6 +91,8 @@ class Entry(BaseModel):
     createdAt: int
     updatedAt: int
     deletedAt: Optional[int] = None
+    photoUpdatedAt: int = 0
+    photoDeletedAt: Optional[int] = None
 class SyncIn(BaseModel):
     changes: List[Entry] = Field(default_factory=list, max_length=500)
     lastSyncAt: Optional[int] = None
@@ -135,20 +148,73 @@ def sync(data: SyncIn, user=Depends(current_user)):
     now = now_ms()
     with db() as c:
         for e in data.changes:
-            old = c.execute("SELECT updated_at FROM entries WHERE id=?", (e.id,)).fetchone()
+            old = c.execute("SELECT updated_at,photo_updated_at,photo_deleted_at,photo_filename FROM entries WHERE id=?", (e.id,)).fetchone()
             if old and old["updated_at"] > e.updatedAt: continue
             c.execute("""
-            INSERT INTO entries(id,owner_id,title,body,category,memory_date,created_at,updated_at,deleted_at)
-            VALUES(?,?,?,?,?,?,?,?,?)
+            INSERT INTO entries(id,owner_id,title,body,category,memory_date,created_at,updated_at,deleted_at,photo_updated_at,photo_deleted_at,photo_filename)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(id) DO UPDATE SET title=excluded.title,body=excluded.body,category=excluded.category,
-            memory_date=excluded.memory_date,updated_at=excluded.updated_at,deleted_at=excluded.deleted_at
+            memory_date=excluded.memory_date,updated_at=excluded.updated_at,deleted_at=excluded.deleted_at,
+            photo_updated_at=MAX(entries.photo_updated_at,excluded.photo_updated_at),
+            photo_deleted_at=CASE WHEN excluded.photo_deleted_at IS NOT NULL AND excluded.photo_deleted_at >= entries.photo_updated_at THEN excluded.photo_deleted_at ELSE entries.photo_deleted_at END
             WHERE entries.updated_at <= excluded.updated_at
-            """, (e.id,user["id"],e.title,e.body,e.category,e.memoryDate,e.createdAt,e.updatedAt,e.deletedAt))
+            """, (e.id,user["id"],e.title,e.body,e.category,e.memoryDate,e.createdAt,e.updatedAt,e.deletedAt,e.photoUpdatedAt,e.photoDeletedAt,old["photo_filename"] if old else None))
         cursor = data.lastSyncAt or 0
         rows = c.execute("SELECT * FROM entries WHERE updated_at > ? ORDER BY updated_at ASC LIMIT 1000", (cursor,)).fetchall()
     return {"changes":[{"id":r["id"],"title":r["title"],"body":r["body"],"category":r["category"],
-      "memoryDate":r["memory_date"],"createdAt":r["created_at"],"updatedAt":r["updated_at"],"deletedAt":r["deleted_at"]} for r in rows],
+      "memoryDate":r["memory_date"],"createdAt":r["created_at"],"updatedAt":r["updated_at"],"deletedAt":r["deleted_at"],"photoUpdatedAt":r["photo_updated_at"],"photoDeletedAt":r["photo_deleted_at"]} for r in rows],
       "serverTime":now}
+
+@app.post("/v1/entries/{entry_id}/photo")
+async def upload_entry_photo(entry_id: str, photo: UploadFile = File(...), user=Depends(current_user)):
+    content_type = (photo.content_type or "").lower().split(";")[0].strip()
+    if content_type not in PHOTO_TYPES:
+        raise HTTPException(415, "Formato foto non supportato: usa JPG, PNG o WebP")
+    payload = await photo.read(MAX_PHOTO_BYTES + 1)
+    if not payload or len(payload) > MAX_PHOTO_BYTES:
+        raise HTTPException(413, "La foto deve pesare al massimo 15 MB")
+    if content_type == "image/jpeg" and not payload.startswith(b"\\xff\\xd8\\xff"):
+        raise HTTPException(400, "File JPEG non valido")
+    if content_type == "image/png" and not payload.startswith(b"\\x89PNG\\r\\n\\x1a\\n"):
+        raise HTTPException(400, "File PNG non valido")
+    if content_type == "image/webp" and not (payload.startswith(b"RIFF") and payload[8:12] == b"WEBP"):
+        raise HTTPException(400, "File WebP non valido")
+    with db() as c:
+        row = c.execute("SELECT id,photo_filename FROM entries WHERE id=?", (entry_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Ricordo non trovato")
+        filename = uuid.uuid4().hex + PHOTO_TYPES[content_type]
+        (PHOTO_DIR / filename).write_bytes(payload)
+        stamp = now_ms()
+        c.execute("UPDATE entries SET photo_filename=?,photo_updated_at=?,photo_deleted_at=NULL WHERE id=?", (filename,stamp,entry_id))
+        old_filename = row["photo_filename"]
+    if old_filename and old_filename != filename:
+        (PHOTO_DIR / old_filename).unlink(missing_ok=True)
+    return {"photoUpdatedAt": stamp, "size": len(payload), "contentType": content_type}
+
+@app.get("/v1/entries/{entry_id}/photo")
+def download_entry_photo(entry_id: str, user=Depends(current_user)):
+    with db() as c:
+        row = c.execute("SELECT photo_filename FROM entries WHERE id=?", (entry_id,)).fetchone()
+    if not row or not row["photo_filename"]:
+        raise HTTPException(404, "Foto non disponibile")
+    path = PHOTO_DIR / row["photo_filename"]
+    if not path.is_file():
+        raise HTTPException(404, "File foto non trovato sul server")
+    return FileResponse(path, media_type=mimetypes.guess_type(path.name)[0] or "application/octet-stream")
+
+@app.delete("/v1/entries/{entry_id}/photo")
+def delete_entry_photo(entry_id: str, user=Depends(current_user)):
+    stamp = now_ms()
+    with db() as c:
+        row = c.execute("SELECT photo_filename FROM entries WHERE id=?", (entry_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "Ricordo non trovato")
+        old_filename = row["photo_filename"]
+        c.execute("UPDATE entries SET photo_filename=NULL,photo_updated_at=?,photo_deleted_at=? WHERE id=?", (stamp,stamp,entry_id))
+    if old_filename:
+        (PHOTO_DIR / old_filename).unlink(missing_ok=True)
+    return {"photoDeletedAt": stamp}
 
 @app.get("/v1/admin/backup")
 def server_backup(user=Depends(current_user)):
