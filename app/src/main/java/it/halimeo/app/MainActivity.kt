@@ -2003,6 +2003,7 @@ private fun DiaryScreen(
     var query by remember { mutableStateOf("") }
     var searchExpanded by remember { mutableStateOf(false) }
     var favoritesOnly by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
     // Derive favourites from the same Room emission as the diary list. A second Flow can briefly lag behind entries and leave the filter empty during updates.
     val favoriteIds = remember(entries) { entries.asSequence().filter { it.isFavorite }.map { it.id }.toSet() }
     var selectedDate by remember { mutableStateOf<String?>(null) }
@@ -2093,11 +2094,15 @@ private fun DiaryScreen(
         animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "diaryHeaderTitleScale"
     )
-    val filtered = remember(entries, query, selectedDate, favoritesOnly, favoriteIds) {
+    val categories = remember(entries) {
+        entries.map { it.category.trim() }.filter { it.isNotBlank() }.distinct().sorted()
+    }
+    val filtered = remember(entries, query, selectedDate, favoritesOnly, favoriteIds, selectedCategory) {
         entries.asSequence().filter { entry ->
             (entry.title.contains(query, true) || entry.body.contains(query, true)) &&
                 (selectedDate == null || entry.memoryDate == selectedDate) &&
-                (!favoritesOnly || entry.id in favoriteIds)
+                (!favoritesOnly || entry.id in favoriteIds) &&
+                (selectedCategory == null || entry.category == selectedCategory)
         }.sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }.toList()
     }
 
@@ -2265,23 +2270,39 @@ private fun DiaryScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically
             ) {
                 FilterChip(
-                    selected = !favoritesOnly, onClick = { favoritesOnly = false },
-                    shape = RoundedCornerShape(50),
+                    selected = !favoritesOnly && selectedCategory == null,
+                    onClick = { favoritesOnly = false; selectedCategory = null },
+                    shape = RoundedCornerShape(18.dp),
                     label = { Text("Tutti", maxLines = 1) },
                     leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    colors = FilterChipDefaults.filterChipColors(containerColor = frostedSurfaceColor(), labelColor = MaterialTheme.colorScheme.onSurfaceVariant, iconColor = MaterialTheme.colorScheme.onSurfaceVariant, selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f), selectedLabelColor = MaterialTheme.colorScheme.onSurface, selectedLeadingIconColor = MaterialTheme.colorScheme.primary)
+                    colors = FilterChipDefaults.filterChipColors(containerColor = frostedSurfaceColor(), labelColor = MaterialTheme.colorScheme.onSurfaceVariant, iconColor = MaterialTheme.colorScheme.onSurfaceVariant, selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.20f), selectedLabelColor = MaterialTheme.colorScheme.onSurface, selectedLeadingIconColor = MaterialTheme.colorScheme.primary)
                 )
                 FilterChip(
-                    selected = favoritesOnly, onClick = { favoritesOnly = true },
-                    shape = RoundedCornerShape(50),
+                    selected = favoritesOnly,
+                    onClick = { favoritesOnly = true; selectedCategory = null },
+                    shape = RoundedCornerShape(18.dp),
                     label = { Text("Preferiti", maxLines = 1) },
-                    leadingIcon = { Icon(if (favoritesOnly) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                    leadingIcon = { Icon(Icons.Default.Bookmark, contentDescription = null, modifier = Modifier.size(16.dp)) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
+                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
                         selectedLabelColor = MaterialTheme.colorScheme.onSurface, selectedLeadingIconColor = MaterialTheme.colorScheme.primary,
                         containerColor = frostedSurfaceColor(), labelColor = MaterialTheme.colorScheme.onSurfaceVariant, iconColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
+                categories.forEach { category ->
+                    FilterChip(
+                        selected = selectedCategory == category,
+                        onClick = { selectedCategory = if (selectedCategory == category) null else category; favoritesOnly = false },
+                        shape = RoundedCornerShape(18.dp),
+                        label = { Text(category, maxLines = 1) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
+                            selectedLabelColor = MaterialTheme.colorScheme.onSurface,
+                            containerColor = frostedSurfaceColor(),
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                }
             }
             IconButton(onClick = {
                 albumsBrowserOpen = true
@@ -2357,7 +2378,7 @@ private fun DiaryScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(top = 4.dp, bottom = 100.dp)
                 ) {
-                    if (!favoritesOnly && query.isBlank()) {
+                    if (!favoritesOnly && selectedCategory == null && query.isBlank()) {
                         if (photoHighlights.isNotEmpty()) {
                             item(key = "memory_highlights") {
                                 Column(verticalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.padding(bottom = 4.dp)) {
@@ -2722,87 +2743,145 @@ private fun SocialMemoryPost(
     val initials = authorName.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
         .take(2).mapNotNull { it.firstOrNull()?.uppercaseChar() }.joinToString("").ifBlank { "H" }
     val dateLabel = displayHaliMeoDate(entry.memoryDate)
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
-        .background(frostedSurfaceStrongColor())
-        .border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp))) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(42.dp).clip(CircleShape)
-                .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.30f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.22f))))
-                .border(1.dp, accent.copy(alpha = 0.35f), CircleShape), contentAlignment = Alignment.Center) {
+    val cardShape = RoundedCornerShape(28.dp)
+    Column(
+        Modifier.fillMaxWidth().clip(cardShape)
+            .background(frostedSurfaceStrongColor())
+            .border(1.dp, frostedEdgeColor(), cardShape)
+    ) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(44.dp).clip(CircleShape)
+                    .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.28f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.22f))))
+                    .border(1.dp, accent.copy(alpha = 0.32f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
                 Text(initials, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.width(11.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(authorName.ifBlank { "HaliMeo" }, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(dateLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
                     Text("·", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(entry.category, color = accent, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
                 }
             }
-            if (entry.syncState != "SYNCED" || entry.photoSyncState != "SYNCED")
+            if (entry.syncState != "SYNCED" || entry.photoSyncState != "SYNCED") {
                 Icon(Icons.Default.CloudUpload, contentDescription = "In attesa di sincronizzazione", tint = accent, modifier = Modifier.size(19.dp))
-            else Icon(Icons.Default.MoreHoriz, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
+            } else {
+                Icon(Icons.Default.Lock, contentDescription = "Ricordo privato condiviso", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f), modifier = Modifier.size(17.dp))
+            }
         }
-        Text(entry.title, Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
-            color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleLarge.copy(letterSpacing = (-0.35).sp),
-            fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+
+        // Let the photograph lead the post: no inset card inside another card.
         if (photo != null) {
-            Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp).clip(RoundedCornerShape(22.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
-                .pointerInput(entry.id) { detectTapGestures(onTap = { onOpen() }, onDoubleTap = { onToggleFavorite() }) }) {
-                Image(photo.asImageBitmap(), contentDescription = "Foto del ricordo: ${entry.title}",
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)), contentScale = ContentScale.FillWidth)
+            Box(
+                Modifier.fillMaxWidth().heightIn(max = 440.dp)
+                    .pointerInput(entry.id) {
+                        detectTapGestures(onTap = { onOpen() }, onDoubleTap = { if (socialEnabled) onToggleLike() })
+                    }
+            ) {
+                Image(
+                    bitmap = photo.asImageBitmap(),
+                    contentDescription = "Foto del ricordo: ${entry.title}",
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp),
+                    contentScale = ContentScale.FillWidth
+                )
+                if (likedByMe) {
+                    Surface(
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(14.dp),
+                        shape = CircleShape,
+                        color = Color.Black.copy(alpha = 0.48f)
+                    ) {
+                        Icon(Icons.Default.Favorite, contentDescription = "Ti piace", tint = Color.White, modifier = Modifier.padding(9.dp).size(18.dp))
+                    }
+                }
             }
         } else {
-            Surface(Modifier.fillMaxWidth().padding(horizontal = 10.dp).clip(RoundedCornerShape(22.dp)).clickable(onClick = onOpen),
-                shape = RoundedCornerShape(22.dp), color = accent.copy(alpha = 0.10f)) {
-                Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Surface(
+                Modifier.fillMaxWidth().heightIn(min = 148.dp).clickable(onClick = onOpen),
+                shape = RoundedCornerShape(0.dp),
+                color = accent.copy(alpha = 0.09f)
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = accent, modifier = Modifier.size(30.dp))
                     Text("Un momento da ricordare", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onToggleFavorite, modifier = Modifier.size(44.dp)) {
-                Icon(if (entry.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = if (entry.isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti",
-                    tint = if (entry.isFavorite) Color(0xFFE66F8B) else MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(25.dp))
-            }
-            Text(if (entry.isFavorite) "Preferito" else "Preferiti",
-                color = if (entry.isFavorite) Color(0xFFE66F8B) else MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.labelMedium)
-            Spacer(Modifier.width(12.dp))
-            IconButton(onClick = onToggleLike, enabled = socialEnabled, modifier = Modifier.size(40.dp)) {
-                Icon(if (likedByMe) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+
+        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp)) {
+            Text(
+                entry.title,
+                Modifier.fillMaxWidth().clickable(onClick = onOpen),
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleLarge.copy(letterSpacing = (-0.35).sp),
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onToggleLike, enabled = socialEnabled, modifier = Modifier.size(44.dp)) {
+                Icon(
+                    if (likedByMe) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = if (likedByMe) "Rimuovi mi piace" else "Mi piace",
-                    tint = if (likedByMe) Color(0xFFE66F8B) else MaterialTheme.colorScheme.onSurfaceVariant)
+                    tint = if (likedByMe) Color(0xFFE66F8B) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(23.dp)
+                )
             }
             Text(likeCount.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
-            IconButton(onClick = onComments, enabled = socialEnabled, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Commenti", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            IconButton(onClick = onComments, enabled = socialEnabled, modifier = Modifier.padding(start = 8.dp).size(44.dp)) {
+                Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Commenti", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(21.dp))
             }
             Text(commentCount.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
-            IconButton(onClick = onAddToAlbum, enabled = socialEnabled, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Default.CollectionsBookmark, contentDescription = "Aggiungi a un album", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            IconButton(onClick = onAddToAlbum, enabled = socialEnabled, modifier = Modifier.padding(start = 8.dp).size(44.dp)) {
+                Icon(Icons.Default.CollectionsBookmark, contentDescription = "Aggiungi a un album", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(21.dp))
             }
             Spacer(Modifier.weight(1f))
-            TextButton(onClick = onOpen) {
-                Text("Apri ricordo", color = accent, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.width(4.dp))
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp), tint = accent)
+            IconButton(onClick = onToggleFavorite, modifier = Modifier.size(44.dp)) {
+                Icon(
+                    if (entry.isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                    contentDescription = if (entry.isFavorite) "Rimuovi dai preferiti" else "Salva nei preferiti",
+                    tint = if (entry.isFavorite) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
+                )
             }
         }
+
         Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(entry.body, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
-                maxLines = if (expanded) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis)
-            if (entry.body.length > 140) TextButton(onClick = onToggleCaption, contentPadding = PaddingValues(0.dp), modifier = Modifier.height(30.dp)) {
-                Text(if (expanded) "Mostra meno" else "Leggi tutto", color = accent, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                entry.body,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
+                maxLines = if (expanded) Int.MAX_VALUE else 3,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (entry.body.length > 140) {
+                TextButton(onClick = onToggleCaption, contentPadding = PaddingValues(0.dp), modifier = Modifier.height(30.dp)) {
+                    Text(if (expanded) "Mostra meno" else "Leggi tutto", color = accent, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                }
             }
-            Text(dateLabel.uppercase(), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
-                style = MaterialTheme.typography.labelSmall, letterSpacing = 0.8.sp)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(dateLabel, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f), style = MaterialTheme.typography.labelSmall)
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = onOpen, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp), modifier = Modifier.height(32.dp)) {
+                    Text("Apri ricordo", color = accent, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.width(4.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp), tint = accent)
+                }
+            }
             if (expanded && showManagement) {
-                HorizontalDivider(modifier = Modifier.padding(top = 5.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f))
+                HorizontalDivider(modifier = Modifier.padding(top = 5.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.20f))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onEdit) { Icon(Icons.Default.Edit, null, Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text("Modifica") }
                     TextButton(onClick = onDelete) { Icon(Icons.Default.DeleteOutline, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text("Elimina", color = MaterialTheme.colorScheme.error) }
