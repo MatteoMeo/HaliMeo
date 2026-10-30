@@ -899,7 +899,7 @@ private fun SettingsScreen(
 ) {
     val diaryEntries by repo.entries.collectAsState(initial = emptyList())
     val settingsFeedbackView = LocalView.current
-    val pendingSyncCount = remember(diaryEntries) { diaryEntries.count { it.syncState != "SYNCED" } }
+    val pendingSyncCount = remember(diaryEntries) { diaryEntries.count { it.syncState != "SYNCED" || it.photoSyncState != "SYNCED" } }
     val lastSyncAt by lastSyncAtState
     var isOwner by remember { mutableStateOf<Boolean?>(null) }
     var inviteCode by remember { mutableStateOf("") }
@@ -2263,8 +2263,8 @@ private fun DiaryScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Card(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)),
-                        shape = RoundedCornerShape(28.dp),
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
+                        shape = RoundedCornerShape(24.dp),
                         colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
                     ) {
                         Column(
@@ -2391,20 +2391,20 @@ private fun DiaryScreen(
                                 // Clip the whole card layer before drawing the outline. This prevents
                                 // the rectangular layer from leaking past rounded glass corners.
                                 
-                                .shadow(9.dp, MaterialTheme.shapes.large, ambientColor = accent.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.22f))
+                                .shadow(6.dp, RoundedCornerShape(24.dp), ambientColor = accent.copy(alpha = 0.08f), spotColor = Color.Black.copy(alpha = 0.16f))
                                 // Repeated scrolling cards use translucent surfaces rather than
                                 // per-item live blur; reserve Haze for the navigation and hero layers.
                                 .animateContentSize(if (reduceAnimationsState.value) tween(0) else tween(210, easing = OneUiMotionEasing))
-                                .clip(MaterialTheme.shapes.large)
-                                .border(1.dp, frostedEdgeColor().copy(alpha = 0.9f), MaterialTheme.shapes.large)
+                                .clip(RoundedCornerShape(24.dp))
+                                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp))
                                 .clickable(
                                     onClick = {
                                         feedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                         expandedEntryIds = if (entry.id in expandedEntryIds) expandedEntryIds - entry.id else expandedEntryIds + entry.id
                                     }
                                 ),
-                            shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor()),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor()),
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {
                             Box {
@@ -2456,7 +2456,7 @@ private fun DiaryScreen(
                                             tint = if (isFavorite) accent else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
-                                    if (entry.syncState != "SYNCED") {
+                                    if (entry.syncState != "SYNCED" || entry.photoSyncState != "SYNCED") {
                                         Surface(
                                             color = Color(0xFFFFD479).copy(alpha = 0.12f),
                                             shape = RoundedCornerShape(50)
@@ -2562,9 +2562,9 @@ private fun SocialMemoryPost(
     val initials = authorName.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
         .take(2).mapNotNull { it.firstOrNull()?.uppercaseChar() }.joinToString("").ifBlank { "H" }
     val dateLabel = displayHaliMeoDate(entry.memoryDate)
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp))
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
         .background(frostedSurfaceStrongColor())
-        .border(1.dp, frostedEdgeColor(), RoundedCornerShape(28.dp))) {
+        .border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp))) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(42.dp).clip(CircleShape)
                 .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.30f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.22f))))
