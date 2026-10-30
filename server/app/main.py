@@ -123,6 +123,7 @@ class SyncIn(BaseModel):
 
 class CommentIn(BaseModel):
     body: str = Field(min_length=1, max_length=4000)
+    clientId: Optional[str] = Field(default=None, min_length=1, max_length=80)
 
 class AlbumIn(BaseModel):
     title: str = Field(min_length=1, max_length=100)
@@ -262,15 +263,22 @@ def list_comments(entry_id: str, user=Depends(current_user)):
 @app.post("/v1/entries/{entry_id}/comments")
 def create_comment(entry_id: str, data: CommentIn, user=Depends(current_user)):
     now=now_ms()
-    comment_id=uuid.uuid4().hex
+    comment_id=data.clientId or uuid.uuid4().hex
     body=data.body.strip()
     if not body: raise HTTPException(422,"Il commento non può essere vuoto")
     with db() as c:
         require_entry(c, entry_id)
-        c.execute("INSERT INTO entry_comments(id,entry_id,user_id,body,created_at,updated_at) VALUES(?,?,?,?,?,?)",
+        existing = c.execute("SELECT entry_id,user_id FROM entry_comments WHERE id=?", (comment_id,)).fetchone()
+        if existing and (existing["entry_id"] != entry_id or existing["user_id"] != user["id"]):
+            raise HTTPException(409,"Identificativo commento già utilizzato")
+        c.execute("INSERT OR IGNORE INTO entry_comments(id,entry_id,user_id,body,created_at,updated_at) VALUES(?,?,?,?,?,?)",
                   (comment_id,entry_id,user["id"],body,now,now))
-    return {"id":comment_id,"entryId":entry_id,"body":body,"userId":user["id"],
-            "authorName":user["display_name"],"createdAt":now,"updatedAt":now}
+        row = c.execute("""
+          SELECT cm.id,cm.entry_id,cm.body,cm.user_id,cm.created_at,cm.updated_at,u.display_name
+          FROM entry_comments cm JOIN users u ON u.id=cm.user_id WHERE cm.id=?
+        """, (comment_id,)).fetchone()
+    return {"id":row["id"],"entryId":row["entry_id"],"body":row["body"],"userId":row["user_id"],
+            "authorName":row["display_name"],"createdAt":row["created_at"],"updatedAt":row["updated_at"]}
 
 @app.delete("/v1/comments/{comment_id}")
 def delete_comment(comment_id: str, user=Depends(current_user)):
