@@ -717,6 +717,15 @@ private fun SettingsScreen(
         }
     }
 
+    val settingsHaze = rememberHazeState()
+    val settingsGlassTint = frostedSurfaceColor()
+    val settingsGlassStyle = remember(settingsGlassTint) {
+        HazeBlurStyle {
+            backgroundColor(Color(0xFF101419))
+            colorEffects(listOf(HazeColorEffect.tint(settingsGlassTint.copy(alpha = 0.48f))))
+            fallbackColorEffect(HazeColorEffect.tint(settingsGlassTint))
+        }
+    }
     val settingsScrollState = rememberScrollState()
     var settingsHeaderCollapsed by remember { mutableStateOf(false) }
     LaunchedEffect(settingsScrollState) {
@@ -731,7 +740,7 @@ private fun SettingsScreen(
         animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "settingsTitleScale"
     )
-    Column(Modifier.fillMaxSize().background(Color.Transparent)) {
+    Column(Modifier.fillMaxSize().background(Color.Transparent).hazeSource(settingsHaze)) {
         // Keep the settings title pinned while it scales down as the options list scrolls.
         Column(
             Modifier.fillMaxWidth().padding(start = 20.dp, top = 8.dp, end = 20.dp, bottom = 6.dp),
@@ -766,7 +775,7 @@ private fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
         Card(
-            modifier = Modifier.fillMaxWidth().shadow(6.dp, RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().shadow(6.dp, RoundedCornerShape(24.dp)).hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle).clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
@@ -780,7 +789,11 @@ private fun SettingsScreen(
                     Spacer(Modifier.weight(1f))
                     Icon(if ("profile" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("profile" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                if ("profile" in expandedSettingsSections) {
+                AnimatedVisibility(
+                    visible = "profile" in expandedSettingsSections,
+                    enter = fadeIn(tween(150, easing = OneUiMotionEasing)) + expandVertically(animationSpec = spring(dampingRatio = 0.9f, stiffness = 420f)),
+                    exit = fadeOut(tween(100)) + shrinkVertically(animationSpec = tween(150, easing = OneUiMotionEasing))
+                ) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Account: $displayName", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
                 Text("I ricordi vengono salvati sul dispositivo prima della sincronizzazione.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
@@ -836,7 +849,7 @@ private fun SettingsScreen(
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth().border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle).clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
@@ -850,7 +863,7 @@ private fun SettingsScreen(
                     Spacer(Modifier.weight(1f))
                     Icon(if ("appearance" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("appearance" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "appearance" in expandedSettingsSections, enter = fadeIn(tween(75)) + expandVertically(tween(110)), exit = fadeOut(tween(45)) + shrinkVertically(tween(85))) {
+                AnimatedVisibility(visible = "appearance" in expandedSettingsSections, enter = fadeIn(tween(150, easing = OneUiMotionEasing)) + expandVertically(animationSpec = spring(dampingRatio = 0.9f, stiffness = 420f)), exit = fadeOut(tween(100)) + shrinkVertically(animationSpec = tween(150, easing = OneUiMotionEasing))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Tema scuro AMOLED sempre attivo, con accento dinamico.", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
                 Text("Anteprima in tempo reale", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -1344,6 +1357,15 @@ private fun DiaryScreen(
     var expandedEntryIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     val feedbackView = LocalView.current
     val diaryContext = LocalContext.current
+    val diaryHaze = rememberHazeState()
+    val diaryGlassTint = frostedSurfaceColor()
+    val diaryGlassStyle = remember(diaryGlassTint) {
+        HazeBlurStyle {
+            backgroundColor(Color(0xFF101419))
+            colorEffects(listOf(HazeColorEffect.tint(diaryGlassTint.copy(alpha = 0.48f))))
+            fallbackColorEffect(HazeColorEffect.tint(diaryGlassTint))
+        }
+    }
     val listState = rememberLazyListState()
     // Cache diary header data instead of sorting favourites and parsing special dates
     // again whenever Compose recomposes the LazyColumn.
@@ -1408,6 +1430,7 @@ private fun DiaryScreen(
         Modifier
             .fillMaxSize()
             .background(Color.Transparent)
+            .hazeSource(diaryHaze)
             .padding(horizontal = 16.dp)
     ) {
         Spacer(Modifier.height(if (headerCollapsed) 2.dp else 8.dp))
@@ -1666,9 +1689,11 @@ private fun DiaryScreen(
                                 )
                                 // Clip the whole card layer before drawing the outline. This prevents
                                 // the rectangular layer from leaking past rounded glass corners.
+                                .hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle)
                                 .clip(MaterialTheme.shapes.large)
                                 .border(1.dp, frostedEdgeColor().copy(alpha = 0.9f), MaterialTheme.shapes.large)
                                 .clickable(
+                                    indication = androidx.compose.material.ripple.rememberRipple(bounded = true, radius = androidx.compose.ui.unit.Dp.Unspecified),
                                     onClick = {
                                         feedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                         expandedEntryIds = if (entry.id in expandedEntryIds) expandedEntryIds - entry.id else expandedEntryIds + entry.id
