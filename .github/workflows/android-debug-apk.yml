@@ -137,82 +137,15 @@ jobs:
           cp "$SIGNED_APK" "HaliMeo-${HALIMEO_VERSION_NAME}-build${HALIMEO_VERSION_CODE}-debug.apk"
           echo "Firma verificata: l’APK usa la chiave Alpha persistente."
 
-      - name: Genera il changelog in italiano
+      - name: Genera il changelog in italiano dalle modifiche reali
         env:
           EVENT_NAME: ${{ github.event_name }}
           BEFORE_SHA: ${{ github.event.before }}
           CURRENT_SHA: ${{ github.sha }}
           BUILD_NUMBER: ${{ github.run_number }}
           VERSION_NAME: 1.0.${{ github.run_number }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          {
-            echo "# 🌙 HaliMeo — Alpha ${VERSION_NAME}"
-            echo
-            echo "> **Build ${BUILD_NUMBER}** · Canale **Alpha** · Android"
-            echo
-            echo "Una nuova tappa di HaliMeo, pronta per essere provata."
-            echo
-            echo "---"
-            echo
-            echo "## ✨ Modifiche incluse"
-            echo
-
-            LAST_ALPHA_TAG="$(git tag --list 'alpha-build-*' --sort=-version:refname | head -n 1)"
-            if [ -n "$LAST_ALPHA_TAG" ]; then
-              RANGE="${LAST_ALPHA_TAG}..${CURRENT_SHA}"
-            elif [ "$EVENT_NAME" = "push" ] && [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
-              RANGE="${BEFORE_SHA}..${CURRENT_SHA}"
-            else
-              RANGE="-5 ${CURRENT_SHA}"
-            fi
-            SUBJECTS="$(git log --format='%s' $RANGE)"
-            SUMMARY_COUNT=0
-
-            if printf '%s\n' "$SUBJECTS" | grep -Fq 'Stabilize live blur overlays and restore finger-following navigation pill'; then
-              echo "- **Navbar e tocchi:** ripristinata la pillola che segue il dito durante lo scorrimento tra Diario, Viaggi e Impostazioni. Ridotta la complessità del blur e collegato l'interruttore di disattivazione allo stato reale dell'effetto. Il pulsante + usa un livello di blur separato per non interferire con la barra."
-              SUMMARY_COUNT=$((SUMMARY_COUNT + 1))
-            fi
-            if printf '%s\n' "$SUBJECTS" | grep -Fq 'Keep backdrop stable and persist exact background brightness percentage'; then
-              echo "- **Sfondo e fluidità:** fermato il movimento continuo dei gradienti che invalidava lo sfondo a ogni fotogramma sotto la navbar sfocata. La luminosità viene salvata come percentuale separata, quindi anche 0% rimane nero dopo aver riaperto l'app."
-              SUMMARY_COUNT=$((SUMMARY_COUNT + 1))
-            fi
-            if printf '%s\n' "$SUBJECTS" | grep -Fq 'Make background brightness a continuous 0–100 photo adjustment'; then
-              echo "- **Luminosità della foto:** sostituiti i tre preset scuro/automatico/chiaro con uno slider continuo 0–100. 0% rende la foto nera, 50% mantiene la luminosità originale e 100% la porta vicino al bianco; i valori intermedi modificano direttamente i pixel."
-              SUMMARY_COUNT=$((SUMMARY_COUNT + 1))
-            fi
-            if printf '%s\n' "$SUBJECTS" | grep -Fq 'Show profile editor only when creating or editing the saved profile'; then
-              echo "- **Profilo:** dopo il primo salvataggio nome e descrizione non restano più in campi sempre aperti. Viene mostrato il riepilogo con il pulsante Modifica profilo; i campi ricompaiono soltanto quando lo si preme."
-              SUMMARY_COUNT=$((SUMMARY_COUNT + 1))
-            fi
-            if printf '%s\n' "$SUBJECTS" | grep -Fq 'Make settings sections collapsible to shorten the settings page'; then
-              echo "- **Impostazioni più compatte:** Profilo e account, Aspetto, Data speciale, Sincronizzazione e Inviti si possono espandere o comprimere dal titolo, così i controlli non occupano tutti la pagina contemporaneamente."
-              SUMMARY_COUNT=$((SUMMARY_COUNT + 1))
-            fi
-            if printf '%s\n' "$SUBJECTS" | grep -Fq 'Remove obsolete duplicate background brightness controls'; then
-              echo "- **Controlli sfondo:** rimossa la vecchia copia dello slider con scala -1/+1, che era rimasta accanto al nuovo controllo percentuale."
-              SUMMARY_COUNT=$((SUMMARY_COUNT + 1))
-            fi
-            if [ "$SUMMARY_COUNT" -eq 0 ]; then
-              echo "- Modifiche incluse in questa build:"
-              git log --format='  - %s' $RANGE
-            fi
-
-            echo
-            echo "---"
-            echo
-            echo "## 📦 Download"
-            echo
-            printf '**APK:** `HaliMeo-%s-build%s-debug.apk`\n' "$VERSION_NAME" "$BUILD_NUMBER"
-            echo
-            echo "## 🧪 Note"
-            echo
-            echo "Questa è una versione preliminare destinata ai test: potrebbero essere presenti bug."
-            echo
-            echo "🔐 **Firma:** certificato Alpha verificato prima della pubblicazione."
-          } > CHANGELOG.md
-          cat CHANGELOG.md
+          RELEASE_CHANNEL: Alpha
+        run: python3 .github/scripts/generate_changelog.py
 
       - name: Carica gli artefatti della build
         uses: actions/upload-artifact@v4
