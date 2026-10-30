@@ -769,6 +769,7 @@ private fun SettingsScreen(
     ctx: android.content.Context,
 ) {
     val diaryEntries by repo.entries.collectAsState(initial = emptyList())
+    val settingsFeedbackView = LocalView.current
     val pendingSyncCount = diaryEntries.count { it.syncState != "SYNCED" }
     val lastSyncAt by lastSyncAtState
     var isOwner by remember { mutableStateOf<Boolean?>(null) }
@@ -1042,7 +1043,7 @@ private fun SettingsScreen(
                         Column(
                             modifier = Modifier.width(82.dp).clip(RoundedCornerShape(18.dp))
                                 .clickable {
-                                    feedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    settingsFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                                     backgroundColor = option.first
                                     backgroundPhoto = null
                                     customBackgroundColorState.value = option.first
