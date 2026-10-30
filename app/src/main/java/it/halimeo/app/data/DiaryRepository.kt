@@ -101,9 +101,13 @@ class DiaryRepository(context: Context) {
         val auth = "Bearer $token"
         val api = ApiClient.api
 
-        // First exchange entry metadata. Photo revisions are independent from text revisions.
+        // Ensure every photo mutation has its parent entry on the server first.
+        // A photo can remain pending after its text row was marked SYNCED (for example
+        // after a transient upload failure or a server database reset).
         val pending = dao.pending()
-        val response = api.sync(auth, SyncRequest(pending.map { it.toDto() }))
+        val pendingPhotoEntries = dao.pendingPhotos().filter { it.deletedAt == null }
+        val metadataToSync = (pending + pendingPhotoEntries).distinctBy { it.id }
+        val response = api.sync(auth, SyncRequest(metadataToSync.map { it.toDto() }))
         val remoteById = response.changes.associateBy { it.id }
         val photosToDownload = mutableSetOf<String>()
         for (dto in response.changes) {
@@ -132,9 +136,13 @@ class DiaryRepository(context: Context) {
             if (remote != null && remote.updatedAt >= entry.updatedAt) dao.markSynced(entry.id, entry.updatedAt)
         }
 
-        // Upload or propagate a photo deletion only after the entry exists on the server.
+        // Upload or propagate a photo deletion only after the sync response confirms
+        // that the parent entry is present remotely. Avoid opaque 404s from /photo.
         for (entry in dao.pendingPhotos()) {
             if (entry.deletedAt != null) continue
+            if (!remoteById.containsKey(entry.id)) {
+                throw IllegalStateException("Il ricordo non è stato confermato dal server: foto non caricata.")
+            }
             if (entry.photoDeletedAt != null && (entry.photoUri == null || entry.photoUpdatedAt == entry.photoDeletedAt)) {
                 val result = api.deletePhoto(auth, entry.id, entry.photoUpdatedAt)
                 if (result["ignored"] == true) dao.markPhotoSynced(entry.id, entry.photoUpdatedAt)
