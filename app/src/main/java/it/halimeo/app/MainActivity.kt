@@ -303,7 +303,6 @@ class MainActivity:ComponentActivity() {
     }
     val navigationScope = rememberCoroutineScope()
     val primaryTab = pagerState.currentPage
-    val pagerPosition = (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 2f)
     fun selectPrimaryTab(index: Int) {
         if (currentRoute != "main") nav.popBackStack("main", inclusive = false)
         navigationScope.launch { pagerState.animateScrollToPage(index) }
@@ -379,8 +378,7 @@ class MainActivity:ComponentActivity() {
             composable("tripMonaco") { MissionScreen() }
         }
     })
-    // Pager offset is the single source of truth: the pill follows swipes and taps identically.
-    val animatedPillPosition = if (reduceAnimationsState.value) primaryTab.toFloat() else pagerPosition
+    // Read the continuously changing pager offset in the graphics layer, not the root composition.
     if (currentRoute != "edit" && currentRoute != "tripMonaco") Surface(
         modifier = Modifier.align(Alignment.BottomStart)
             .padding(start = 12.dp, end = 78.dp)
@@ -403,7 +401,12 @@ class MainActivity:ComponentActivity() {
             // reinterpret a click while moving between destinations.
             Box(
                 Modifier.graphicsLayer {
-                    translationX = (tabWidth + 3.dp).toPx() * animatedPillPosition
+                    val pagePosition = if (reduceAnimationsState.value) {
+                        pagerState.currentPage.toFloat()
+                    } else {
+                        (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 2f)
+                    }
+                    translationX = (tabWidth + 3.dp).toPx() * pagePosition
                 }
                     .width(tabWidth)
                     .fillMaxHeight()
