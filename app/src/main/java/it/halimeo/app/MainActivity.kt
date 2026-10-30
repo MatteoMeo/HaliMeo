@@ -2404,6 +2404,7 @@ private fun DiaryScreen(
                             expanded = expanded,
                             likeCount = social?.likeCount ?: 0,
                             likedByMe = social?.likedByMe ?: false,
+                            socialEnabled = entry.syncState == "SYNCED",
                             onToggleLike = {
                                 val wasLiked = social?.likedByMe ?: false
                                 if (social != null) {
@@ -2547,8 +2548,8 @@ private fun DiaryScreen(
 @Composable
 private fun SocialMemoryPost(
     entry: DiaryEntry, authorName: String, photo: android.graphics.Bitmap?, expanded: Boolean,
-    likeCount: Int = 0, likedByMe: Boolean = false, onToggleLike: () -> Unit = {}, onComments: () -> Unit = {},
-    onAddToAlbum: () -> Unit = {}, onOpen: () -> Unit, onToggleFavorite: () -> Unit, onToggleCaption: () -> Unit,
+    likeCount: Int = 0, likedByMe: Boolean = false, socialEnabled: Boolean = true,
+    onToggleLike: () -> Unit = {}, onComments: () -> Unit = {}, onAddToAlbum: () -> Unit = {}, onOpen: () -> Unit, onToggleFavorite: () -> Unit, onToggleCaption: () -> Unit,
     onEdit: () -> Unit, onDelete: () -> Unit, showManagement: Boolean = true
 ) {
     val accent = MaterialTheme.colorScheme.primary
@@ -2606,16 +2607,16 @@ private fun SocialMemoryPost(
                 color = if (entry.isFavorite) Color(0xFFE66F8B) else MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.labelMedium)
             Spacer(Modifier.width(12.dp))
-            IconButton(onClick = onToggleLike, modifier = Modifier.size(40.dp)) {
+            IconButton(onClick = onToggleLike, enabled = socialEnabled, modifier = Modifier.size(40.dp)) {
                 Icon(if (likedByMe) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = if (likedByMe) "Rimuovi mi piace" else "Mi piace",
                     tint = if (likedByMe) Color(0xFFE66F8B) else MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text(likeCount.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
-            IconButton(onClick = onComments, modifier = Modifier.size(40.dp)) {
+            IconButton(onClick = onComments, enabled = socialEnabled, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Commenti", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            IconButton(onClick = onAddToAlbum, modifier = Modifier.size(40.dp)) {
+            IconButton(onClick = onAddToAlbum, enabled = socialEnabled, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Default.CollectionsBookmark, contentDescription = "Aggiungi a un album", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.weight(1f))
