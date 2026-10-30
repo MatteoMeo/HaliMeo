@@ -436,7 +436,7 @@ class MainActivity:ComponentActivity() {
                             navigationScope.launch {
                                 val destination = pagerState.targetPage.coerceIn(0, 2)
                                 if (reduceAnimationsState.value) pagerState.scrollToPage(destination)
-                                else pagerState.animateScrollToPage(destination, spring(dampingRatio = 0.94f, stiffness = 1500f))
+                                else pagerState.animateScrollToPage(destination, animationSpec = spring(dampingRatio = 0.94f, stiffness = 1500f))
                             }
                         },
                         onHorizontalDrag = { change, dragAmount ->
@@ -2000,7 +2000,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro") }
+            IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Indietro") }
             Text("Il vostro ricordo", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = "Modifica ricordo") }
         }
