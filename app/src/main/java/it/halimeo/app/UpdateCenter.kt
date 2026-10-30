@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -167,8 +168,17 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
         }
         release?.let { item ->
             Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                Text(item.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Text("v${item.versionName} · Build ${item.versionCode}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                if (item.versionCode > BuildConfig.VERSION_CODE.toLong()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text("v${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Aggiornamento disponibile", modifier = Modifier.padding(horizontal = 12.dp).size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                        Text("v${item.versionName}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    }
+                }
                 if (item.changelog.isNotBlank()) {
                     Surface(
                         modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp),
