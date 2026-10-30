@@ -414,14 +414,11 @@ class MainActivity:ComponentActivity() {
         }
     }
     // Favorite state lives in Room, so the diary Flow is the single source of truth.
-    val favoriteIds = remember(entries) {
-        entries.asSequence().filter { it.isFavorite }.mapTo(mutableSetOf()) { it.id }
-    }
     val legacyFavoritesPrefs = remember { ctx.getSharedPreferences("halimeo_favorites", android.content.Context.MODE_PRIVATE) }
     LaunchedEffect(Unit) {
         if (!legacyFavoritesPrefs.getBoolean("room_migrated", false)) {
             // Wait for the first real database emission before migrating the old set.
-            repo.entries.first { it.isNotEmpty() }
+            repo.entries.first()
             val legacyIds = legacyFavoritesPrefs.getStringSet("ids", emptySet())?.toSet().orEmpty()
             legacyIds.forEach { repo.setFavorite(it, true) }
             legacyFavoritesPrefs.edit().putBoolean("room_migrated", true).remove("ids").apply()
@@ -496,8 +493,14 @@ class MainActivity:ComponentActivity() {
         modifier=Modifier.heightIn(min=56.dp),
         colors=TopAppBarDefaults.topAppBarColors(containerColor=Color.Transparent, scrolledContainerColor=Color.Transparent, titleContentColor=MaterialTheme.colorScheme.onSurface,actionIconContentColor=MaterialTheme.colorScheme.onSurface),
         actions={
-            IconButton(onClick={ syncDiary() }, enabled = !syncInProgress){Icon(Icons.Default.CloudSync,"Sincronizza")}
-            IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.AutoMirrored.Filled.Logout,"Esci")}
+            IconButton(
+                onClick = { activity.lifecycleScope.launch { session.clear(); signed = false } },
+                modifier = Modifier.padding(horizontal = 8.dp).size(42.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Esci", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(21.dp))
+            }
         }
     )},bottomBar={}, floatingActionButton = {}, content = { padding ->
         NavHost(
@@ -517,9 +520,9 @@ class MainActivity:ComponentActivity() {
                     key = { it }
                 ) { page ->
                     when (page) {
-                        0 -> DiaryScreen(entries, favoriteIds,
+                        0 -> DiaryScreen(entries,
                             { editing = it; nav.navigate("edit") },
-                            { entry -> activity.lifecycleScope.launch { repo.toggleFavorite(entry.id) } },
+                            { entry -> activity.lifecycleScope.launch { repo.setFavorite(entry.id, !entry.isFavorite) } },
                             { entry -> activity.lifecycleScope.launch { repo.delete(entry.id) } },
                             { entry -> nav.navigate("memory/${entry.id}") }
                         )
@@ -1670,7 +1673,6 @@ private fun categoryIcon(category: String): androidx.compose.ui.graphics.vector.
 @Composable
 private fun DiaryScreen(
     entries: List<DiaryEntry>,
-    favoriteIds: Set<String>,
     onEdit: (DiaryEntry) -> Unit,
     onToggleFavorite: (DiaryEntry) -> Unit,
     onDelete: (DiaryEntry) -> Unit,
@@ -1711,7 +1713,7 @@ private fun DiaryScreen(
             .sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }
             .take(12)
     }
-    val upcomingSpecial = remember(entries, favoriteIds) {
+    val upcomingSpecial = remember(entries) {
         val prefs = diaryContext.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
         readHaliMeoSpecialDates(prefs).mapNotNull { item ->
             parseHaliMeoDate(item.date)?.let { date ->
@@ -1749,7 +1751,7 @@ private fun DiaryScreen(
         val matches = entries.filter {
             (it.title.contains(query, true) || it.body.contains(query, true)) &&
                 (selectedDate == null || it.memoryDate == selectedDate) &&
-                (!favoritesOnly || it.id in favoriteIds)
+                (!favoritesOnly || it.isFavorite)
         }
         matches.sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }
     }
@@ -2077,8 +2079,8 @@ private fun DiaryScreen(
                                             }
                                         }
                                     }
-                                    val isFavorite = entry.id in favoriteIds
-                                    IconButton(onClick = { feedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onToggleFavorite(entry) }, modifier = Modifier.semantics { contentDescription = if (entry.id in favoriteIds) "Rimuovi dai preferiti" else "Aggiungi ai preferiti" }) {
+                                    val isFavorite = entry.isFavorite
+                                    IconButton(onClick = { feedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onToggleFavorite(entry) }, modifier = Modifier.semantics { contentDescription = if (entry.isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti" }) {
                                         Icon(
                                             if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                             contentDescription = if (isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti",
@@ -2197,9 +2199,17 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Indietro") }
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.size(42.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape)
+            ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp)) }
             AnimatedPageTitle("Il vostro ricordo", MaterialTheme.typography.headlineSmall)
-            IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = "Modifica ricordo") }
+            IconButton(
+                onClick = onEdit,
+                modifier = Modifier.size(42.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape)
+            ) { Icon(Icons.Default.Edit, contentDescription = "Modifica ricordo", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(21.dp)) }
         }
         Card(
             modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(26.dp), ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.24f))
