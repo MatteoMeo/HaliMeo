@@ -2013,6 +2013,10 @@ private fun DiaryScreen(
     var comments by remember { mutableStateOf<List<it.halimeo.app.network.SocialComment>>(emptyList()) }
     var commentDraft by remember { mutableStateOf("") }
     var commentsBusy by remember { mutableStateOf(false) }
+    var albumEntry by remember { mutableStateOf<DiaryEntry?>(null) }
+    var albums by remember { mutableStateOf<List<it.halimeo.app.network.SocialAlbum>>(emptyList()) }
+    var albumTitle by remember { mutableStateOf("") }
+    var albumBusy by remember { mutableStateOf(false) }
     val socialScope = rememberCoroutineScope()
     LaunchedEffect(entries.map { it.updatedAt }) {
         runCatching { repo.loadSocialFeed().entries.associateBy { it.id } }
@@ -2420,6 +2424,14 @@ private fun DiaryScreen(
                                     commentsBusy = false
                                 }
                             },
+                            onAddToAlbum = {
+                                albumEntry = entry
+                                albumBusy = true
+                                socialScope.launch {
+                                    albums = runCatching { repo.loadAlbums().albums }.getOrDefault(emptyList())
+                                    albumBusy = false
+                                }
+                            },
                             onOpen = { onOpenMemory(entry) },
                             onToggleFavorite = { onToggleFavorite(entry) },
                             onToggleCaption = {
@@ -2433,6 +2445,55 @@ private fun DiaryScreen(
             }
         }
     }
+    }
+    if (albumEntry != null) {
+        AlertDialog(
+            onDismissRequest = { albumEntry = null },
+            title = { Text("Aggiungi a un album") },
+            text = {
+                Column(Modifier.fillMaxWidth().heightIn(max = 380.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (albumBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
+                    else if (albums.isEmpty()) Text("Non avete ancora creato album.")
+                    else albums.forEach { album ->
+                        TextButton(onClick = {
+                            val target = albumEntry ?: return@TextButton
+                            albumBusy = true
+                            socialScope.launch {
+                                runCatching { repo.addEntryToAlbum(album.id, target.id) }
+                                albumBusy = false
+                                albumEntry = null
+                            }
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.CollectionsBookmark, contentDescription = null)
+                                Spacer(Modifier.width(10.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(album.title, fontWeight = FontWeight.SemiBold)
+                                    Text("${album.entryCount} ricordi", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                            }
+                        }
+                    }
+                    HorizontalDivider()
+                    OutlinedTextField(value = albumTitle, onValueChange = { albumTitle = it.take(100) },
+                        modifier = Modifier.fillMaxWidth(), label = { Text("Nome del nuovo album") }, singleLine = true)
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = albumTitle.isNotBlank() && !albumBusy, onClick = {
+                    val target = albumEntry ?: return@TextButton
+                    albumBusy = true
+                    socialScope.launch {
+                        runCatching { repo.createAlbum(albumTitle.trim()) }
+                            .onSuccess { repo.addEntryToAlbum(it.id, target.id); albumTitle = "" }
+                        albumBusy = false
+                        albumEntry = null
+                    }
+                }) { Text("Crea e aggiungi") }
+            },
+            dismissButton = { TextButton(onClick = { albumEntry = null }) { Text("Chiudi") } }
+        )
     }
     if (commentsEntry != null) {
         AlertDialog(
@@ -2485,7 +2546,7 @@ private fun DiaryScreen(
 private fun SocialMemoryPost(
     entry: DiaryEntry, authorName: String, photo: android.graphics.Bitmap?, expanded: Boolean,
     likeCount: Int = 0, likedByMe: Boolean = false, onToggleLike: () -> Unit = {}, onComments: () -> Unit = {},
-    onOpen: () -> Unit, onToggleFavorite: () -> Unit, onToggleCaption: () -> Unit,
+    onAddToAlbum: () -> Unit = {}, onOpen: () -> Unit, onToggleFavorite: () -> Unit, onToggleCaption: () -> Unit,
     onEdit: () -> Unit, onDelete: () -> Unit, showManagement: Boolean = true
 ) {
     val accent = MaterialTheme.colorScheme.primary
@@ -2551,6 +2612,9 @@ private fun SocialMemoryPost(
             Text(likeCount.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
             IconButton(onClick = onComments, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Commenti", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            IconButton(onClick = onAddToAlbum, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Default.CollectionsBookmark, contentDescription = "Aggiungi a un album", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.weight(1f))
             TextButton(onClick = onOpen) {
