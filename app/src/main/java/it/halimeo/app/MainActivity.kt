@@ -347,6 +347,14 @@ class MainActivity:ComponentActivity() {
     val favoriteIds = remember(entries) {
         entries.asSequence().filter { it.isFavorite }.mapTo(mutableSetOf()) { it.id }
     }
+    val legacyFavoritesPrefs = remember { ctx.getSharedPreferences("halimeo_favorites", android.content.Context.MODE_PRIVATE) }
+    LaunchedEffect(entries) {
+        if (!legacyFavoritesPrefs.getBoolean("room_migrated", false) && entries.isNotEmpty()) {
+            val legacyIds = legacyFavoritesPrefs.getStringSet("ids", emptySet())?.toSet().orEmpty()
+            legacyIds.forEach { repo.setFavorite(it, true) }
+            legacyFavoritesPrefs.edit().putBoolean("room_migrated", true).remove("ids").apply()
+        }
+    }
     val nav = rememberNavController()
     val backStackEntry by nav.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
