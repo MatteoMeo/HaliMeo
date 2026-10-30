@@ -1,31 +1,45 @@
 # HaliMeo Server
 
-## Avvio locale
-1. Installa Docker Desktop o Docker Engine.
-2. Copia `.env.example` in `.env`.
-3. Imposta `HALIMEO_JWT_SECRET` con un segreto casuale lungo almeno 32 caratteri.
-4. Esegui `docker compose up --build -d`.
-5. Verifica `http://127.0.0.1:8000/v1/health`.
+Backend privato HaliMeo basato su **FastAPI + Uvicorn**, esposto all'esterno tramite **Cloudflare Tunnel**. Il processo API viene eseguito direttamente sull'host: non è necessario Docker.
 
-Il servizio ascolta solo su localhost: usa un tunnel HTTPS per l'accesso esterno. Non esporre direttamente la porta 8000.
+## Avvio e aggiornamento manuale (Windows / PowerShell)
 
-## Inviti e account
-Non esiste un endpoint di registrazione pubblica. Il primo account proprietario va creato con una procedura amministrativa locale, poi si configura `HALIMEO_OWNER_USER_ID`. Il proprietario autenticato può creare inviti monouso tramite `POST /v1/admin/invites`. Non lasciare endpoint di bootstrap pubblici.
+Apri PowerShell nella cartella del repository sul PC che ospita il server:
 
-## Aggiornare il server dopo le modifiche social
-
-Le modifiche al backend non vengono installate automaticamente dalla build APK. Se l'app registra `GET /v1/social/feed` con risposta **404**, il processo FastAPI in esecuzione sta quasi certamente usando un'immagine/codice precedente oppure il tunnel reverse-proxy punta a un servizio diverso.
-
-Dalla cartella del repository sul PC che ospita il server, aggiorna il branch usato per il deploy e ricrea il container:
-
-```bash
+```powershell
 git pull origin feature/ui-ux-refresh
 cd server
-docker compose up --build -d
-docker compose logs --tail=100 -f halimeo-api
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Verifica poi `/v1/health` e `/docs`: nella documentazione OpenAPI deve comparire `GET /v1/social/feed`. Se la rotta compare su `http://127.0.0.1:8000/docs` ma il dominio pubblico restituisce ancora 404, controlla che il tunnel/reverse-proxy inoltri allo stesso servizio sulla porta 8000. **Non cancellare `server/data`**: contiene il database e gli account privati.
+Se il processo FastAPI è già in esecuzione, prima arrestalo nella sua finestra con `Ctrl+C`, poi riavvialo con i comandi sopra. Non avviare una seconda istanza sulla stessa porta. Mantieni la finestra/processo attivo: Cloudflare Tunnel deve continuare a inoltrare al servizio locale `http://127.0.0.1:8000` (o alla porta effettivamente configurata nel tunnel).
 
-## Prima di usarlo con dati reali
-Questa è una base iniziale, non un server già pronto per produzione. Mancano ancora rate limiting, throttling login, migrazioni DB, test di concorrenza, backup cifrati off-site, cursore di sincronizzazione persistente e verifica Ed25519 dei manifest degli aggiornamenti. Il codice attuale assume una sola istanza privata HaliMeo condivisa dai due utenti.
+Se l'ambiente virtuale ha un nome/percorso diverso da `.venv`, attiva quello già usato per il server; non crearne uno nuovo senza motivo. Non cancellare la cartella dati o il database.
+
+## Verifica del routing
+
+Dopo il riavvio controlla prima sul PC:
+
+- `http://127.0.0.1:8000/v1/health` deve restituire `{"status":"ok", ...}`.
+- `http://127.0.0.1:8000/docs` deve mostrare **GET /v1/social/feed**.
+
+Poi ripeti la verifica attraverso il dominio pubblico Cloudflare:
+
+- `https://TUO-DOMINIO/v1/health`
+- `https://TUO-DOMINIO/docs`
+
+Interpretazione: se la rotta è presente su localhost ma il dominio pubblico restituisce 404, controlla il tunnel Cloudflare e assicurati che punti al processo/porta corretti. Se anche localhost non mostra la rotta, il processo sta caricando una copia vecchia o un modulo Python diverso: verifica la cartella di lavoro e il percorso del repository da cui avvii Uvicorn.
+
+Il feed richiede autenticazione: una richiesta senza token può restituire **401**, che indica che la rotta esiste; un **404** sul percorso esatto indica invece che la richiesta non sta raggiungendo questa route FastAPI (oppure che il path è alterato dal proxy).
+
+## Inviti e account
+
+Non esiste un endpoint di registrazione pubblica. Il primo account proprietario viene creato con `bootstrap_owner.py`; il proprietario autenticato può creare inviti monouso tramite `POST /v1/admin/invites`. Non esporre endpoint di bootstrap pubblici.
+
+## Dati e sicurezza
+
+Il backend usa SQLite e conserva foto e database nella directory indicata da `HALIMEO_DATA_DIR` (il valore predefinito nel codice è `/data`). Prima di cambiare tale variabile o spostare il server, verifica il percorso effettivo dei dati e fai un backup. **Non cancellare il database**: contiene gli account e i ricordi condivisi.
+
+Questa è una base privata in evoluzione, non un servizio pubblico multi-tenant. Prima di un uso più ampio servono rate limiting, throttling login, backup cifrati off-site e ulteriori test di concorrenza.
