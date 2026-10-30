@@ -325,12 +325,9 @@ class MainActivity:ComponentActivity() {
         onRedeem={code,n,e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.redeem(RedeemInviteRequest(code,n,e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Invito non valido")}}}
     );return}
     val entries by repo.entries.collectAsState(initial= emptyList()); var editing by remember{mutableStateOf<DiaryEntry?>(null)}
-    val favoritesPrefs = remember { ctx.getSharedPreferences("halimeo_favorites", android.content.Context.MODE_PRIVATE) }
-    var favoriteIds by remember { mutableStateOf(favoritesPrefs.getStringSet("ids", emptySet())?.toSet() ?: emptySet()) }
-    fun toggleFavorite(id: String) {
-        val updated = if (id in favoriteIds) favoriteIds - id else favoriteIds + id
-        favoriteIds = updated
-        favoritesPrefs.edit().putStringSet("ids", updated.toSet()).apply()
+    // Favorite state lives in Room, so the diary Flow is the single source of truth.
+    val favoriteIds = remember(entries) {
+        entries.asSequence().filter { it.isFavorite }.mapTo(mutableSetOf()) { it.id }
     }
     val nav = rememberNavController()
     val backStackEntry by nav.currentBackStackEntryAsState()
@@ -395,7 +392,7 @@ class MainActivity:ComponentActivity() {
                     when (page) {
                         0 -> DiaryScreen(entries, favoriteIds,
                             { editing = it; nav.navigate("edit") },
-                            { toggleFavorite(it.id) },
+                            { entry -> activity.lifecycleScope.launch { repo.toggleFavorite(entry.id) } },
                             { entry -> activity.lifecycleScope.launch { repo.delete(entry.id) } },
                             { entry -> nav.navigate("memory/${entry.id}") }
                         )
