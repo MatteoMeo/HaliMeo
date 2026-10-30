@@ -2677,37 +2677,113 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
 }
 
 @SuppressLint("SetJavaScriptEnabled")
-@Composable private fun MissionScreen(){
-    AndroidView(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF0A0E16)),
-        factory = { ctx ->
-            WebView(ctx).apply {
-                // Keep WebView stable during Compose page transitions; this avoids black frames.
-                setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
-                setBackgroundColor(android.graphics.Color.rgb(10, 14, 22))
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.allowFileAccess = true
-                settings.allowContentAccess = true
-                settings.loadsImagesAutomatically = true
-                settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-                webChromeClient = WebChromeClient()
-                webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                        val uri = request.url
-                        if (uri.scheme == "file" || uri.scheme == "about") return false
-                        if ((uri.scheme == "https" || uri.scheme == "http") && request.isForMainFrame) {
-                            runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
-                            return true
+@Composable
+private fun MissionScreen() {
+    val pageBackground = Color(0xFF0A0E16)
+    var pageReady by remember { mutableStateOf(false) }
+    var pageError by remember { mutableStateOf(false) }
+    var webViewRef by remember { mutableStateOf<WebView?>(null) }
+
+    Box(Modifier.fillMaxSize().background(pageBackground)) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { ctx ->
+                WebView(ctx).apply {
+                    webViewRef = this
+                    setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+                    setBackgroundColor(android.graphics.Color.rgb(10, 14, 22))
+                    isVerticalScrollBarEnabled = false
+                    isHorizontalScrollBarEnabled = false
+                    overScrollMode = android.view.View.OVER_SCROLL_NEVER
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    settings.allowFileAccess = true
+                    settings.allowContentAccess = true
+                    settings.loadsImagesAutomatically = true
+                    settings.javaScriptCanOpenWindowsAutomatically = false
+                    settings.setSupportMultipleWindows(false)
+                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                    webChromeClient = WebChromeClient()
+                    webViewClient = object : WebViewClient() {
+                        override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
+                            pageReady = false
+                            pageError = false
+                            view.setBackgroundColor(android.graphics.Color.rgb(10, 14, 22))
                         }
-                        return false
+
+                        override fun onPageFinished(view: WebView, url: String?) {
+                            // The page's boot overlay must be opaque: otherwise its animation
+                            // can reveal the already-rendered Monaco page underneath it.
+                            val backgroundFix = """
+                                (() => {
+                                  const css = 'html,body{background-color:#0A0E16!important;} #boot,#boot-screen,.boot-screen,.boot-animation,.boot-overlay,.bootloader{background-color:#0A0E16!important;isolation:isolate;}';
+                                  let style = document.getElementById('halimeo-native-webview-background');
+                                  if (!style) {
+                                    style = document.createElement('style');
+                                    style.id = 'halimeo-native-webview-background';
+                                    (document.head || document.documentElement).appendChild(style);
+                                  }
+                                  style.textContent = css;
+                                  document.documentElement.style.backgroundColor = '#0A0E16';
+                                  if (document.body) document.body.style.backgroundColor = '#0A0E16';
+                                })();
+                            """.trimIndent()
+                            view.evaluateJavascript(backgroundFix) {
+                                pageReady = true
+                            }
+                        }
+
+                        override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+                            if (request.isForMainFrame) {
+                                pageError = true
+                                pageReady = true
+                            }
+                        }
+
+                        override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                            val uri = request.url
+                            if (uri.scheme == "file" || uri.scheme == "about" || uri.scheme == "data") return false
+                            if ((uri.scheme == "https" || uri.scheme == "http") && request.isForMainFrame) {
+                                runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
+                                return true
+                            }
+                            return false
+                        }
+                    }
+                    loadUrl("file:///android_asset/missione-monaco.html")
+                }
+            },
+            update = { view ->
+                webViewRef = view
+                if (view.url.isNullOrBlank()) view.loadUrl("file:///android_asset/missione-monaco.html")
+            }
+        )
+
+        if (!pageReady || pageError) {
+            Box(
+                Modifier.fillMaxSize().background(pageBackground),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    Modifier.padding(28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    if (pageError) {
+                        Icon(Icons.Default.CloudOff, contentDescription = null, tint = Color(0xFFB7A0FF), modifier = Modifier.size(34.dp))
+                        Text("Impossibile caricare il viaggio", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text("Controlla il contenuto e riprova.", color = Color.White.copy(alpha = 0.70f), style = MaterialTheme.typography.bodySmall)
+                        Button(onClick = { pageReady = false; pageError = false; webViewRef?.reload() }, shape = RoundedCornerShape(50)) {
+                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Riprova")
+                        }
+                    } else {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 2.5.dp)
+                        Text("Preparazione del viaggio…", color = Color.White.copy(alpha = 0.82f), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
-                loadUrl("file:///android_asset/missione-monaco.html")
             }
-        },
-        update = { view ->
-            if (view.url.isNullOrBlank()) view.loadUrl("file:///android_asset/missione-monaco.html")
         }
-    )
+    }
 }
