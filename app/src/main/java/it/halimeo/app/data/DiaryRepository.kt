@@ -107,8 +107,7 @@ class DiaryRepository(context: Context) {
     }
 
     suspend fun toggleFavorite(id: String) {
-        val current = dao.get(id) ?: return
-        dao.setFavoriteExplicit(id, !current.isFavorite)
+        dao.toggleFavorite(id)
     }
 
     suspend fun setFavorite(id: String, favorite: Boolean) {
