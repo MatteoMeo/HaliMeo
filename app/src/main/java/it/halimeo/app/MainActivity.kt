@@ -1243,10 +1243,10 @@ private fun SettingsScreen(
                 var selectedThemeMode by remember { mutableStateOf(appThemeModeState.value) }
                 SingleChoiceSegmentedButtonRow(
                     modifier = Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(frostedSurfaceColor(), RoundedCornerShape(22.dp))
-                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.42f), RoundedCornerShape(22.dp))
-                        .padding(4.dp),
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.52f), RoundedCornerShape(18.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.42f), RoundedCornerShape(18.dp))
+                        .padding(3.dp),
                     space = 3.dp
                 ) {
                     listOf("dark" to "Scuro", "light" to "Chiaro", "system" to "Sistema").forEachIndexed { index, item ->
@@ -1258,9 +1258,9 @@ private fun SettingsScreen(
                                 ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
                                     .edit().putString("app_theme_mode", item.first).apply()
                             },
-                            shape = SegmentedButtonDefaults.itemShape(index, 3, RoundedCornerShape(18.dp)),
+                            shape = SegmentedButtonDefaults.itemShape(index, 3, RoundedCornerShape(14.dp)),
                             colors = SegmentedButtonDefaults.colors(
-                                activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
+                                activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.34f else 0.18f),
                                 activeContentColor = MaterialTheme.colorScheme.onSurface,
                                 activeBorderColor = Color.Transparent,
                                 inactiveContainerColor = Color.Transparent,
