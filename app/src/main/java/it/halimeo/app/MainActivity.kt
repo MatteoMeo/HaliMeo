@@ -2026,9 +2026,10 @@ private fun DiaryScreen(
     var albumDetailBusy by remember { mutableStateOf(false) }
     val socialScope = rememberCoroutineScope()
     LaunchedEffect(Unit) { currentUserId = repo.currentUserId() }
-    LaunchedEffect(entries.map { it.updatedAt }) {
-        runCatching { repo.loadSocialFeed().entries.associateBy { it.id } }
-            .onSuccess { socialEntries = it }
+    LaunchedEffect(entries.map { it.updatedAt }, entries.map { it.isFavorite }) {
+        val localFeed = runCatching { repo.loadLocalSocialFeed().associateBy { it.id } }.getOrDefault(emptyMap())
+        val remoteFeed = runCatching { repo.loadSocialFeed().entries.associateBy { it.id } }.getOrNull()
+        socialEntries = if (remoteFeed != null) localFeed + remoteFeed else localFeed
     }
     val diaryHaze = rememberHazeState()
     val diaryGlassTint = frostedSurfaceColor()
