@@ -39,7 +39,7 @@ data class SocialAlbum(
 data class SocialAlbumsResponse(val albums: List<SocialAlbum>)
 data class SocialAlbumEntry(
     val id: String, val title: String, val body: String, val category: String,
-    val memoryDate: String, val createdAt: Long, val updatedAt: Long, val authorName: String
+    val memoryDate: String, val authorName: String
 )
 data class SocialAlbumDetail(
     val id: String, val title: String, val description: String,
