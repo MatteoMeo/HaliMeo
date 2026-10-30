@@ -612,7 +612,7 @@ class MainActivity:ComponentActivity() {
                     memory,
                     onBack = { nav.popBackStack() },
                     onEdit = { editing = memory; nav.navigate("edit") },
-                    onToggleFavorite = { activity.lifecycleScope.launch { repo.toggleFavorite(memory.id) } }
+                    onToggleFavorite = { activity.lifecycleScope.launch { repo.setFavorite(memory.id, !memory.isFavorite) } }
                 )
                 else LaunchedEffect(entryId) { nav.popBackStack() }
             }
@@ -2003,7 +2003,7 @@ private fun DiaryScreen(
     var query by remember { mutableStateOf("") }
     var searchExpanded by remember { mutableStateOf(false) }
     var favoritesOnly by remember { mutableStateOf(false) }
-    var favoriteOverrides by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
+    val favoriteIds by repo.favoriteIds.collectAsState(initial = entries.filter { it.isFavorite }.map { it.id }.toSet())
     var selectedDate by remember { mutableStateOf<String?>(null) }
     var showCalendar by remember { mutableStateOf(false) }
     val calendarState = rememberDatePickerState()
@@ -2084,19 +2084,16 @@ private fun DiaryScreen(
         animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "diaryHeaderTitleScale"
     )
-    val filtered = remember(entries, query, selectedDate, favoritesOnly, favoriteOverrides) {
+    val filtered = remember(entries, query, selectedDate, favoritesOnly, favoriteIds) {
         entries.asSequence().filter { entry ->
-            val isFavorite = favoriteOverrides[entry.id] ?: entry.isFavorite
             (entry.title.contains(query, true) || entry.body.contains(query, true)) &&
                 (selectedDate == null || entry.memoryDate == selectedDate) &&
-                (!favoritesOnly || isFavorite)
+                (!favoritesOnly || entry.id in favoriteIds)
         }.sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }.toList()
     }
 
     fun toggleDiaryFavorite(entry: DiaryEntry) {
-        val current = favoriteOverrides[entry.id] ?: entry.isFavorite
-        val next = !current
-        favoriteOverrides = favoriteOverrides + (entry.id to next)
+        val next = entry.id !in favoriteIds
         onToggleFavorite(entry.copy(isFavorite = next))
     }
 
@@ -2406,7 +2403,7 @@ private fun DiaryScreen(
                             value = entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 1800) }
                         }
                         val social = socialEntries[entry.id]
-                        val displayedEntry = entry.copy(isFavorite = favoriteOverrides[entry.id] ?: entry.isFavorite)
+                        val displayedEntry = entry.copy(isFavorite = entry.id in favoriteIds)
                         SocialMemoryPost(
                             entry = displayedEntry,
                             authorName = social?.authorName ?: "Diario condiviso",
