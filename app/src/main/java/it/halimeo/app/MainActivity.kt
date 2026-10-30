@@ -554,7 +554,7 @@ class MainActivity:ComponentActivity() {
                     when (page) {
                         0 -> DiaryScreen(entries,
                             { editing = it; nav.navigate("edit") },
-                            { entry -> activity.lifecycleScope.launch { repo.setFavorite(entry.id, !entry.isFavorite) } },
+                            { entry -> activity.lifecycleScope.launch { repo.toggleFavorite(entry.id) } },
                             { entry -> activity.lifecycleScope.launch { repo.delete(entry.id) } },
                             { entry -> nav.navigate("memory/${entry.id}") }
                         )
