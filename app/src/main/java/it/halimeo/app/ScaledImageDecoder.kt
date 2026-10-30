@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.LruCache
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -36,7 +37,7 @@ internal suspend fun decodeScaledBitmap(
     scaledBitmapCache.get(cacheKey)?.let { return@withContext it }
     val uri = Uri.parse(uriString)
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    runCatching {
+    try {
         context.contentResolver.openInputStream(uri)?.use {
             BitmapFactory.decodeStream(it, null, bounds)
         }
@@ -52,8 +53,10 @@ internal suspend fun decodeScaledBitmap(
         }
         context.contentResolver.openInputStream(uri)?.use {
             BitmapFactory.decodeStream(it, null, options)
-        }
-    }.getOrNull()?.also { decoded ->
-        scaledBitmapCache.put(cacheKey, decoded)
+        }?.also { decoded -> scaledBitmapCache.put(cacheKey, decoded) }
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (_: Exception) {
+        null
     }
 }
