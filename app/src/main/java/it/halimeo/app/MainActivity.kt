@@ -1124,7 +1124,14 @@ private fun SettingsScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Aspetto dell'app", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 var selectedThemeMode by remember { mutableStateOf(appThemeModeState.value) }
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(frostedSurfaceColor(), RoundedCornerShape(22.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.42f), RoundedCornerShape(22.dp))
+                        .padding(4.dp),
+                    space = 3.dp
+                ) {
                     listOf("dark" to "Scuro", "light" to "Chiaro", "system" to "Sistema").forEachIndexed { index, item ->
                         SegmentedButton(
                             selected = selectedThemeMode == item.first,
@@ -1134,8 +1141,16 @@ private fun SettingsScreen(
                                 ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
                                     .edit().putString("app_theme_mode", item.first).apply()
                             },
-                            shape = SegmentedButtonDefaults.itemShape(index, 3)
-                        ) { Text(item.second, maxLines = 1) }
+                            shape = SegmentedButtonDefaults.itemShape(index, 3),
+                            colors = SegmentedButtonDefaults.colors(
+                                activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
+                                activeContentColor = MaterialTheme.colorScheme.onSurface,
+                                activeBorderColor = Color.Transparent,
+                                inactiveContainerColor = Color.Transparent,
+                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                inactiveBorderColor = Color.Transparent
+                            )
+                        ) { Text(item.second, maxLines = 1, fontWeight = if (selectedThemeMode == item.first) FontWeight.SemiBold else FontWeight.Medium) }
                     }
                 }
                 Text("Il tema chiaro mantiene gli stessi accenti, sfondi e personalizzazioni del tema scuro.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
@@ -1405,9 +1420,10 @@ private fun SettingsScreen(
                         checkedThumbColor = Color.White,
                         checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f),
                         checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        uncheckedThumbColor = Color(0xFFE2E8F0),
-                        uncheckedTrackColor = Color(0xFF374151),
-                        uncheckedBorderColor = Color(0xFF94A3B8)
+                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.88f),
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.88f),
+                        uncheckedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.72f),
+                        uncheckedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
                     ))
                 }
                 Text("Riduce gli effetti di sfocatura per privilegiare leggibilità e prestazioni.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
@@ -2042,8 +2058,34 @@ private fun DiaryScreen(
         DatePickerDialog(
             onDismissRequest = { showCalendar = false },
             confirmButton = { TextButton(onClick = { selectedDate = calendarState.selectedDateMillis?.let { java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneOffset.UTC).toLocalDate().toString() }; showCalendar = false }) { Text("Filtra") } },
-            dismissButton = { TextButton(onClick = { showCalendar = false }) { Text("Annulla") } }
-        ) { DatePicker(state = calendarState) }
+            dismissButton = { TextButton(onClick = { showCalendar = false }) { Text("Annulla") } },
+            colors = DatePickerDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            DatePicker(
+                state = calendarState,
+                colors = DatePickerDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    headlineContentColor = MaterialTheme.colorScheme.onSurface,
+                    weekdayContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    subheadContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    yearContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    currentYearContentColor = MaterialTheme.colorScheme.primary,
+                    selectedYearContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedYearContentColor = MaterialTheme.colorScheme.onPrimary,
+                    dayContentColor = MaterialTheme.colorScheme.onSurface,
+                    disabledDayContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f),
+                    selectedDayContainerColor = MaterialTheme.colorScheme.primary,
+                    disabledSelectedDayContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                    selectedDayContentColor = MaterialTheme.colorScheme.onPrimary,
+                    todayContentColor = MaterialTheme.colorScheme.primary,
+                    todayDateBorderColor = MaterialTheme.colorScheme.primary,
+                    dayInSelectionRangeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                    dayInSelectionRangeContentColor = MaterialTheme.colorScheme.onSurface,
+                    dividerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                )
+            )
+        }
     }
     Column(
         Modifier
@@ -2084,8 +2126,21 @@ private fun DiaryScreen(
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(onClick = { calendarState.selectedDateMillis = selectedDate?.let { runCatching { java.time.LocalDate.parse(it).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli() }.getOrNull() }; showCalendar = true }) {
-                    Icon(Icons.Default.CalendarMonth, contentDescription = "Filtra per data", modifier = Modifier.size(25.dp), tint = if (selectedDate != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                Box(
+                    modifier = Modifier.size(36.dp)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), CircleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    IconButton(
+                        onClick = {
+                            calendarState.selectedDateMillis = selectedDate?.let { runCatching { java.time.LocalDate.parse(it).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli() }.getOrNull() }
+                            showCalendar = true
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(Icons.Default.CalendarMonth, contentDescription = "Filtra per data", modifier = Modifier.size(19.dp), tint = if (selectedDate != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary)
+                    }
                 }
                 Box(
                     modifier = Modifier.size(36.dp)
