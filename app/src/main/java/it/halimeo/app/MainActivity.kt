@@ -1123,7 +1123,7 @@ private fun SettingsScreen(
                     }
                     Icon(if ("invites" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("invites" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "invites" in expandedSettingsSections, enter = fadeIn(tween(90)), exit = fadeOut(tween(70)))) {
+                AnimatedVisibility(visible = "invites" in expandedSettingsSections, enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Crea un codice monouso valido 7 giorni e condividilo direttamente dal telefono.", color = secondaryText)
 
@@ -1237,7 +1237,7 @@ private fun SettingsScreen(
                     }
                     Icon(if ("appearance" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("appearance" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "appearance" in expandedSettingsSections, enter = fadeIn(tween(90)), exit = fadeOut(tween(70)))) {
+                AnimatedVisibility(visible = "appearance" in expandedSettingsSections, enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Aspetto dell'app", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 var selectedThemeMode by remember { mutableStateOf(appThemeModeState.value) }
@@ -1565,7 +1565,7 @@ private fun SettingsScreen(
                     }
                     Icon(if ("date" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("date" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "date" in expandedSettingsSections, enter = fadeIn(tween(90)), exit = fadeOut(tween(70)))) {
+                AnimatedVisibility(visible = "date" in expandedSettingsSections, enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Tenete a portata di mano una data importante", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(value = specialDateLabel, onValueChange = { specialDateLabel = it }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), shape = RoundedCornerShape(18.dp), singleLine = true, label = { Text("Nome (es. compleanno)") })
@@ -1610,7 +1610,7 @@ private fun SettingsScreen(
                     }
                     Icon(if ("sync" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("sync" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "sync" in expandedSettingsSections, enter = fadeIn(tween(90)), exit = fadeOut(tween(70)))) {
+                AnimatedVisibility(visible = "sync" in expandedSettingsSections, enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(if (pendingSyncCount == 0) Icons.Default.CloudDone else Icons.Default.CloudUpload, contentDescription = null, tint = accentText, modifier = Modifier.size(26.dp))
