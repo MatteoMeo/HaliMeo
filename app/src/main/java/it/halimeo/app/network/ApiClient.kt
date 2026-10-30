@@ -13,7 +13,8 @@ object ApiClient {
     private lateinit var appContext: Context
     private val client = OkHttpClient.Builder()
         .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
     fun initialize(context: Context) { appContext = context.applicationContext }
