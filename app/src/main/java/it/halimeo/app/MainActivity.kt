@@ -1034,7 +1034,6 @@ private fun SettingsScreen(
                 }
                 Text("Scegli il colore d'accento dell'app.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
-                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
                 Text("Icona dell’app", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Text("Scegli l’aspetto di HaliMeo nella schermata Home.", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 val iconChoices = listOf(
