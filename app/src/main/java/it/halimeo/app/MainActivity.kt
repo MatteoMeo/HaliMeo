@@ -1693,7 +1693,6 @@ private fun DiaryScreen(
                                 .clip(MaterialTheme.shapes.large)
                                 .border(1.dp, frostedEdgeColor().copy(alpha = 0.9f), MaterialTheme.shapes.large)
                                 .clickable(
-                                    indication = androidx.compose.material.ripple.rememberRipple(bounded = true, radius = androidx.compose.ui.unit.Dp.Unspecified),
                                     onClick = {
                                         feedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                                         expandedEntryIds = if (entry.id in expandedEntryIds) expandedEntryIds - entry.id else expandedEntryIds + entry.id
