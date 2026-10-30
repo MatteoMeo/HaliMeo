@@ -73,7 +73,7 @@ interface DiaryDao {
     @Query("DELETE FROM pending_social_actions WHERE entryId=:entryId AND type IN ('LIKE','UNLIKE')")
     suspend fun clearPendingLikeActions(entryId: String)
     @Query("SELECT * FROM pending_social_actions WHERE entryId=:entryId AND type='COMMENT' ORDER BY createdAt ASC")
-    suspend fun pendingComments(entryId: String)
+    suspend fun pendingComments(entryId: String): List<PendingSocialAction>
     @Query("SELECT * FROM diary_entries ORDER BY updatedAt DESC")
     suspend fun allForBackup(): List<DiaryEntry>
 }
