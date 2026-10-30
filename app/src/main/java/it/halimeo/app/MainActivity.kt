@@ -137,8 +137,8 @@ private val OneUiMotionEasing = CubicBezierEasing(0.22f, 0.25f, 0f, 1f)
 @Composable private fun frostedEdgeColor(): Color = Color.White.copy(alpha = 0.20f)
 @Composable private fun frostedGlassBrush(): Brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.065f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.075f)))
 @Composable private fun isHaliMeoDark(): Boolean = true
-@Composable private fun frostedSurfaceColor(): Color = when { reduceStaticEffectsState.value && isHaliMeoDark() -> Color(0xF0141921); reduceStaticEffectsState.value -> Color(0xF2FFFFFF); isHaliMeoDark() -> Color(0xD9101419); else -> Color(0xE6FFFFFF) }
-@Composable private fun frostedSurfaceStrongColor(): Color = when { reduceStaticEffectsState.value && isHaliMeoDark() -> Color(0xF51A2029); reduceStaticEffectsState.value -> Color(0xF8FFFFFF); isHaliMeoDark() -> Color(0xE60C0F12); else -> Color(0xF0FFFFFF) }
+@Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.08f else 0.14f).compositeOver(Color(0xD9101419)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.10f).compositeOver(Color(0xE6FFFFFF))
+@Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.10f else 0.18f).compositeOver(Color(0xE60C0F12)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f).compositeOver(Color(0xF0FFFFFF))
 private val customBackgroundColorState = mutableStateOf("default")
 private val customBackgroundUriState = mutableStateOf<String?>(null)
 private val backgroundBlurState = mutableStateOf(0f)
@@ -661,7 +661,7 @@ private fun FloatingNavItem(
         modifier = modifier.fillMaxHeight()
             .graphicsLayer { scaleX = itemScale; scaleY = itemScale }
             .clip(RoundedCornerShape(50))
-            .clickable(onClick = onClick)
+            .clickable(role = androidx.compose.ui.semantics.Role.Tab, onClickLabel = label, onClick = onClick)
             .padding(4.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -766,7 +766,7 @@ private fun SettingsScreen(
     val settingsGlassTint = frostedSurfaceColor()
     val settingsGlassStyle = remember(settingsGlassTint) {
         HazeBlurStyle {
-            backgroundColor(Color(0xFF101419))
+            backgroundColor(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
             colorEffects(listOf(HazeColorEffect.tint(settingsGlassTint.copy(alpha = 0.48f))))
             fallbackColorEffect(HazeColorEffect.tint(settingsGlassTint))
         }
@@ -1288,7 +1288,7 @@ private fun SettingsScreen(
     val authGlassTint = frostedSurfaceStrongColor()
     val authGlassStyle = remember(authGlassTint) {
         HazeBlurStyle {
-            backgroundColor(Color(0xFF101419))
+            backgroundColor(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
             colorEffects(listOf(HazeColorEffect.tint(authGlassTint.copy(alpha = 0.48f))))
             fallbackColorEffect(HazeColorEffect.tint(authGlassTint))
         }
@@ -1410,7 +1410,7 @@ private fun DiaryScreen(
     val diaryGlassTint = frostedSurfaceColor()
     val diaryGlassStyle = remember(diaryGlassTint) {
         HazeBlurStyle {
-            backgroundColor(Color(0xFF101419))
+            backgroundColor(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
             colorEffects(listOf(HazeColorEffect.tint(diaryGlassTint.copy(alpha = 0.48f))))
             fallbackColorEffect(HazeColorEffect.tint(diaryGlassTint))
         }
@@ -1725,7 +1725,7 @@ private fun DiaryScreen(
                         }
                     itemsIndexed(filtered, key = { _, entry -> entry.id }, contentType = { _, _ -> "diary_entry" }) { _, entry ->
                         val expanded = entry.id in expandedEntryIds
-                        val accent = categoryAccent(entry.category, entry.id)
+                        val accent = MaterialTheme.colorScheme.primary
                         val photoContext = LocalContext.current
                         val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext, expanded) {
                             // Decode only after opening a card; eagerly decoding every visible photo
@@ -1773,7 +1773,7 @@ private fun DiaryScreen(
                                         border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.22f))
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
-                                            Icon(categoryIcon(entry.category), contentDescription = null, tint = accent, modifier = Modifier.size(21.dp))
+                                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = accent, modifier = Modifier.size(21.dp))
                                         }
                                     }
                                     Spacer(Modifier.width(11.dp))
@@ -1793,7 +1793,7 @@ private fun DiaryScreen(
                                             Icon(Icons.Default.CalendarToday, contentDescription = null, tint = accent, modifier = Modifier.size(14.dp))
                                             Text(displayHaliMeoDate(entry.memoryDate), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
                                             Surface(shape = RoundedCornerShape(50), color = accent.copy(alpha = 0.13f)) {
-                                                Text(entry.category.ifBlank { "Ricordo" }, modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp), color = accent, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                
                                             }
                                         }
                                     }
@@ -1901,7 +1901,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
     val detailTint = frostedSurfaceColor()
     val detailStyle = remember(detailTint) {
         HazeBlurStyle {
-            backgroundColor(Color(0xFF101419))
+            backgroundColor(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
             colorEffects(listOf(HazeColorEffect.tint(detailTint.copy(alpha = 0.50f))))
             fallbackColorEffect(HazeColorEffect.tint(detailTint))
         }
@@ -1930,7 +1930,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
                 Text(entry.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(displayHaliMeoDate(entry.memoryDate), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    AssistChip(onClick = {}, label = { Text(entry.category) })
+                    
                 }
                 if (bitmap != null) {
                     Image(bitmap!!.asImageBitmap(), contentDescription = "Foto del ricordo", modifier = Modifier.fillMaxWidth()
@@ -1956,7 +1956,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
     val editGlassTint = frostedSurfaceColor()
     val editGlassStyle = remember(editGlassTint) {
         HazeBlurStyle {
-            backgroundColor(Color(0xFF101419))
+            backgroundColor(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
             colorEffects(listOf(HazeColorEffect.tint(editGlassTint.copy(alpha = 0.48f))))
             fallbackColorEffect(HazeColorEffect.tint(editGlassTint))
         }
@@ -2120,7 +2120,7 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
     val tripsGlassTint = frostedSurfaceColor()
     val tripsGlassStyle = remember(tripsGlassTint) {
         HazeBlurStyle {
-            backgroundColor(Color(0xFF101419))
+            backgroundColor(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
             colorEffects(listOf(HazeColorEffect.tint(tripsGlassTint.copy(alpha = 0.48f))))
             fallbackColorEffect(HazeColorEffect.tint(tripsGlassTint))
         }
