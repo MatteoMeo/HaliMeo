@@ -31,7 +31,8 @@ internal suspend fun decodeScaledBitmap(
     uriString: String,
     maxDimension: Int
 ): Bitmap? = withContext(Dispatchers.IO) {
-    val cacheKey = "$uriString#$maxDimension"
+    val targetDimension = maxDimension.coerceIn(256, 4096)
+    val cacheKey = "$uriString#$targetDimension"
     scaledBitmapCache.get(cacheKey)?.let { return@withContext it }
     val uri = Uri.parse(uriString)
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -42,7 +43,7 @@ internal suspend fun decodeScaledBitmap(
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@withContext null
 
         var sampleSize = 1
-        while (maxOf(bounds.outWidth / sampleSize, bounds.outHeight / sampleSize) > maxDimension) {
+        while (maxOf(bounds.outWidth / sampleSize, bounds.outHeight / sampleSize) > targetDimension) {
             sampleSize *= 2
         }
         val options = BitmapFactory.Options().apply {
