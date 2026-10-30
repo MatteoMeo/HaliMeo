@@ -1014,7 +1014,7 @@ private fun SettingsScreen(
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth().border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle).clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
@@ -1193,7 +1193,7 @@ private fun SettingsScreen(
 
                         if (inviteCode.isNotBlank()) {
                             Card(
-                                modifier = Modifier.fillMaxWidth().border(1.dp, frostedEdgeColor(), RoundedCornerShape(20.dp)),
+                                modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle).clip(RoundedCornerShape(20.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(20.dp)),
                                 shape = RoundedCornerShape(20.dp),
                                 colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
                             ) {
@@ -1863,6 +1863,15 @@ private fun DiaryScreen(
             photoUri = uri.toString()
         }
     }
+    val cameraCapture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
+        if (bitmap != null) {
+            val target = java.io.File(context.cacheDir, "halimeo-camera-${System.currentTimeMillis()}.jpg")
+            runCatching {
+                target.outputStream().use { output -> bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, output) }
+                photoUri = Uri.fromFile(target).toString()
+            }.onFailure { Toast.makeText(context, "Non sono riuscito a salvare la foto", Toast.LENGTH_SHORT).show() }
+        }
+    }
     val photoBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, photoUri, context) {
         value = photoUri?.takeIf { it.isNotBlank() }?.let { decodeScaledBitmap(context, it, maxDimension = 1200) }
     }
@@ -1926,14 +1935,19 @@ private fun DiaryScreen(
                     OutlinedButton(onClick = { photoPicker.launch(arrayOf("image/*")) }, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Default.PhotoLibrary, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
-                        Text(if (photoUri == null) "Scegli foto" else "Cambia foto", maxLines = 1)
+                        Text(if (photoUri == null) "Galleria" else "Cambia foto", maxLines = 1)
                     }
-                    if (photoUri != null) {
-                        OutlinedButton(onClick = { photoUri = "" }, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.DeleteOutline, contentDescription = null)
-                            Spacer(Modifier.width(4.dp))
-                            Text("Rimuovi")
-                        }
+                    OutlinedButton(onClick = { cameraCapture.launch(null) }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Default.PhotoCamera, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Fotocamera", maxLines = 1)
+                    }
+                }
+                if (photoUri != null) {
+                    OutlinedButton(onClick = { photoUri = "" }, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.DeleteOutline, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Rimuovi foto")
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
