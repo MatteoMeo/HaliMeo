@@ -450,17 +450,6 @@ class MainActivity:ComponentActivity() {
             syncInProgress = false
         }
     }
-    // Favorite state lives in Room, so the diary Flow is the single source of truth.
-    val legacyFavoritesPrefs = remember { ctx.getSharedPreferences("halimeo_favorites", android.content.Context.MODE_PRIVATE) }
-    LaunchedEffect(Unit) {
-        if (!legacyFavoritesPrefs.getBoolean("room_migrated", false)) {
-            // Wait for the first real database emission before migrating the old set.
-            repo.entries.first()
-            val legacyIds = legacyFavoritesPrefs.getStringSet("ids", emptySet())?.toSet().orEmpty()
-            legacyIds.forEach { repo.setFavorite(it, true) }
-            legacyFavoritesPrefs.edit().putBoolean("room_migrated", true).remove("ids").apply()
-        }
-    }
     val nav = rememberNavController()
     val backStackEntry by nav.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -560,7 +549,6 @@ class MainActivity:ComponentActivity() {
                     when (page) {
                         0 -> DiaryScreen(entries, repo,
                             { editing = it; nav.navigate("edit") },
-                            { entry -> activity.lifecycleScope.launch { repo.toggleFavorite(entry.id) } },
                             { entry -> activity.lifecycleScope.launch { repo.delete(entry.id) } },
                             { entry -> nav.navigate("memory/${entry.id}") }
                         )
@@ -611,9 +599,7 @@ class MainActivity:ComponentActivity() {
                 if (memory != null) MemoryDetailScreen(
                     memory,
                     onBack = { nav.popBackStack() },
-                    onEdit = { editing = memory; nav.navigate("edit") },
-                    onToggleFavorite = { activity.lifecycleScope.launch { repo.setFavorite(memory.id, !memory.isFavorite) } }
-                )
+                    onEdit = { editing = memory; nav.navigate("edit") }                )
                 else LaunchedEffect(entryId) { nav.popBackStack() }
             }
             composable("tripMonaco") { MissionScreen() }
@@ -1996,15 +1982,11 @@ private fun DiaryScreen(
     entries: List<DiaryEntry>,
     repo: DiaryRepository,
     onEdit: (DiaryEntry) -> Unit,
-    onToggleFavorite: (DiaryEntry) -> Unit,
     onDelete: (DiaryEntry) -> Unit,
     onOpenMemory: (DiaryEntry) -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     var searchExpanded by remember { mutableStateOf(false) }
-    var favoritesOnly by remember { mutableStateOf(false) }
-    // Derive favourites from the same Room emission as the diary list. A second Flow can briefly lag behind entries and leave the filter empty during updates.
-    val favoriteIds = remember(entries) { entries.asSequence().filter { it.isFavorite }.map { it.id }.toSet() }
     var selectedDate by remember { mutableStateOf<String?>(null) }
     var showCalendar by remember { mutableStateOf(false) }
     val calendarState = rememberDatePickerState()
@@ -2027,7 +2009,7 @@ private fun DiaryScreen(
     var albumDetailBusy by remember { mutableStateOf(false) }
     val socialScope = rememberCoroutineScope()
     LaunchedEffect(Unit) { currentUserId = repo.currentUserId() }
-    LaunchedEffect(entries.map { it.updatedAt }, entries.map { it.isFavorite }) {
+    LaunchedEffect(entries.map { it.updatedAt }) {
         val localFeed = runCatching { repo.loadLocalSocialFeed().associateBy { it.id } }.getOrDefault(emptyMap())
         val remoteFeed = runCatching { repo.loadSocialFeed().entries.associateBy { it.id } }.getOrNull()
         socialEntries = if (remoteFeed != null) localFeed + remoteFeed else localFeed
@@ -2093,17 +2075,11 @@ private fun DiaryScreen(
         animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "diaryHeaderTitleScale"
     )
-    val filtered = remember(entries, query, selectedDate, favoritesOnly, favoriteIds) {
+    val filtered = remember(entries, query, selectedDate) {
         entries.asSequence().filter { entry ->
             (entry.title.contains(query, true) || entry.body.contains(query, true)) &&
-                (selectedDate == null || entry.memoryDate == selectedDate) &&
-                (!favoritesOnly || entry.id in favoriteIds)
+                (selectedDate == null || entry.memoryDate == selectedDate)
         }.sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }.toList()
-    }
-
-    fun toggleDiaryFavorite(entry: DiaryEntry) {
-        // Room performs the toggle atomically; don't derive the next value from a potentially stale Compose snapshot.
-        onToggleFavorite(entry)
     }
 
     if (showCalendar) {
@@ -2259,33 +2235,7 @@ private fun DiaryScreen(
                 AssistChip(onClick = { selectedDate = null }, label = { Text("Data: ${selectedDate?.let(::displayHaliMeoDate)} · Rimuovi filtro") }, leadingIcon = { Icon(Icons.Default.Event, contentDescription = null) }, trailingIcon = { Icon(Icons.Default.Close, contentDescription = null) })
             }
         }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
-                modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically
-            ) {
-                FilterChip(
-                    selected = !favoritesOnly,
-                    onClick = { favoritesOnly = false; query = ""; selectedDate = null },
-                    shape = RoundedCornerShape(18.dp),
-                    label = { Text("Tutti", maxLines = 1) },
-                    leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    colors = FilterChipDefaults.filterChipColors(containerColor = frostedSurfaceColor(), labelColor = MaterialTheme.colorScheme.onSurfaceVariant, iconColor = MaterialTheme.colorScheme.onSurfaceVariant, selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.20f), selectedLabelColor = MaterialTheme.colorScheme.onSurface, selectedLeadingIconColor = MaterialTheme.colorScheme.primary)
-                )
-                FilterChip(
-                    selected = favoritesOnly,
-                    onClick = { favoritesOnly = true; query = ""; selectedDate = null },
-                    shape = RoundedCornerShape(18.dp),
-                    label = { Text("Preferiti", maxLines = 1) },
-                    leadingIcon = { Icon(Icons.Default.Bookmark, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
-                        selectedLabelColor = MaterialTheme.colorScheme.onSurface, selectedLeadingIconColor = MaterialTheme.colorScheme.primary,
-                        containerColor = frostedSurfaceColor(), labelColor = MaterialTheme.colorScheme.onSurfaceVariant, iconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-
-            }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
             IconButton(onClick = {
                 albumsBrowserOpen = true
                 albumBusy = true
@@ -2360,7 +2310,7 @@ private fun DiaryScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(top = 4.dp, bottom = 100.dp)
                 ) {
-                    if (!favoritesOnly && query.isBlank()) {
+                    if (query.isBlank()) {
                         if (photoHighlights.isNotEmpty()) {
                             item(key = "memory_highlights") {
                                 Column(verticalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.padding(bottom = 4.dp)) {
@@ -2425,9 +2375,8 @@ private fun DiaryScreen(
                             value = entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 1800) }
                         }
                         val social = socialEntries[entry.id]
-                        val displayedEntry = entry.copy(isFavorite = entry.id in favoriteIds)
                         SocialMemoryPost(
-                            entry = displayedEntry,
+                            entry = entry,
                             authorName = social?.authorName ?: "Diario condiviso",
                             photo = entryPhoto,
                             expanded = expanded,
@@ -2470,7 +2419,6 @@ private fun DiaryScreen(
                                 }
                             },
                             onOpen = { onOpenMemory(entry) },
-                            onToggleFavorite = { toggleDiaryFavorite(entry) },
                             onToggleCaption = {
                                 expandedEntryIds = if (expanded) expandedEntryIds - entry.id else expandedEntryIds + entry.id
                             },
@@ -2718,7 +2666,7 @@ private fun DiaryScreen(
 private fun SocialMemoryPost(
     entry: DiaryEntry, authorName: String, photo: android.graphics.Bitmap?, expanded: Boolean,
     likeCount: Int = 0, likedByMe: Boolean = false, commentCount: Int = 0, socialEnabled: Boolean = true,
-    onToggleLike: () -> Unit = {}, onComments: () -> Unit = {}, onAddToAlbum: () -> Unit = {}, onOpen: () -> Unit, onToggleFavorite: () -> Unit, onToggleCaption: () -> Unit,
+    onToggleLike: () -> Unit = {}, onComments: () -> Unit = {}, onAddToAlbum: () -> Unit = {}, onOpen: () -> Unit, onToggleCaption: () -> Unit,
     onEdit: () -> Unit, onDelete: () -> Unit, showManagement: Boolean = true
 ) {
     val accent = MaterialTheme.colorScheme.primary
@@ -2829,15 +2777,6 @@ private fun SocialMemoryPost(
             IconButton(onClick = onAddToAlbum, enabled = socialEnabled, modifier = Modifier.padding(start = 8.dp).size(44.dp)) {
                 Icon(Icons.Default.CollectionsBookmark, contentDescription = "Aggiungi a un album", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(21.dp))
             }
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = onToggleFavorite, modifier = Modifier.size(44.dp)) {
-                Icon(
-                    if (entry.isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                    contentDescription = if (entry.isFavorite) "Rimuovi dai preferiti" else "Salva nei preferiti",
-                    tint = if (entry.isFavorite) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
         }
 
         Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -2877,8 +2816,7 @@ private fun SocialMemoryPost(
 private fun MemoryDetailScreen(
     entry: DiaryEntry,
     onBack: () -> Unit,
-    onEdit: () -> Unit,
-    onToggleFavorite: () -> Unit
+    onEdit: () -> Unit
 ) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState())
@@ -2912,7 +2850,6 @@ private fun MemoryDetailScreen(
             photo = bitmap,
             expanded = true,
             onOpen = {},
-            onToggleFavorite = onToggleFavorite,
             onToggleCaption = {},
             onEdit = onEdit,
             onDelete = {},
