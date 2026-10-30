@@ -16,5 +16,6 @@ class SessionStore(private val context: Context) {
     }
     suspend fun token() = context.sessionData.data.first()[tokenKey]
     suspend fun name() = context.sessionData.data.first()[nameKey].orEmpty()
+    suspend fun userId() = context.sessionData.data.first()[userKey].orEmpty()
     suspend fun clear() { context.sessionData.edit { it.clear() } }
 }
