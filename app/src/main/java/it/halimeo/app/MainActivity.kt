@@ -776,8 +776,8 @@ private fun SettingsScreen(
         ) {
         Card(
             modifier = Modifier.fillMaxWidth().shadow(6.dp, RoundedCornerShape(24.dp)).hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
-                .clickable { expandedSettingsSections = if ("profile" in expandedSettingsSections) expandedSettingsSections - "profile" else expandedSettingsSections + "profile" }
-                .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
+                .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp))
+                .clickable { expandedSettingsSections = if ("profile" in expandedSettingsSections) expandedSettingsSections - "profile" else expandedSettingsSections + "profile" },
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
@@ -852,8 +852,8 @@ private fun SettingsScreen(
 
         Card(
             modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
-                .clickable { expandedSettingsSections = if ("appearance" in expandedSettingsSections) expandedSettingsSections - "appearance" else expandedSettingsSections + "appearance" }
-                .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
+                .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp))
+                .clickable { expandedSettingsSections = if ("appearance" in expandedSettingsSections) expandedSettingsSections - "appearance" else expandedSettingsSections + "appearance" },
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
