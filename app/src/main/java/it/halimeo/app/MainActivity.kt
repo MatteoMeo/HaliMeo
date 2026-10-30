@@ -875,8 +875,6 @@ private fun FloatingNavItem(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
-@Composable
 @Composable
 private fun SettingsCategoryIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color) {
     Box(
@@ -890,6 +888,8 @@ private fun SettingsCategoryIcon(icon: androidx.compose.ui.graphics.vector.Image
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
 private fun SettingsScreen(
     displayName: String,
     session: SessionStore,
