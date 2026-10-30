@@ -6,6 +6,9 @@ import android.graphics.BitmapFactory
 import it.halimeo.app.network.ApiClient
 import it.halimeo.app.network.SyncRequest
 import it.halimeo.app.network.SocialFeedResponse
+import it.halimeo.app.network.SocialComment
+import it.halimeo.app.network.SocialFeedEntry
+import kotlinx.coroutines.flow.map
 import it.halimeo.app.network.SocialCommentRequest
 import it.halimeo.app.network.SocialCommentResponse
 import it.halimeo.app.network.SocialAlbum
@@ -25,6 +28,7 @@ class DiaryRepository(context: Context) {
     private val session = SessionStore(appContext)
     private val photoDir = File(appContext.filesDir, "diary_photos").apply { mkdirs() }
     val entries: Flow<List<DiaryEntry>> = dao.observeAll()
+    val favoriteIds: Flow<Set<String>> = dao.observeFavoriteIds().map { it.toSet() }
 
     private fun importPhoto(uri: String, id: String): String {
         val source = Uri.parse(uri)
@@ -101,11 +105,12 @@ class DiaryRepository(context: Context) {
     }
 
     suspend fun toggleFavorite(id: String) {
-        dao.toggleFavorite(id)
+        val current = dao.get(id) ?: return
+        dao.setFavoriteExplicit(id, !current.isFavorite)
     }
 
     suspend fun setFavorite(id: String, favorite: Boolean) {
-        dao.setFavorite(id, favorite)
+        dao.setFavoriteExplicit(id, favorite)
     }
 
     suspend fun delete(id:String) {
@@ -207,6 +212,22 @@ class DiaryRepository(context: Context) {
             dao.upsert(local.copy(photoUri=Uri.fromFile(destination).toString(),
                 photoUpdatedAt=dto.photoUpdatedAt, photoDeletedAt=null, photoSyncState="SYNCED"))
         }
+
+        // Replay queued likes and comments only after their diary entry is confirmed on the server.
+        val socialActions = dao.pendingSocialActions()
+        for (action in socialActions) {
+            val entry = dao.get(action.entryId)
+            if (entry == null || entry.deletedAt != null || entry.syncState != "SYNCED") continue
+            val sent = runCatching {
+                when (action.type) {
+                    "LIKE" -> api.likeEntry(auth, action.entryId)
+                    "UNLIKE" -> api.unlikeEntry(auth, action.entryId)
+                    "COMMENT" -> api.addComment(auth, action.entryId, SocialCommentRequest(action.payload, action.id))
+                    else -> emptyMap<String, Any>()
+                }
+            }.isSuccess
+            if (sent) dao.deleteSocialAction(action.id)
+        }
     }
 
     private suspend fun authorizedHeader(): String {
@@ -214,25 +235,65 @@ class DiaryRepository(context: Context) {
         return "Bearer $token"
     }
 
-    suspend fun loadSocialFeed(): SocialFeedResponse = ApiClient.api.socialFeed(authorizedHeader())
+    suspend fun loadSocialFeed(): SocialFeedResponse {
+        val response = ApiClient.api.socialFeed(authorizedHeader())
+        val actions = dao.pendingSocialActions().groupBy { it.entryId }
+        val userId = session.userId()
+        val authorName = session.name().ifBlank { "Tu" }
+        return response.copy(entries = response.entries.map { entry ->
+            val pending = actions[entry.id].orEmpty()
+            val likeAction = pending.lastOrNull { it.type == "LIKE" || it.type == "UNLIKE" }
+            val comments = pending.filter { it.type == "COMMENT" }.map { action ->
+                SocialComment(action.id, action.payload, userId, authorName, action.createdAt, action.createdAt)
+            }
+            when (likeAction?.type) {
+                "LIKE" -> entry.copy(likeCount = if (entry.likedByMe) entry.likeCount else entry.likeCount + 1, likedByMe = true, comments = entry.comments + comments)
+                "UNLIKE" -> entry.copy(likeCount = (entry.likeCount - if (entry.likedByMe) 1 else 0).coerceAtLeast(0), likedByMe = false, comments = entry.comments + comments)
+                else -> entry.copy(comments = entry.comments + comments)
+            }
+        })
+    }
 
     suspend fun setEntryLiked(entryId: String, liked: Boolean): Map<String, Any> {
         val auth = authorizedHeader()
-        return if (liked) ApiClient.api.likeEntry(auth, entryId) else ApiClient.api.unlikeEntry(auth, entryId)
+        dao.clearPendingLikeActions(entryId)
+        return runCatching {
+            if (liked) ApiClient.api.likeEntry(auth, entryId) else ApiClient.api.unlikeEntry(auth, entryId)
+        }.getOrElse {
+            dao.upsertSocialAction(PendingSocialAction(UUID.randomUUID().toString(), entryId, if (liked) "LIKE" else "UNLIKE", createdAt = System.currentTimeMillis()))
+            mapOf("queued" to true)
+        }
     }
 
     suspend fun addEntryComment(entryId: String, body: String): SocialCommentResponse {
         require(body.isNotBlank()) { "Scrivi un commento prima di inviarlo." }
-        return ApiClient.api.addComment(authorizedHeader(), entryId, SocialCommentRequest(body.trim()))
+        val auth = authorizedHeader()
+        val cleanBody = body.trim()
+        val clientId = UUID.randomUUID().toString()
+        return runCatching {
+            ApiClient.api.addComment(auth, entryId, SocialCommentRequest(cleanBody, clientId))
+        }.getOrElse {
+            val now = System.currentTimeMillis()
+            dao.upsertSocialAction(PendingSocialAction(clientId, entryId, "COMMENT", cleanBody, now))
+            SocialCommentResponse(clientId, entryId, cleanBody, session.userId(), session.name().ifBlank { "Tu" }, now, now)
+        }
     }
 
-    suspend fun loadEntryComments(entryId: String) =
-        ApiClient.api.comments(authorizedHeader(), entryId)["comments"].orEmpty()
+    suspend fun loadEntryComments(entryId: String): List<SocialComment> {
+        val auth = authorizedHeader()
+        val remote = runCatching { ApiClient.api.comments(auth, entryId)["comments"].orEmpty() }.getOrDefault(emptyList())
+        val pending = dao.pendingComments(entryId).map { action ->
+            SocialComment(action.id, action.payload, session.userId(), session.name().ifBlank { "Tu" }, action.createdAt, action.createdAt)
+        }
+        return remote + pending
+    }
 
     suspend fun deleteEntryComment(commentId: String) =
         ApiClient.api.deleteComment(authorizedHeader(), commentId)
 
     suspend fun loadAlbums(): SocialAlbumsResponse = ApiClient.api.albums(authorizedHeader())
+
+    suspend fun loadAlbum(albumId: String) = ApiClient.api.album(authorizedHeader(), albumId)
 
     suspend fun createAlbum(title: String, description: String = ""): SocialAlbum =
         ApiClient.api.createAlbum(authorizedHeader(), AlbumRequest(title, description))
