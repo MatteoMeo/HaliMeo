@@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -129,12 +131,31 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
                 Text("Canale di rilascio e nuove versioni", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.52f), RoundedCornerShape(18.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f), RoundedCornerShape(18.dp))
+                .padding(3.dp),
+            space = 3.dp
+        ) {
             listOf("alpha" to "Alpha", "stable" to "Stabile").forEachIndexed { index, option ->
-                SegmentedButton(selected = channel == option.first, onClick = {
-                    channel = option.first; prefs.edit().putString("update_channel", channel).apply()
-                    release = null; status = if (channel == "stable") "Canale Stabile selezionato." else "Canale Alpha selezionato."
-                }, shape = SegmentedButtonDefaults.itemShape(index, 2)) { Text(option.second) }
+                SegmentedButton(
+                    selected = channel == option.first,
+                    onClick = {
+                        channel = option.first; prefs.edit().putString("update_channel", channel).apply()
+                        release = null; status = if (channel == "stable") "Canale Stabile selezionato." else "Canale Alpha selezionato."
+                    },
+                    shape = SegmentedButtonDefaults.itemShape(index, 2, RoundedCornerShape(15.dp)),
+                    colors = SegmentedButtonDefaults.colors(
+                        activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = if (isSystemInDarkTheme()) 0.34f else 0.18f),
+                        activeContentColor = MaterialTheme.colorScheme.onSurface,
+                        activeBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
+                        inactiveContainerColor = Color.Transparent,
+                        inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        inactiveBorderColor = Color.Transparent
+                    )
+                ) { Text(option.second) }
             }
         }
         Surface(
