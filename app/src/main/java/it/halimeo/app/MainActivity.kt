@@ -1606,7 +1606,6 @@ private fun SettingsScreen(
                             label = { Text("URL base del server") },
                             placeholder = { Text("https://server.example/") },
                             singleLine = true,
-                            shape = RoundedCornerShape(18.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = frostedSurfaceStrongColor(),
                                 unfocusedContainerColor = frostedSurfaceColor(),
