@@ -2406,10 +2406,12 @@ private fun DiaryScreen(
                             likedByMe = social?.likedByMe ?: false,
                             onToggleLike = {
                                 val wasLiked = social?.likedByMe ?: false
-                                socialEntries = socialEntries + (entry.id to (social?.copy(
-                                    likeCount = (social.likeCount + if (wasLiked) -1 else 1).coerceAtLeast(0),
-                                    likedByMe = !wasLiked
-                                ) ?: return@SocialMemoryPost))
+                                if (social != null) {
+                                    socialEntries = socialEntries + (entry.id to social.copy(
+                                        likeCount = (social.likeCount + if (wasLiked) -1 else 1).coerceAtLeast(0),
+                                        likedByMe = !wasLiked
+                                    ))
+                                }
                                 socialScope.launch {
                                     runCatching { repo.setEntryLiked(entry.id, !wasLiked) }
                                         .onFailure { socialEntries = socialEntries - entry.id }
