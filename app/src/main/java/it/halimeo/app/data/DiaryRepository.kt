@@ -77,8 +77,14 @@ class DiaryRepository(context: Context) {
             syncState="PENDING", photoUri=storedPhoto,
             photoUpdatedAt=if (photoChanged || removedPhoto) now else old?.photoUpdatedAt ?: 0L,
             photoDeletedAt=if (removedPhoto) now else if (photoChanged) null else old?.photoDeletedAt,
-            photoSyncState=if (photoChanged || removedPhoto) "PENDING" else old?.photoSyncState ?: "SYNCED"
+            photoSyncState=if (photoChanged || removedPhoto) "PENDING" else old?.photoSyncState ?: "SYNCED",
+            isFavorite=old?.isFavorite ?: false
         ))
+    }
+
+    suspend fun toggleFavorite(id: String) {
+        val entry = dao.get(id) ?: return
+        dao.setFavorite(id, !entry.isFavorite)
     }
 
     suspend fun delete(id:String) {
@@ -113,7 +119,8 @@ class DiaryRepository(context: Context) {
                 photoUri = if (preserveLocalPhoto) local?.photoUri else null,
                 photoUpdatedAt = maxOf(dto.photoUpdatedAt, local?.photoUpdatedAt ?: 0L),
                 photoDeletedAt = if (remotePhotoIsNewer) dto.photoDeletedAt else local?.photoDeletedAt,
-                photoSyncState = if (preserveLocalPhoto) local?.photoSyncState ?: "SYNCED" else if (dto.photoUpdatedAt == 0L || dto.photoDeletedAt != null) "SYNCED" else "PENDING"
+                photoSyncState = if (preserveLocalPhoto) local?.photoSyncState ?: "SYNCED" else if (dto.photoUpdatedAt == 0L || dto.photoDeletedAt != null) "SYNCED" else "PENDING",
+                isFavorite = local?.isFavorite ?: false
             )
             dao.upsert(merged)
         }
