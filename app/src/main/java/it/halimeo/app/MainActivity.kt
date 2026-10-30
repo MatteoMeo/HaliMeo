@@ -531,7 +531,7 @@ class MainActivity:ComponentActivity() {
         actions={
             IconButton(
                 onClick = { activity.lifecycleScope.launch { session.clear(); signed = false } },
-                modifier = Modifier.padding(horizontal = 8.dp).size(34.dp)
+                modifier = Modifier.padding(horizontal = 8.dp).size(36.dp)
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
                     .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape)
             ) {
@@ -2554,13 +2554,13 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(
                 onClick = onBack,
-                modifier = Modifier.size(34.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
+                modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
                     .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape)
             ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) }
             AnimatedPageTitle("Il vostro ricordo", MaterialTheme.typography.headlineSmall)
             IconButton(
                 onClick = onEdit,
-                modifier = Modifier.size(30.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
+                modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
                     .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape)
             ) { Icon(Icons.Default.Edit, contentDescription = "Modifica ricordo", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp)) }
         }
@@ -2592,10 +2592,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
                     bitmap?.let { photo ->
                         Image(photo.asImageBitmap(), contentDescription = "Foto del ricordo", modifier = Modifier.fillMaxWidth()
                             .heightIn(max = 620.dp)
-                            .graphicsLayer {
-                                shape = RoundedCornerShape(22.dp)
-                                clip = true
-                            }
+                            .clip(RoundedCornerShape(22.dp))
                             .border(1.dp, frostedEdgeColor(), RoundedCornerShape(22.dp)), contentScale = ContentScale.Fit)
                     }
                 }
