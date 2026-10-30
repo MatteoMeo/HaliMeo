@@ -2097,7 +2097,7 @@ private fun DiaryScreen(
         entries.asSequence().filter { entry ->
             (entry.title.contains(query, true) || entry.body.contains(query, true)) &&
                 (selectedDate == null || entry.memoryDate == selectedDate) &&
-                (!favoritesOnly || entry.id in favoriteIds) &&
+                (!favoritesOnly || entry.id in favoriteIds)
         }.sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }.toList()
     }
 
