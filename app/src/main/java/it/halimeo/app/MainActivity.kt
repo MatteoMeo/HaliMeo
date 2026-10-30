@@ -1616,6 +1616,7 @@ private fun DiaryScreen(
                     )
                 }
             }
+        }
 
         Spacer(Modifier.height(4.dp))
 
@@ -1927,7 +1928,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Indietro") }
-            Text("Il vostro ricordo", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text("Il vostro ricordo", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
             IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = "Modifica ricordo") }
         }
         Card(
