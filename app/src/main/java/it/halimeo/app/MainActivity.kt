@@ -1066,8 +1066,8 @@ private fun SettingsScreen(
                     }
                 }
                 if (isProfileEditing) {
-                    OutlinedTextField(value = profileNickname, onValueChange = { profileNickname = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Nome o soprannome") }, singleLine = true)
-                    OutlinedTextField(value = profileAbout, onValueChange = { profileAbout = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Una piccola descrizione") }, placeholder = { Text("Es. collezionisti di ricordi dal 2024") }, minLines = 2, maxLines = 3)
+                    OutlinedTextField(value = profileNickname, onValueChange = { profileNickname = it }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), shape = RoundedCornerShape(18.dp), label = { Text("Nome o soprannome") }, singleLine = true)
+                    OutlinedTextField(value = profileAbout, onValueChange = { profileAbout = it }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), shape = RoundedCornerShape(18.dp), label = { Text("Una piccola descrizione") }, placeholder = { Text("Es. collezionisti di ricordi dal 2024") }, minLines = 2, maxLines = 3)
                     Button(onClick = {
                         profilePrefs.edit()
                             .putString("profile_nickname", profileNickname.trim())
@@ -1321,7 +1321,14 @@ private fun SettingsScreen(
                 var reduceAnimations by remember { mutableStateOf(prefs.getBoolean("reduce_animations", false)) }
                 var reduceStaticEffects by remember { mutableStateOf(prefs.getBoolean("reduce_static_effects", false)) }
                 Text("Frequenza schermo", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(frostedSurfaceColor(), RoundedCornerShape(22.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.42f), RoundedCornerShape(22.dp))
+                        .padding(4.dp),
+                    space = 3.dp
+                ) {
                     listOf(0, 48, 60, 90, 120).forEachIndexed { index, hz ->
                         SegmentedButton(
                             selected = selectedRefreshRate == hz,
@@ -1330,8 +1337,16 @@ private fun SettingsScreen(
                                 prefs.edit().putInt("preferred_refresh_rate", hz).apply()
                                 activity.window.attributes = activity.window.attributes.apply { preferredRefreshRate = hz.toFloat() }
                             },
-                            shape = SegmentedButtonDefaults.itemShape(index, 4)
-                        ) { Text(if (hz == 0) "Auto" else "$hz", maxLines = 1) }
+                            shape = SegmentedButtonDefaults.itemShape(index, 5),
+                            colors = SegmentedButtonDefaults.colors(
+                                activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
+                                activeContentColor = MaterialTheme.colorScheme.onSurface,
+                                activeBorderColor = Color.Transparent,
+                                inactiveContainerColor = Color.Transparent,
+                                inactiveContentColor = secondaryText,
+                                inactiveBorderColor = Color.Transparent
+                            )
+                        ) { Text(if (hz == 0) "Auto" else "$hz", maxLines = 1, fontWeight = if (selectedRefreshRate == hz) FontWeight.SemiBold else FontWeight.Medium) }
                     }
                 }
                 Text("Auto lascia a One UI la scelta dinamica della frequenza; i valori manuali possono aumentare i consumi.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
@@ -1348,9 +1363,10 @@ private fun SettingsScreen(
                         checkedThumbColor = Color.White,
                         checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f),
                         checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        uncheckedThumbColor = Color(0xFFE2E8F0),
-                        uncheckedTrackColor = Color(0xFF374151),
-                        uncheckedBorderColor = Color(0xFF94A3B8)
+                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.88f),
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.88f),
+                        uncheckedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.72f),
+                        uncheckedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
                     ))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1396,8 +1412,8 @@ private fun SettingsScreen(
                 AnimatedVisibility(visible = "date" in expandedSettingsSections, enter = fadeIn(tween(75)) + expandVertically(tween(110)), exit = fadeOut(tween(45)) + shrinkVertically(tween(85))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Tenete a portata di mano una data importante", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                OutlinedTextField(value = specialDateLabel, onValueChange = { specialDateLabel = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Nome (es. compleanno)") })
-                OutlinedTextField(value = specialDate, onValueChange = { specialDate = it.take(10) }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(24.dp), label = { Text("Data (gg/mm/aa)") }, placeholder = { Text("26/12/26") })
+                OutlinedTextField(value = specialDateLabel, onValueChange = { specialDateLabel = it }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), shape = RoundedCornerShape(18.dp), singleLine = true, label = { Text("Nome (es. compleanno)") })
+                OutlinedTextField(value = specialDate, onValueChange = { specialDate = it.take(10) }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), singleLine = true, shape = RoundedCornerShape(18.dp), label = { Text("Data (gg/mm/aa)") }, placeholder = { Text("26/12/26") })
                 Button(onClick = {
                     val parsed = parseHaliMeoDate(specialDate)
                     if (specialDateLabel.isNotBlank() && parsed != null) {
@@ -1562,11 +1578,18 @@ private fun SettingsScreen(
                         OutlinedTextField(
                             value = serverDraft,
                             onValueChange = { serverDraft = it },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)),
+                            shape = RoundedCornerShape(18.dp),
                             label = { Text("URL base del server") },
                             placeholder = { Text("https://server.example/") },
                             singleLine = true,
-                            shape = RoundedCornerShape(16.dp)
+                            shape = RoundedCornerShape(18.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = frostedSurfaceStrongColor(),
+                                unfocusedContainerColor = frostedSurfaceColor(),
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
+                            )
                         )
                         Text("Il cambio server non esegue il logout e non cancella i dati locali. Il server di destinazione deve però riconoscere il token di sessione attuale.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2042,17 +2065,26 @@ private fun DiaryScreen(
                 IconButton(onClick = { calendarState.selectedDateMillis = selectedDate?.let { runCatching { java.time.LocalDate.parse(it).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli() }.getOrNull() }; showCalendar = true }) {
                     Icon(Icons.Default.CalendarMonth, contentDescription = "Filtra per data", modifier = Modifier.size(25.dp), tint = if (selectedDate != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(
-                    onClick = {
-                        searchExpanded = !searchExpanded
-                        if (!searchExpanded) query = ""
-                    }
+                Box(
+                    modifier = Modifier.size(36.dp)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), CircleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        if (searchExpanded) Icons.Default.Close else Icons.Default.Search,
-                        contentDescription = if (searchExpanded) "Chiudi ricerca" else "Cerca ricordi",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    IconButton(
+                        onClick = {
+                            searchExpanded = !searchExpanded
+                            if (!searchExpanded) query = ""
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            if (searchExpanded) Icons.Default.Close else Icons.Default.Search,
+                            contentDescription = if (searchExpanded) "Chiudi ricerca" else "Cerca ricordi",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(19.dp)
+                        )
+                    }
                 }
             }
         }
