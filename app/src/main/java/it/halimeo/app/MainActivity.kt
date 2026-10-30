@@ -1625,9 +1625,9 @@ private fun DiaryScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(28.dp)),
                         shape = RoundedCornerShape(28.dp),
-                        colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
+                        colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
                     ) {
                         Column(
                             modifier = Modifier.padding(24.dp),
@@ -1760,7 +1760,7 @@ private fun DiaryScreen(
                                         }
                                     }
                                     upcomingSpecial?.let { (item, date, daysUntil) ->
-                                        Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth()) {
+                                        Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(18.dp))) {
                                             Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                                 Icon(Icons.Default.Event, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                                 Column(Modifier.weight(1f)) {
