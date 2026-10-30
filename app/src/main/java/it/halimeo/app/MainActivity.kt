@@ -557,7 +557,7 @@ class MainActivity:ComponentActivity() {
                     key = { it }
                 ) { page ->
                     when (page) {
-                        0 -> DiaryScreen(entries, displayName,
+                        0 -> DiaryScreen(entries, "Il vostro diario",
                             { editing = it; nav.navigate("edit") },
                             { entry -> activity.lifecycleScope.launch { repo.toggleFavorite(entry.id) } },
                             { entry -> activity.lifecycleScope.launch { repo.delete(entry.id) } },
@@ -607,10 +607,12 @@ class MainActivity:ComponentActivity() {
             ) { backStack ->
                 val entryId = backStack.arguments?.getString("entryId")
                 val memory = entries.firstOrNull { it.id == entryId }
-                if (memory != null) MemoryDetailScreen(memory, onBack = { nav.popBackStack() }, onEdit = {
-                    editing = memory
-                    nav.navigate("edit")
-                })
+                if (memory != null) MemoryDetailScreen(
+                    memory,
+                    onBack = { nav.popBackStack() },
+                    onEdit = { editing = memory; nav.navigate("edit") },
+                    onToggleFavorite = { activity.lifecycleScope.launch { repo.toggleFavorite(memory.id) } }
+                )
                 else LaunchedEffect(entryId) { nav.popBackStack() }
             }
             composable("tripMonaco") { MissionScreen() }
@@ -2628,25 +2630,16 @@ private fun SocialMemoryPost(
 }
 
 @Composable
-private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: () -> Unit) {
-    val detailHaze = rememberHazeState()
-    val detailTint = frostedSurfaceColor()
-    val detailStyleBackground = MaterialTheme.colorScheme.surface
-    val detailStyle = remember(detailTint) {
-        HazeBlurStyle {
-            backgroundColor(detailStyleBackground.copy(alpha = 0.82f))
-            colorEffects(listOf(HazeColorEffect.tint(detailTint.copy(alpha = 0.50f))))
-            fallbackColorEffect(HazeColorEffect.tint(detailTint))
-        }
-    }
-    val context = LocalContext.current
-    val bitmap by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri) {
-        value = entry.photoUri?.let { decodeMemoryPhoto(context, it, maxDimension = 2200) }
-    }
+private fun MemoryDetailScreen(
+    entry: DiaryEntry,
+    onBack: () -> Unit,
+    onEdit: () -> Unit,
+    onToggleFavorite: () -> Unit
+) {
     Column(
-        Modifier.fillMaxSize().hazeSource(detailHaze).verticalScroll(rememberScrollState())
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(
@@ -2654,50 +2647,32 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
                 modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
                     .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape)
             ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) }
-            AnimatedPageTitle("Il vostro ricordo", MaterialTheme.typography.headlineSmall)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text("Il vostro ricordo", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text("Un momento della vostra storia", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+            }
             IconButton(
                 onClick = onEdit,
                 modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
                     .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape)
             ) { Icon(Icons.Default.Edit, contentDescription = "Modifica ricordo", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp)) }
         }
-        Card(
-            modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(26.dp), ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.24f))
-                .hazeBlur(HazeInput.Sources(detailHaze), detailStyle)
-                .clip(RoundedCornerShape(26.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(26.dp)),
-            shape = RoundedCornerShape(26.dp),
-            colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
-        ) {
-            Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text(entry.title, style = MaterialTheme.typography.headlineLarge.copy(letterSpacing = (-0.8).sp), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier.size(32.dp)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), CircleShape)
-                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.CalendarToday, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
-                    }
-                    Text(displayHaliMeoDate(entry.memoryDate), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                AnimatedVisibility(
-                    visible = bitmap != null,
-                    enter = if (reduceAnimationsState.value) fadeIn(tween(0)) else fadeIn(tween(180, easing = OneUiMotionEasing)) + expandVertically(animationSpec = tween(220, easing = OneUiMotionEasing)),
-                    exit = fadeOut(tween(100))
-                ) {
-                    bitmap?.let { photo ->
-                        Image(photo.asImageBitmap(), contentDescription = "Foto del ricordo", modifier = Modifier.fillMaxWidth()
-                            .heightIn(max = 620.dp)
-                            .clip(RoundedCornerShape(22.dp))
-                            .border(1.dp, frostedEdgeColor(), RoundedCornerShape(22.dp)), contentScale = ContentScale.Fit)
-                    }
-                }
-                SelectionContainer {
-                    Text(entry.body, style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 26.sp), color = MaterialTheme.colorScheme.onSurface)
-                }
-            }
+        val context = LocalContext.current
+        val bitmap by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri) {
+            value = entry.photoUri?.let { decodeMemoryPhoto(context, it, maxDimension = 2200) }
         }
+        SocialMemoryPost(
+            entry = entry,
+            authorName = "Il vostro diario",
+            photo = bitmap,
+            expanded = true,
+            onOpen = {},
+            onToggleFavorite = onToggleFavorite,
+            onToggleCaption = {},
+            onEdit = onEdit,
+            onDelete = {}
+        )
         Spacer(Modifier.height(100.dp))
     }
 }
