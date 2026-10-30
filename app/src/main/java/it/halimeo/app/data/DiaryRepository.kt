@@ -111,7 +111,7 @@ class DiaryRepository(context: Context) {
     }
 
     suspend fun setFavorite(id: String, favorite: Boolean) {
-        dao.setFavoriteExplicit(id, favorite)
+        dao.setFavorite(id, favorite)
     }
 
     suspend fun delete(id:String) {
