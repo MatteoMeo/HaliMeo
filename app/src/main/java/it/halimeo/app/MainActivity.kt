@@ -1503,7 +1503,7 @@ private fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)) {
-                        Icon(if (developerUnlocked) Icons.Default.Terminal else Icons.Default.Lock, contentDescription = null, tint = accentText, modifier = Modifier.padding(9.dp).size(20.dp))
+                        Icon(if (developerUnlocked) Icons.Default.Code else Icons.Default.Lock, contentDescription = null, tint = accentText, modifier = Modifier.padding(9.dp).size(20.dp))
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("OPZIONI SVILUPPATORE", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
