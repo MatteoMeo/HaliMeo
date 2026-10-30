@@ -104,6 +104,7 @@ import it.halimeo.app.data.*
 import it.halimeo.app.network.*
 import it.halimeo.app.sync.SyncScheduler
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -348,8 +349,10 @@ class MainActivity:ComponentActivity() {
         entries.asSequence().filter { it.isFavorite }.mapTo(mutableSetOf()) { it.id }
     }
     val legacyFavoritesPrefs = remember { ctx.getSharedPreferences("halimeo_favorites", android.content.Context.MODE_PRIVATE) }
-    LaunchedEffect(entries) {
-        if (!legacyFavoritesPrefs.getBoolean("room_migrated", false) && entries.isNotEmpty()) {
+    LaunchedEffect(Unit) {
+        if (!legacyFavoritesPrefs.getBoolean("room_migrated", false)) {
+            // Wait for the first real database emission before migrating the old set.
+            repo.entries.first { it.isNotEmpty() }
             val legacyIds = legacyFavoritesPrefs.getStringSet("ids", emptySet())?.toSet().orEmpty()
             legacyIds.forEach { repo.setFavorite(it, true) }
             legacyFavoritesPrefs.edit().putBoolean("room_migrated", true).remove("ids").apply()
