@@ -17,9 +17,9 @@ data class DiaryEntry(
     val deletedAt: Long? = null,
     val syncState: String = "PENDING",
     val photoUri: String? = null,
-    val photoUpdatedAt: Long = 0L,
+    @ColumnInfo(defaultValue = "0") val photoUpdatedAt: Long = 0L,
     val photoDeletedAt: Long? = null,
-    val photoSyncState: String = "SYNCED"
+    @ColumnInfo(defaultValue = "'SYNCED'") val photoSyncState: String = "SYNCED"
 )
 
 data class DiaryEntryDto(
