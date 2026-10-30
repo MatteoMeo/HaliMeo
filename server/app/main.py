@@ -210,7 +210,8 @@ def social_feed(user=Depends(current_user)):
         rows = c.execute("""
           SELECT e.*, u.display_name AS author_name,
             (SELECT COUNT(*) FROM entry_likes l WHERE l.entry_id=e.id) AS like_count,
-            EXISTS(SELECT 1 FROM entry_likes l WHERE l.entry_id=e.id AND l.user_id=?) AS liked_by_me
+            EXISTS(SELECT 1 FROM entry_likes l WHERE l.entry_id=e.id AND l.user_id=?) AS liked_by_me,
+            (SELECT COUNT(*) FROM entry_comments cm WHERE cm.entry_id=e.id AND cm.deleted_at IS NULL) AS comment_count
           FROM entries e LEFT JOIN users u ON u.id=e.owner_id
           WHERE e.deleted_at IS NULL ORDER BY e.memory_date DESC,e.created_at DESC LIMIT 500
         """, (user["id"],)).fetchall()
@@ -227,7 +228,7 @@ def social_feed(user=Depends(current_user)):
               "memoryDate":r["memory_date"],"createdAt":r["created_at"],"updatedAt":r["updated_at"],
               "authorId":r["owner_id"],"authorName":r["author_name"] or "Account disattivato",
               "likeCount":r["like_count"],"likedByMe":bool(r["liked_by_me"]),
-              "comments":[dict(x) for x in comments]
+              "commentCount":r["comment_count"],"comments":[dict(x) for x in comments]
             })
     return {"entries":result,"serverTime":now_ms()}
 
