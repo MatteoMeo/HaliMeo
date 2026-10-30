@@ -116,8 +116,8 @@ private val OneUiMotionEasing = CubicBezierEasing(0.22f, 0.25f, 0f, 1f)
 @Composable private fun frostedEdgeColor(): Color = Color.White.copy(alpha = 0.20f)
 @Composable private fun frostedGlassBrush(): Brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.065f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.075f)))
 @Composable private fun isHaliMeoDark(): Boolean = true
-@Composable private fun frostedSurfaceColor(): Color = when { reduceStaticEffectsState.value && isHaliMeoDark() -> Color(0xF0141921); reduceStaticEffectsState.value -> Color(0xF2FFFFFF); isHaliMeoDark() -> Color(0x99101419); else -> Color(0xB8FFFFFF) }
-@Composable private fun frostedSurfaceStrongColor(): Color = when { reduceStaticEffectsState.value && isHaliMeoDark() -> Color(0xF51A2029); reduceStaticEffectsState.value -> Color(0xF8FFFFFF); isHaliMeoDark() -> Color(0xCC0C0F12); else -> Color(0xD6FFFFFF) }
+@Composable private fun frostedSurfaceColor(): Color = when { reduceStaticEffectsState.value && isHaliMeoDark() -> Color(0xF0141921); reduceStaticEffectsState.value -> Color(0xF2FFFFFF); isHaliMeoDark() -> Color(0xD9101419); else -> Color(0xE6FFFFFF) }
+@Composable private fun frostedSurfaceStrongColor(): Color = when { reduceStaticEffectsState.value && isHaliMeoDark() -> Color(0xF51A2029); reduceStaticEffectsState.value -> Color(0xF8FFFFFF); isHaliMeoDark() -> Color(0xE60C0F12); else -> Color(0xF0FFFFFF) }
 private val customBackgroundColorState = mutableStateOf("default")
 private val customBackgroundUriState = mutableStateOf<String?>(null)
 private val backgroundBlurState = mutableStateOf(0f)
