@@ -1703,6 +1703,7 @@ private fun SettingsScreen(
                 Text("Package: ${BuildConfig.APPLICATION_ID}", color = secondaryText, style = MaterialTheme.typography.labelSmall)
                 Text("Diario privato condiviso · Android API 37", color = secondaryText, style = MaterialTheme.typography.labelSmall)
                 UpdateCenterCard(activity)
+                UpdateCenterCard(activity)
             }
         }
 
