@@ -429,7 +429,7 @@ class MainActivity:ComponentActivity() {
     val entries by repo.entries.collectAsState(initial= emptyList()); var editing by remember{mutableStateOf<DiaryEntry?>(null)}
     var syncInProgress by remember { mutableStateOf(false) }
     var syncFailed by remember { mutableStateOf(false) }
-    val pendingSyncCount = remember(entries) { entries.count { it.syncState != "SYNCED" } }
+    val pendingSyncCount = remember(entries) { entries.count { it.syncState != "SYNCED" || it.photoSyncState != "SYNCED" } }
     fun syncDiary() {
         if (syncInProgress) return
         syncInProgress = true
