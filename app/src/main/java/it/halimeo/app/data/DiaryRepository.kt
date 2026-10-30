@@ -2,6 +2,7 @@ package it.halimeo.app.data
 
 import android.content.Context
 import android.net.Uri
+import android.graphics.BitmapFactory
 import it.halimeo.app.network.ApiClient
 import it.halimeo.app.network.SyncRequest
 import kotlinx.coroutines.flow.Flow
@@ -20,12 +21,39 @@ class DiaryRepository(context: Context) {
 
     private fun importPhoto(uri: String, id: String): String {
         val source = Uri.parse(uri)
-        val destination = File(photoDir, "$id-${System.currentTimeMillis()}.img")
-        appContext.contentResolver.openInputStream(source).use { input ->
-            requireNotNull(input) { "Impossibile leggere la foto selezionata" }
-            destination.outputStream().use { output -> input.copyTo(output) }
+        val mime = appContext.contentResolver.getType(source)?.lowercase()
+        val extension = when (mime) {
+            "image/jpeg", "image/jpg" -> ".jpg"
+            "image/png" -> ".png"
+            "image/webp" -> ".webp"
+            else -> ".jpg"
+        }
+        val destination = File(photoDir, "$id-${System.currentTimeMillis()}$extension")
+        if (mime in setOf("image/jpeg", "image/jpg", "image/png", "image/webp")) {
+            appContext.contentResolver.openInputStream(source).use { input ->
+                requireNotNull(input) { "Impossibile leggere la foto selezionata" }
+                destination.outputStream().use { output -> input.copyTo(output) }
+            }
+        } else {
+            val bitmap = appContext.contentResolver.openInputStream(source).use { input ->
+                requireNotNull(input) { "Impossibile leggere la foto selezionata" }
+                BitmapFactory.decodeStream(input)
+            } ?: throw IllegalArgumentException("Il formato della foto non è supportato")
+            destination.outputStream().use { output ->
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, output)
+            }
+            bitmap.recycle()
         }
         return Uri.fromFile(destination).toString()
+    }
+
+    private fun deleteManagedPhoto(uri: String?) {
+        if (uri.isNullOrBlank()) return
+        val parsed = Uri.parse(uri)
+        val path = parsed.path ?: return
+        if (parsed.scheme == "file" && File(path).parentFile?.canonicalFile == photoDir.canonicalFile) {
+            File(path).delete()
+        }
     }
 
     suspend fun save(title:String, body:String, category:String, date:String, id:String?=null, photoUri:String?=null) {
@@ -40,7 +68,7 @@ class DiaryRepository(context: Context) {
             else -> old?.photoUri
         }
         if (photoChanged || removedPhoto) {
-            old?.photoUri?.let { previous -> runCatching { File(Uri.parse(previous).path ?: "").delete() } }
+            deleteManagedPhoto(old?.photoUri)
         }
         dao.upsert(DiaryEntry(
             id=entryId, title=title.trim(), body=body.trim(),
@@ -130,7 +158,7 @@ class DiaryRepository(context: Context) {
             val local = dao.get(dto.id) ?: continue
             if ((dto.id !in photosToDownload && dto.photoUpdatedAt <= local.photoUpdatedAt) || dto.photoDeletedAt != null) {
                 if (dto.photoDeletedAt != null && dto.photoDeletedAt >= local.photoUpdatedAt) {
-                    local.photoUri?.let { runCatching { File(Uri.parse(it).path ?: "").delete() } }
+                    deleteManagedPhoto(local.photoUri)
                     dao.upsert(local.copy(photoUri=null, photoUpdatedAt=dto.photoUpdatedAt,
                         photoDeletedAt=dto.photoDeletedAt, photoSyncState="SYNCED"))
                 }
@@ -139,7 +167,7 @@ class DiaryRepository(context: Context) {
             val downloaded = api.downloadPhoto(auth, dto.id)
             val destination = File(photoDir, "${dto.id}-remote-${dto.photoUpdatedAt}.img")
             downloaded.byteStream().use { input -> destination.outputStream().use { output -> input.copyTo(output) } }
-            local.photoUri?.let { runCatching { File(Uri.parse(it).path ?: "").delete() } }
+            deleteManagedPhoto(local.photoUri)
             dao.upsert(local.copy(photoUri=Uri.fromFile(destination).toString(),
                 photoUpdatedAt=dto.photoUpdatedAt, photoDeletedAt=null, photoSyncState="SYNCED"))
         }
