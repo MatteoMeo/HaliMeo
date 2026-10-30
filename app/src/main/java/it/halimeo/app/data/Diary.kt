@@ -19,7 +19,8 @@ data class DiaryEntry(
     val photoUri: String? = null,
     @ColumnInfo(defaultValue = "0") val photoUpdatedAt: Long = 0L,
     val photoDeletedAt: Long? = null,
-    @ColumnInfo(defaultValue = "'SYNCED'") val photoSyncState: String = "SYNCED"
+    @ColumnInfo(defaultValue = "'SYNCED'") val photoSyncState: String = "SYNCED",
+    @ColumnInfo(defaultValue = "0") val isFavorite: Boolean = false
 )
 
 data class DiaryEntryDto(
@@ -49,11 +50,13 @@ interface DiaryDao {
     @Insert(onConflict=OnConflictStrategy.REPLACE) suspend fun upsertAll(entries: List<DiaryEntry>)
     @Query("UPDATE diary_entries SET syncState='SYNCED' WHERE id=:id AND updatedAt=:updatedAt")
     suspend fun markSynced(id: String, updatedAt: Long)
+    @Query("UPDATE diary_entries SET isFavorite=:favorite WHERE id=:id")
+    suspend fun setFavorite(id: String, favorite: Boolean)
     @Query("SELECT * FROM diary_entries ORDER BY updatedAt DESC")
     suspend fun allForBackup(): List<DiaryEntry>
 }
 
-@Database(entities=[DiaryEntry::class], version=3, exportSchema=true)
+@Database(entities=[DiaryEntry::class], version=4, exportSchema=true)
 abstract class HaliMeoDatabase : RoomDatabase() {
     abstract fun diaryDao(): DiaryDao
     companion object {
@@ -69,10 +72,15 @@ abstract class HaliMeoDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE diary_entries ADD COLUMN photoSyncState TEXT NOT NULL DEFAULT 'SYNCED'")
             }
         }
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE diary_entries ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0")
+            }
+        }
         @Volatile private var instance: HaliMeoDatabase? = null
         fun get(context: android.content.Context) = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, HaliMeoDatabase::class.java, "halimeo.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build().also { instance=it }
         }
     }
