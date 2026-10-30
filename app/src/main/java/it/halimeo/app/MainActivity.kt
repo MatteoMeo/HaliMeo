@@ -527,7 +527,7 @@ class MainActivity:ComponentActivity() {
         actions={
             IconButton(
                 onClick = { activity.lifecycleScope.launch { session.clear(); signed = false } },
-                modifier = Modifier.padding(horizontal = 8.dp).size(48.dp)
+                modifier = Modifier.padding(horizontal = 8.dp).size(42.dp)
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
                     .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape)
             ) {
@@ -2351,7 +2351,8 @@ private fun DiaryScreen(
                                         Image(
                                             bitmap = entryPhoto!!.asImageBitmap(),
                                             contentDescription = "Foto del ricordo: " + entry.title,
-                                            modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp).clip(RoundedCornerShape(18.dp)),
+                                            modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp).clip(RoundedCornerShape(22.dp))
+                                                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(22.dp)),
                                             contentScale = androidx.compose.ui.layout.ContentScale.Fit
                                         )
                                     }
@@ -2440,13 +2441,13 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(
                 onClick = onBack,
-                modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
+                modifier = Modifier.size(42.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
                     .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape)
             ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp)) }
             AnimatedPageTitle("Il vostro ricordo", MaterialTheme.typography.headlineSmall)
             IconButton(
                 onClick = onEdit,
-                modifier = Modifier.size(42.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
+                modifier = Modifier.size(38.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
                     .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape)
             ) { Icon(Icons.Default.Edit, contentDescription = "Modifica ricordo", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(21.dp)) }
         }
@@ -2470,7 +2471,8 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
                 ) {
                     bitmap?.let { photo ->
                         Image(photo.asImageBitmap(), contentDescription = "Foto del ricordo", modifier = Modifier.fillMaxWidth()
-                            .heightIn(max = 620.dp).clip(RoundedCornerShape(18.dp)), contentScale = ContentScale.Fit)
+                            .heightIn(max = 620.dp).clip(RoundedCornerShape(22.dp))
+                            .border(1.dp, frostedEdgeColor(), RoundedCornerShape(22.dp)), contentScale = ContentScale.Fit)
                     }
                 }
                 SelectionContainer {
