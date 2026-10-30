@@ -1072,8 +1072,20 @@ private fun SettingsScreen(
                                     ).padding(3.dp),
                                 contentAlignment = Alignment.Center
                             ) {
+                                val iconPreview = remember(iconRes, ctx) {
+                                    val drawable = requireNotNull(ctx.getDrawable(iconRes)) {
+                                        "Risorsa anteprima icona non disponibile"
+                                    }
+                                    android.graphics.Bitmap.createBitmap(
+                                        128, 128, android.graphics.Bitmap.Config.ARGB_8888
+                                    ).also { bitmap ->
+                                        val canvas = android.graphics.Canvas(bitmap)
+                                        drawable.setBounds(0, 0, canvas.width, canvas.height)
+                                        drawable.draw(canvas)
+                                    }.asImageBitmap()
+                                }
                                 Image(
-                                    painter = androidx.compose.ui.res.painterResource(iconRes),
+                                    bitmap = iconPreview,
                                     contentDescription = "Icona HaliMeo $label",
                                     modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp))
                                 )
