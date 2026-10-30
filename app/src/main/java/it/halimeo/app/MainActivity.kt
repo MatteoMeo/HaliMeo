@@ -391,6 +391,28 @@ class MainActivity:ComponentActivity() {
         onRedeem={code,n,e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.redeem(RedeemInviteRequest(code,n,e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Invito non valido")}}}
     );return}
     val entries by repo.entries.collectAsState(initial= emptyList()); var editing by remember{mutableStateOf<DiaryEntry?>(null)}
+    var syncInProgress by remember { mutableStateOf(false) }
+    var syncFailed by remember { mutableStateOf(false) }
+    val pendingSyncCount = entries.count { it.syncState != "SYNCED" }
+    fun syncDiary() {
+        if (syncInProgress) return
+        syncInProgress = true
+        syncFailed = false
+        activity.lifecycleScope.launch {
+            runCatching { repo.syncNow() }
+                .onSuccess {
+                    val now = System.currentTimeMillis()
+                    ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putLong("last_sync_at", now).apply()
+                    lastSyncAtState.value = now
+                    Toast.makeText(ctx, "Sincronizzazione completata", Toast.LENGTH_SHORT).show()
+                }
+                .onFailure {
+                    syncFailed = true
+                    Toast.makeText(ctx, "Offline: i ricordi restano salvati sul dispositivo", Toast.LENGTH_LONG).show()
+                }
+            syncInProgress = false
+        }
+    }
     // Favorite state lives in Room, so the diary Flow is the single source of truth.
     val favoriteIds = remember(entries) {
         entries.asSequence().filter { it.isFavorite }.mapTo(mutableSetOf()) { it.id }
@@ -441,11 +463,39 @@ class MainActivity:ComponentActivity() {
     Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA))) {
     HaliMeoAmbientBackdrop(Modifier.fillMaxSize())
     Scaffold(containerColor=Color.Transparent,topBar={TopAppBar(
-        title={Text("HaliMeo", fontWeight=FontWeight.ExtraBold, style=MaterialTheme.typography.headlineSmall.copy(letterSpacing=(-1.1).sp, brush=Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.primary))))},
+        title={
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("HaliMeo", fontWeight=FontWeight.ExtraBold, style=MaterialTheme.typography.headlineSmall.copy(letterSpacing=(-1.1).sp, brush=Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.primary))))
+                val statusLabel = when {
+                    syncInProgress -> "Sync…"
+                    syncFailed -> "Offline"
+                    pendingSyncCount > 0 -> "$pendingSyncCount da inviare"
+                    lastSyncAtState.value > 0L -> "Aggiornato"
+                    else -> "Sul dispositivo"
+                }
+                val statusIcon = when {
+                    syncInProgress -> Icons.Default.Sync
+                    syncFailed -> Icons.Default.CloudOff
+                    pendingSyncCount > 0 -> Icons.Default.CloudUpload
+                    else -> Icons.Default.CloudDone
+                }
+                Surface(
+                    modifier = Modifier.clip(RoundedCornerShape(50)).clickable(enabled = !syncInProgress, onClick = { syncDiary() }),
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.20f))
+                ) {
+                    Row(Modifier.padding(horizontal = 9.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Icon(statusIcon, contentDescription = null, tint = if (syncFailed) Color(0xFFFFC36B) else MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                        Text(statusLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                    }
+                }
+            }
+        },
         modifier=Modifier.heightIn(min=56.dp),
         colors=TopAppBarDefaults.topAppBarColors(containerColor=Color.Transparent, scrolledContainerColor=Color.Transparent, titleContentColor=MaterialTheme.colorScheme.onSurface,actionIconContentColor=MaterialTheme.colorScheme.onSurface),
         actions={
-            IconButton(onClick={activity.lifecycleScope.launch{runCatching{repo.syncNow()}.onSuccess{val now=System.currentTimeMillis();ctx.getSharedPreferences("halimeo_preferences",android.content.Context.MODE_PRIVATE).edit().putLong("last_sync_at",now).apply();lastSyncAtState.value=now;Toast.makeText(ctx,"Sincronizzazione completata",Toast.LENGTH_SHORT).show()}.onFailure{Toast.makeText(ctx,"Offline: dati conservati sul dispositivo",Toast.LENGTH_LONG).show()}}}){Icon(Icons.Default.CloudSync,"Sincronizza")}
+            IconButton(onClick={ syncDiary() }, enabled = !syncInProgress){Icon(Icons.Default.CloudSync,"Sincronizza")}
             IconButton(onClick={activity.lifecycleScope.launch{session.clear();signed=false}}){Icon(Icons.AutoMirrored.Filled.Logout,"Esci")}
         }
     )},bottomBar={}, floatingActionButton = {}, content = { padding ->
@@ -507,7 +557,13 @@ class MainActivity:ComponentActivity() {
                     runCatching { repo.syncNow() }
                 }
             }, { editing = null; nav.popBackStack() }) }
-            composable("memory/{entryId}") { backStack ->
+            composable(
+                route = "memory/{entryId}",
+                enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(90)) else fadeIn(tween(130, easing = OneUiMotionEasing)) + slideInHorizontally(initialOffsetX = { it / 12 }, animationSpec = tween(220, easing = OneUiMotionEasing)) },
+                exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else fadeOut(tween(110, easing = OneUiMotionEasing)) + slideOutHorizontally(targetOffsetX = { -it / 18 }, animationSpec = tween(140, easing = OneUiMotionEasing)) },
+                popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(80)) else fadeIn(tween(110, easing = OneUiMotionEasing)) + slideInHorizontally(initialOffsetX = { -it / 18 }, animationSpec = tween(150, easing = OneUiMotionEasing)) },
+                popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else fadeOut(tween(130, easing = OneUiMotionEasing)) + slideOutHorizontally(targetOffsetX = { it / 12 }, animationSpec = tween(210, easing = OneUiMotionEasing)) }
+            ) { backStack ->
                 val entryId = backStack.arguments?.getString("entryId")
                 val memory = entries.firstOrNull { it.id == entryId }
                 if (memory != null) MemoryDetailScreen(memory, onBack = { nav.popBackStack() }, onEdit = {
@@ -1724,7 +1780,7 @@ private fun DiaryScreen(
                         scaleY = headerTitleScale
                         transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
                     },
-                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = 31.sp, letterSpacing = (-0.65).sp),
+                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = 33.sp, letterSpacing = (-0.9).sp),
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -1769,9 +1825,9 @@ private fun DiaryScreen(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(28.dp)),
+                modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(20.dp)),
                 singleLine = true,
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(20.dp),
                 placeholder = { Text("Cerca un ricordo…") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Cerca") },
                 trailingIcon = {
@@ -1904,8 +1960,8 @@ private fun DiaryScreen(
                                                 Surface(
                                                     modifier = Modifier.size(62.dp).hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(CircleShape).clickable { onOpenMemory(highlight) },
                                                     shape = CircleShape,
-                                                    color = categoryAccent(highlight.category).copy(alpha = 0.18f),
-                                                    border = androidx.compose.foundation.BorderStroke(2.dp, categoryAccent(highlight.category).copy(alpha = 0.8f))
+                                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                                                    border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.8f))
                                                 ) {
                                                     Box(contentAlignment = Alignment.Center) {
                                                         if (storyBitmap != null) Image(
@@ -1913,7 +1969,7 @@ private fun DiaryScreen(
                                                             contentDescription = "Apri ${highlight.title}",
                                                             modifier = Modifier.fillMaxSize().clip(CircleShape),
                                                             contentScale = ContentScale.Crop
-                                                        ) else Icon(Icons.Default.Photo, contentDescription = null, tint = categoryAccent(highlight.category), modifier = Modifier.size(26.dp))
+                                                        ) else Icon(Icons.Default.Photo, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
                                                     }
                                                 }
                                                 Text(highlight.title, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1979,7 +2035,7 @@ private fun DiaryScreen(
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {
                             Box {
-                                Box(Modifier.matchParentSize().background(Brush.horizontalGradient(listOf(accent.copy(alpha = 0.075f), Color.Transparent, accent.copy(alpha = 0.025f)))));
+                                Box(Modifier.matchParentSize().background(Brush.linearGradient(listOf(accent.copy(alpha = 0.11f), Color.Transparent, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.045f)))));
                                 Column(
                                 modifier = Modifier.padding(15.dp),
                                 verticalArrangement = Arrangement.spacedBy(11.dp)
