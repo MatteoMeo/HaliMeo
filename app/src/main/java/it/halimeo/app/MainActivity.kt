@@ -623,7 +623,7 @@ class MainActivity:ComponentActivity() {
         modifier = Modifier.align(Alignment.BottomStart)
             // Keep the right edge anchored to the + action while shortening the bar
             // from the left, so the two controls read as one balanced bottom cluster.
-            .padding(start = 28.dp, end = 78.dp)
+            .padding(start = 48.dp, end = 78.dp)
             .fillMaxWidth()
             .navigationBarsPadding()
             // A little taller and raised: its visual center now lines up with the + button.
@@ -721,7 +721,7 @@ class MainActivity:ComponentActivity() {
         modifier = Modifier.align(Alignment.BottomEnd)
             .padding(end = 12.dp)
             .navigationBarsPadding()
-            .padding(bottom = 11.dp)
+            .padding(bottom = 15.dp)
             .size(46.dp)
             .graphicsLayer { scaleX = fabScale; scaleY = fabScale }
             .clip(RoundedCornerShape(24.dp))
