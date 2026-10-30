@@ -204,7 +204,6 @@ private val Elevated = Color(0xFF111827)
 private val FrostedSurface = Color(0xB80D1420)
 private val FrostedSurfaceStrong = Color(0xD90D1420)
 private val OneUiMotionEasing = CubicBezierEasing(0.22f, 0.25f, 0f, 1f)
-@Composable private fun frostedEdgeColor(): Color = Color.White.copy(alpha = 0.20f)
 @Composable private fun frostedGlassBrush(): Brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.065f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.075f)))
 @Composable private fun isHaliMeoDark(): Boolean = when (appThemeModeState.value) { "light" -> false; "system" -> isSystemInDarkTheme(); else -> true }
 @Composable private fun frostedEdgeColor(): Color = if (isHaliMeoDark()) Color.White.copy(alpha = 0.20f) else Color(0xFF59647A).copy(alpha = 0.22f)
