@@ -139,7 +139,9 @@ private fun applyLauncherIcon(context: android.content.Context, variant: String)
         "ocean" to "it.halimeo.app.LauncherOcean",
         "lavender" to "it.halimeo.app.LauncherLavender",
         "mint" to "it.halimeo.app.LauncherMint",
-        "rose" to "it.halimeo.app.LauncherRose"
+        "rose" to "it.halimeo.app.LauncherRose",
+        "graphite" to "it.halimeo.app.LauncherGraphite",
+        "aurora" to "it.halimeo.app.LauncherAurora"
     )
     val selected = if (variant in aliases) variant else "ocean"
     val packageManager = context.packageManager
@@ -1236,9 +1238,11 @@ private fun SettingsScreen(
                 Text("Scegli l’aspetto di HaliMeo nella schermata Home.", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 val iconChoices = listOf(
                     Triple("ocean", "Oceano", R.mipmap.ic_launcher),
-                    Triple("lavender", "Lavanda", R.mipmap.ic_launcher_lavender),
-                    Triple("mint", "Menta", R.mipmap.ic_launcher_mint),
-                    Triple("rose", "Rosa", R.mipmap.ic_launcher_rose)
+                    Triple("rose", "Tramonto", R.mipmap.ic_launcher_rose),
+                    Triple("mint", "Foresta", R.mipmap.ic_launcher_mint),
+                    Triple("lavender", "Ametista", R.mipmap.ic_launcher_lavender),
+                    Triple("graphite", "Grafite", R.mipmap.ic_launcher_graphite),
+                    Triple("aurora", "Aurora", R.mipmap.ic_launcher_aurora)
                 )
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
