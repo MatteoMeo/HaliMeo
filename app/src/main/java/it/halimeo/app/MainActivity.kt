@@ -1868,7 +1868,6 @@ private fun SettingsScreen(
 }
 
 }
-}
 @Composable private fun AuthScreen(onLogin:(String,String,(String)->Unit)->Unit,onRedeem:(String,String,String,String,(String)->Unit)->Unit){
         val authHaze = rememberHazeState()
     val authGlassTint = frostedSurfaceStrongColor()
