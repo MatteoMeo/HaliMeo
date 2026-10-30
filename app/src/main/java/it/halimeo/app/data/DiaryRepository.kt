@@ -68,11 +68,13 @@ class DiaryRepository(context: Context) {
         val pending = dao.pending()
         val response = api.sync(auth, SyncRequest(pending.map { it.toDto() }))
         val remoteById = response.changes.associateBy { it.id }
+        val photosToDownload = mutableSetOf<String>()
         for (dto in response.changes) {
             val local = dao.get(dto.id)
             if (local != null && local.updatedAt > dto.updatedAt) continue
             val remotePhotoIsNewer = dto.photoUpdatedAt > (local?.photoUpdatedAt ?: 0L)
             val preserveLocalPhoto = local != null && !remotePhotoIsNewer
+            if (remotePhotoIsNewer && dto.photoDeletedAt == null) photosToDownload += dto.id
             dao.upsert(dto.toEntity().copy(
                 photoUri = if (preserveLocalPhoto) local?.photoUri else null,
                 photoUpdatedAt = maxOf(dto.photoUpdatedAt, local?.photoUpdatedAt ?: 0L),
@@ -111,7 +113,7 @@ class DiaryRepository(context: Context) {
         // Download remote photo revisions after uploads, keeping the file app-private for offline use.
         for (dto in response.changes) {
             val local = dao.get(dto.id) ?: continue
-            if (dto.photoUpdatedAt <= local.photoUpdatedAt || dto.photoDeletedAt != null) {
+            if ((dto.id !in photosToDownload && dto.photoUpdatedAt <= local.photoUpdatedAt) || dto.photoDeletedAt != null) {
                 if (dto.photoDeletedAt != null && dto.photoDeletedAt >= local.photoUpdatedAt) {
                     local.photoUri?.let { runCatching { File(Uri.parse(it).path ?: "").delete() } }
                     dao.upsert(local.copy(photoUri=null, photoUpdatedAt=dto.photoUpdatedAt,
