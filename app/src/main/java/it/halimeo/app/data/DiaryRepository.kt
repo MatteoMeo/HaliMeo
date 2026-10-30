@@ -98,7 +98,7 @@ class DiaryRepository(context: Context) {
         for (entry in dao.pendingPhotos()) {
             if (entry.deletedAt != null) continue
             if (entry.photoDeletedAt != null && (entry.photoUri == null || entry.photoUpdatedAt == entry.photoDeletedAt)) {
-                api.deletePhoto(auth, entry.id)
+                api.deletePhoto(auth, entry.id, entry.photoUpdatedAt)
                 dao.markPhotoSynced(entry.id, entry.photoUpdatedAt)
                 continue
             }
@@ -113,7 +113,7 @@ class DiaryRepository(context: Context) {
             }
             val body = file.asRequestBody(mime.toMediaType())
             val part = MultipartBody.Part.createFormData("photo", file.name, body)
-            api.uploadPhoto(auth, entry.id, part)
+            api.uploadPhoto(auth, entry.id, entry.photoUpdatedAt, part)
             dao.markPhotoSynced(entry.id, entry.photoUpdatedAt)
         }
 
