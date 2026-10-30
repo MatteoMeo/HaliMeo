@@ -20,6 +20,7 @@ data class DiaryEntry(
     @ColumnInfo(defaultValue = "0") val photoUpdatedAt: Long = 0L,
     val photoDeletedAt: Long? = null,
     @ColumnInfo(defaultValue = "'SYNCED'") val photoSyncState: String = "SYNCED",
+    // Retained as a legacy Room column so existing databases upgrade without a destructive migration.
     @ColumnInfo(defaultValue = "0") val isFavorite: Boolean = false
 )
 
@@ -45,8 +46,6 @@ data class PendingSocialAction(
 interface DiaryDao {
     @Query("SELECT * FROM diary_entries WHERE deletedAt IS NULL ORDER BY memoryDate DESC, updatedAt DESC")
     fun observeAll(): Flow<List<DiaryEntry>>
-    @Query("SELECT id FROM diary_entries WHERE deletedAt IS NULL AND isFavorite = 1")
-    fun observeFavoriteIds(): Flow<List<String>>
     @Query("SELECT * FROM diary_entries WHERE id=:id LIMIT 1")
     suspend fun get(id: String): DiaryEntry?
     @Query("SELECT * FROM diary_entries WHERE syncState != 'SYNCED' ORDER BY updatedAt")
@@ -61,10 +60,6 @@ interface DiaryDao {
     @Insert(onConflict=OnConflictStrategy.REPLACE) suspend fun upsertAll(entries: List<DiaryEntry>)
     @Query("UPDATE diary_entries SET syncState='SYNCED' WHERE id=:id AND updatedAt=:updatedAt")
     suspend fun markSynced(id: String, updatedAt: Long)
-    @Query("UPDATE diary_entries SET isFavorite = CASE WHEN isFavorite = 1 THEN 0 ELSE 1 END WHERE id=:id AND deletedAt IS NULL")
-    suspend fun toggleFavorite(id: String)
-    @Query("UPDATE diary_entries SET isFavorite=:favorite WHERE id=:id AND deletedAt IS NULL")
-    suspend fun setFavorite(id: String, favorite: Boolean)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertSocialAction(action: PendingSocialAction)
     @Query("SELECT * FROM pending_social_actions ORDER BY createdAt ASC")
     suspend fun pendingSocialActions(): List<PendingSocialAction>
