@@ -2432,16 +2432,20 @@ private fun DiaryScreen(
                             commentCount = social?.commentCount ?: 0,
                             socialEnabled = entry.syncState == "SYNCED",
                             onToggleLike = {
-                                val wasLiked = social?.likedByMe ?: false
-                                if (social != null) {
-                                    socialEntries = socialEntries + (entry.id to social.copy(
-                                        likeCount = (social.likeCount + if (wasLiked) -1 else 1).coerceAtLeast(0),
-                                        likedByMe = !wasLiked
-                                    ))
-                                }
+                                val currentSocial = socialEntries[entry.id] ?: it.halimeo.app.network.SocialFeedEntry(
+                                    id = entry.id, title = entry.title, body = entry.body, category = entry.category,
+                                    memoryDate = entry.memoryDate, createdAt = entry.createdAt, updatedAt = entry.updatedAt,
+                                    authorId = currentUserId, authorName = "Tu", likeCount = 0, likedByMe = false
+                                )
+                                val wasLiked = currentSocial.likedByMe
+                                val optimistic = currentSocial.copy(
+                                    likeCount = (currentSocial.likeCount + if (wasLiked) -1 else 1).coerceAtLeast(0),
+                                    likedByMe = !wasLiked
+                                )
+                                socialEntries = socialEntries + (entry.id to optimistic)
                                 socialScope.launch {
                                     runCatching { repo.setEntryLiked(entry.id, !wasLiked) }
-                                        .onFailure { if (social != null) socialEntries = socialEntries + (entry.id to social) }
+                                        .onFailure { socialEntries = socialEntries + (entry.id to currentSocial) }
                                         .onSuccess { runCatching { repo.loadSocialFeed().entries.associateBy { it.id } }.onSuccess { socialEntries = it } }
                                 }
                             },
