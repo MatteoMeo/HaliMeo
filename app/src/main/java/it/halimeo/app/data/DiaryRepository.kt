@@ -21,27 +21,38 @@ class DiaryRepository(context: Context) {
 
     private fun importPhoto(uri: String, id: String): String {
         val source = Uri.parse(uri)
-        val mime = appContext.contentResolver.getType(source)?.lowercase()
-        val extension = when (mime) {
-            "image/jpeg", "image/jpg" -> ".jpg"
-            "image/png" -> ".png"
-            "image/webp" -> ".webp"
-            else -> ".jpg"
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        appContext.contentResolver.openInputStream(source).use { input ->
+            requireNotNull(input) { "Impossibile leggere la foto selezionata" }
+            BitmapFactory.decodeStream(input, null, bounds)
         }
-        val destination = File(photoDir, "$id-${System.currentTimeMillis()}$extension")
-        if (mime in setOf("image/jpeg", "image/jpg", "image/png", "image/webp")) {
-            appContext.contentResolver.openInputStream(source).use { input ->
-                requireNotNull(input) { "Impossibile leggere la foto selezionata" }
-                destination.outputStream().use { output -> input.copyTo(output) }
-            }
-        } else {
-            val bitmap = appContext.contentResolver.openInputStream(source).use { input ->
-                requireNotNull(input) { "Impossibile leggere la foto selezionata" }
-                BitmapFactory.decodeStream(input)
-            } ?: throw IllegalArgumentException("Il formato della foto non è supportato")
+        require(bounds.outWidth > 0 && bounds.outHeight > 0) {
+            "Il formato della foto non è supportato"
+        }
+
+        // Normalize every selected image to a reasonably sized JPEG before upload.
+        // Full-resolution phone photos can exceed the server's upload limit.
+        var sampleSize = 1
+        while (maxOf(bounds.outWidth / sampleSize, bounds.outHeight / sampleSize) > 2560) {
+            sampleSize *= 2
+        }
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+            inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+        }
+        val bitmap = appContext.contentResolver.openInputStream(source).use { input ->
+            requireNotNull(input) { "Impossibile leggere la foto selezionata" }
+            BitmapFactory.decodeStream(input, null, options)
+        } ?: throw IllegalArgumentException("Impossibile decodificare la foto selezionata")
+
+        val destination = File(photoDir, "$id-${System.currentTimeMillis()}.jpg")
+        try {
             destination.outputStream().use { output ->
-                bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, output)
+                check(bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 88, output)) {
+                    "Impossibile preparare la foto per la sincronizzazione"
+                }
             }
+        } finally {
             bitmap.recycle()
         }
         return Uri.fromFile(destination).toString()
