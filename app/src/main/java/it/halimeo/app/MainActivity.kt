@@ -1376,6 +1376,17 @@ private fun DiaryScreen(
     val featuredMemories = remember(entries, favoriteIds) {
         entries.asSequence().filter { it.id in favoriteIds }.sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }.take(2).toList()
     }
+    val memoriesToday = remember(entries) {
+        val today = java.time.LocalDate.now()
+        entries.mapNotNull { entry ->
+            parseHaliMeoDate(entry.memoryDate)?.takeIf { it.year < today.year && it.monthValue == today.monthValue && it.dayOfMonth == today.dayOfMonth }?.let { entry to it }
+        }.sortedByDescending { it.second }.map { it.first }
+    }
+    val photoHighlights = remember(entries) {
+        entries.filter { !it.photoUri.isNullOrBlank() }
+            .sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }
+            .take(8)
+    }
     val upcomingSpecial = remember(entries, favoriteIds) {
         val prefs = diaryContext.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
         readHaliMeoSpecialDates(prefs).mapNotNull { item ->
@@ -1636,6 +1647,54 @@ private fun DiaryScreen(
                     contentPadding = PaddingValues(top = 4.dp, bottom = 100.dp)
                 ) {
                     if (!favoritesOnly && query.isBlank() && selectedCategory == "Tutte") {
+                        if (photoHighlights.isNotEmpty()) {
+                            item(key = "memory_highlights") {
+                                Column(verticalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.padding(bottom = 4.dp)) {
+                                    Text("I vostri momenti", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                        photoHighlights.forEach { highlight ->
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
+                                                Surface(
+                                                    modifier = Modifier.size(62.dp).clickable {
+                                                        expandedEntryIds = expandedEntryIds + highlight.id
+                                                    },
+                                                    shape = CircleShape,
+                                                    color = categoryAccent(highlight.category).copy(alpha = 0.18f),
+                                                    border = androidx.compose.foundation.BorderStroke(2.dp, categoryAccent(highlight.category).copy(alpha = 0.8f))
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Icon(Icons.Default.Photo, contentDescription = null, tint = categoryAccent(highlight.category), modifier = Modifier.size(26.dp))
+                                                    }
+                                                }
+                                                Text(highlight.title, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (memoriesToday.isNotEmpty()) {
+                            item(key = "today_in_history") {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 4.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                        Icon(Icons.Default.History, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                        Text("Oggi nella vostra storia", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                    }
+                                    memoriesToday.forEach { memory ->
+                                        Surface(
+                                            modifier = Modifier.fillMaxWidth().clickable { expandedEntryIds = expandedEntryIds + memory.id },
+                                            shape = RoundedCornerShape(18.dp), color = frostedSurfaceColor(),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor())
+                                        ) {
+                                            Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                                Text(memory.title, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                                                Text(displayHaliMeoDate(memory.memoryDate), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         item(key = "featured_memories") {
                             val featured = featuredMemories
                             if (featured.isNotEmpty() || upcomingSpecial != null) {
@@ -1681,7 +1740,7 @@ private fun DiaryScreen(
                         val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext, expanded) {
                             // Decode only after opening a card; eagerly decoding every visible photo
                             // causes avoidable IO, allocations and frame drops while scrolling.
-                            value = if (expanded) entry.photoUri?.let { decodeScaledBitmap(photoContext, it, maxDimension = 1000) } else null
+                            value = entry.photoUri?.let { decodeScaledBitmap(photoContext, it, maxDimension = 1000) }
                         }
                         Card(
                             modifier = Modifier.fillMaxWidth()
@@ -1772,7 +1831,7 @@ private fun DiaryScreen(
                                     }
                                 }
                                 AnimatedVisibility(
-                                    visible = expanded && entryPhoto != null,
+                                    visible = entryPhoto != null,
                                     enter = fadeIn(tween(180)) + expandVertically(animationSpec = tween(240)),
                                     exit = fadeOut(tween(120)) + shrinkVertically(animationSpec = tween(180))
                                 ) {
