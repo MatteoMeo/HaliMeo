@@ -171,9 +171,9 @@ async def upload_entry_photo(entry_id: str, photoUpdatedAt: int, photo: UploadFi
     payload = await photo.read(MAX_PHOTO_BYTES + 1)
     if not payload or len(payload) > MAX_PHOTO_BYTES:
         raise HTTPException(413, "La foto deve pesare al massimo 15 MB")
-    if content_type == "image/jpeg" and not payload.startswith(b"\\xff\\xd8\\xff"):
+    if content_type == "image/jpeg" and not payload.startswith(b"\xff\xd8\xff"):
         raise HTTPException(400, "File JPEG non valido")
-    if content_type == "image/png" and not payload.startswith(b"\\x89PNG\\r\\n\\x1a\\n"):
+    if content_type == "image/png" and not payload.startswith(b"\x89PNG\r\n\x1a\n"):
         raise HTTPException(400, "File PNG non valido")
     if content_type == "image/webp" and not (payload.startswith(b"RIFF") and payload[8:12] == b"WEBP"):
         raise HTTPException(400, "File WebP non valido")
