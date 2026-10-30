@@ -625,7 +625,7 @@ class MainActivity:ComponentActivity() {
             .fillMaxWidth()
             .navigationBarsPadding()
             .padding(vertical = 4.dp)
-            .height(68.dp)
+            .height(52.dp)
             .then(
                 if (reduceStaticEffectsState.value) Modifier.background(navigationGlassTint, RoundedCornerShape(50))
                 else Modifier.clip(RoundedCornerShape(50)).hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)
@@ -719,7 +719,7 @@ class MainActivity:ComponentActivity() {
             .padding(end = 12.dp)
             .navigationBarsPadding()
             .padding(bottom = 11.dp)
-            .size(58.dp)
+            .size(46.dp)
             .graphicsLayer { scaleX = fabScale; scaleY = fabScale }
             .clip(RoundedCornerShape(24.dp))
             .then(if (reduceStaticEffectsState.value) Modifier else Modifier.hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)),
@@ -729,7 +729,7 @@ class MainActivity:ComponentActivity() {
         shadowElevation = 7.dp
     ) {
         Box(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)).clickable(interactionSource = fabInteraction, indication = null, role = androidx.compose.ui.semantics.Role.Button, onClickLabel = "Nuovo ricordo") { navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); editing = null; nav.navigate("edit") }, contentAlignment = Alignment.Center) {
-            Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(25.dp), tint = MaterialTheme.colorScheme.onPrimary)
+            Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(21.dp), tint = MaterialTheme.colorScheme.onPrimary)
         }
     }
     }
@@ -1110,12 +1110,12 @@ private fun SettingsScreen(
 
         Card(
             modifier = Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
+                .clip(RoundedCornerShape(24.dp)).clickable { expandedSettingsSections = if ("invites" in expandedSettingsSections) expandedSettingsSections - "invites" else expandedSettingsSections + "invites" }.border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { expandedSettingsSections = if ("invites" in expandedSettingsSections) expandedSettingsSections - "invites" else expandedSettingsSections + "invites" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.MarkEmailRead, contentDescription = null, tint = accentText, modifier = Modifier.size(22.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("INVITI", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
@@ -1218,7 +1218,6 @@ private fun SettingsScreen(
                 if (inviteMessage.isNotBlank() && isOwner != false) {
                     Text(inviteMessage, color = if (inviteCode.isNotBlank()) accentText else secondaryText, style = MaterialTheme.typography.bodySmall)
                 }
-                Text("Versione ${BuildConfig.VERSION_NAME}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             }
         }
 
@@ -1493,7 +1492,7 @@ private fun SettingsScreen(
                                 prefs.edit().putInt("preferred_refresh_rate", hz).apply()
                                 activity.window.attributes = activity.window.attributes.apply { preferredRefreshRate = hz.toFloat() }
                             },
-                            shape = SegmentedButtonDefaults.itemShape(index, 5, RoundedCornerShape(18.dp)),
+                            shape = SegmentedButtonDefaults.itemShape(index, 5, RoundedCornerShape(14.dp)),
                             colors = SegmentedButtonDefaults.colors(
                                 activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
                                 activeContentColor = MaterialTheme.colorScheme.onSurface,
@@ -1553,12 +1552,12 @@ private fun SettingsScreen(
 
 
         Card(
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).clickable { expandedSettingsSections = if ("date" in expandedSettingsSections) expandedSettingsSections - "date" else expandedSettingsSections + "date" }.border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { expandedSettingsSections = if ("date" in expandedSettingsSections) expandedSettingsSections - "date" else expandedSettingsSections + "date" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.Event, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("DATA SPECIALE", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
@@ -1598,12 +1597,12 @@ private fun SettingsScreen(
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).clickable { expandedSettingsSections = if ("sync" in expandedSettingsSections) expandedSettingsSections - "sync" else expandedSettingsSections + "sync" }.border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { expandedSettingsSections = if ("sync" in expandedSettingsSections) expandedSettingsSections - "sync" else expandedSettingsSections + "sync" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.CloudSync, contentDescription = null, tint = accentText, modifier = Modifier.size(20.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("SINCRONIZZAZIONE", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
