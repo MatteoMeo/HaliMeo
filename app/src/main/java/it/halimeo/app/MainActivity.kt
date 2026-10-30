@@ -289,13 +289,6 @@ class MainActivity:ComponentActivity() {
         favoriteIds = updated
         favoritesPrefs.edit().putStringSet("ids", updated.toSet()).apply()
     }
-    val featuredPrefs = remember { ctx.getSharedPreferences("halimeo_featured", android.content.Context.MODE_PRIVATE) }
-    var featuredIds by remember { mutableStateOf(featuredPrefs.getStringSet("ids", emptySet())?.toSet() ?: emptySet()) }
-    fun toggleFeatured(id: String) {
-        val updated = if (id in featuredIds) featuredIds - id else featuredIds + id
-        featuredIds = updated
-        featuredPrefs.edit().putStringSet("ids", updated.toSet()).apply()
-    }
     val nav = rememberNavController()
     val backStackEntry by nav.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -357,10 +350,9 @@ class MainActivity:ComponentActivity() {
                     key = { it }
                 ) { page ->
                     when (page) {
-                        0 -> DiaryScreen(entries, favoriteIds, featuredIds,
+                        0 -> DiaryScreen(entries, favoriteIds,
                             { editing = it; nav.navigate("edit") },
                             { toggleFavorite(it.id) },
-                            { toggleFeatured(it.id) },
                             { entry -> activity.lifecycleScope.launch { repo.delete(entry.id) } },
                             { entry -> nav.navigate("memory/${entry.id}") }
                         )
@@ -1036,7 +1028,7 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(Modifier.fillMaxWidth().clickable { expandedSettingsSections = if ("date" in expandedSettingsSections) expandedSettingsSections - "date" else expandedSettingsSections + "date" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { expandedSettingsSections = if ("date" in expandedSettingsSections) expandedSettingsSections - "date" else expandedSettingsSections + "date" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.Event, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("DATA SPECIALE", color = accentText, style = MaterialTheme.typography.labelLarge)
@@ -1082,7 +1074,7 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(Modifier.fillMaxWidth().clickable { expandedSettingsSections = if ("sync" in expandedSettingsSections) expandedSettingsSections - "sync" else expandedSettingsSections + "sync" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { expandedSettingsSections = if ("sync" in expandedSettingsSections) expandedSettingsSections - "sync" else expandedSettingsSections + "sync" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.CloudSync, contentDescription = null, tint = accentText, modifier = Modifier.size(20.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("SINCRONIZZAZIONE", color = accentText, style = MaterialTheme.typography.labelLarge)
@@ -1158,7 +1150,7 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(Modifier.fillMaxWidth().clickable { expandedSettingsSections = if ("invites" in expandedSettingsSections) expandedSettingsSections - "invites" else expandedSettingsSections + "invites" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { expandedSettingsSections = if ("invites" in expandedSettingsSections) expandedSettingsSections - "invites" else expandedSettingsSections + "invites" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.MarkEmailRead, contentDescription = null, tint = accentText, modifier = Modifier.size(22.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("INVITI", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
@@ -1371,10 +1363,8 @@ private fun categoryIcon(category: String): androidx.compose.ui.graphics.vector.
 private fun DiaryScreen(
     entries: List<DiaryEntry>,
     favoriteIds: Set<String>,
-    featuredIds: Set<String>,
     onEdit: (DiaryEntry) -> Unit,
     onToggleFavorite: (DiaryEntry) -> Unit,
-    onToggleFeatured: (DiaryEntry) -> Unit,
     onDelete: (DiaryEntry) -> Unit,
     onOpenMemory: (DiaryEntry) -> Unit,
 ) {
@@ -1388,10 +1378,7 @@ private fun DiaryScreen(
     var pendingDelete by remember { mutableStateOf<DiaryEntry?>(null) }
     var expandedEntryIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     val diaryContext = LocalContext.current
-    var showHighlightsSettings by remember { mutableStateOf(false) }
-    val highlightsPrefs = remember { diaryContext.getSharedPreferences("halimeo_highlights", android.content.Context.MODE_PRIVATE) }
-    var highlightsTitle by remember { mutableStateOf(highlightsPrefs.getString("title", "I vostri momenti") ?: "I vostri momenti") }
-    var highlightsNewestFirst by remember { mutableStateOf(highlightsPrefs.getBoolean("newest_first", true)) }
+    val highlightsTitle = "Highlights"
     val feedbackView = LocalView.current
     val diaryHaze = rememberHazeState()
     val diaryGlassTint = frostedSurfaceColor()
@@ -1405,19 +1392,16 @@ private fun DiaryScreen(
     val listState = rememberLazyListState()
     // Cache diary header data instead of sorting favourites and parsing special dates
     // again whenever Compose recomposes the LazyColumn.
-    val featuredMemories = remember(entries, featuredIds) {
-        entries.asSequence().filter { it.id in featuredIds }.sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }.toList()
-    }
     val memoriesToday = remember(entries) {
         val today = java.time.LocalDate.now()
         entries.mapNotNull { entry ->
             parseHaliMeoDate(entry.memoryDate)?.takeIf { it.year < today.year && it.monthValue == today.monthValue && it.dayOfMonth == today.dayOfMonth }?.let { entry to it }
         }.sortedByDescending { it.second }.map { it.first }
     }
-    val photoHighlights = remember(entries, highlightsNewestFirst) {
-        val sorted = entries.filter { !it.photoUri.isNullOrBlank() }
-            .sortedBy { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }
-        (if (highlightsNewestFirst) sorted.reversed() else sorted).take(12)
+    val photoHighlights = remember(entries) {
+        entries.filter { !it.photoUri.isNullOrBlank() }
+            .sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }
+            .take(12)
     }
     val upcomingSpecial = remember(entries, favoriteIds) {
         val prefs = diaryContext.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
@@ -1512,20 +1496,8 @@ private fun DiaryScreen(
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isHaliMeoDark()) 0.56f else 0.72f)
-                ) {
-                    Text(
-                        entries.size.toString(),
-                        modifier = Modifier.padding(horizontal = 13.dp, vertical = 9.dp),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
                 IconButton(onClick = { calendarState.selectedDateMillis = selectedDate?.let { runCatching { java.time.LocalDate.parse(it).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli() }.getOrNull() }; showCalendar = true }) {
-                    Icon(Icons.Default.CalendarMonth, contentDescription = "Filtra per data", tint = if (selectedDate != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.Default.CalendarToday, contentDescription = "Filtra per data", tint = if (selectedDate != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 IconButton(
                     onClick = {
@@ -1534,7 +1506,7 @@ private fun DiaryScreen(
                     }
                 ) {
                     Icon(
-                        if (searchExpanded) Icons.Default.Close else Icons.Default.Search,
+                        if (searchExpanded) Icons.Default.Close else Icons.Default.ManageSearch,
                         contentDescription = if (searchExpanded) "Chiudi ricerca" else "Cerca ricordi",
                         tint = MaterialTheme.colorScheme.primary
                     )
@@ -1682,10 +1654,7 @@ private fun DiaryScreen(
                         if (photoHighlights.isNotEmpty()) {
                             item(key = "memory_highlights") {
                                 Column(verticalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.padding(bottom = 4.dp)) {
-                                    Text(highlightsTitle, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                    IconButton(onClick = { showHighlightsSettings = true }, modifier = Modifier.size(30.dp)) {
-                                        Icon(Icons.Default.Tune, contentDescription = "Personalizza momenti in evidenza", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-                                    }
+                                    Text("Highlights", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                                         photoHighlights.forEach { highlight ->
                                             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
@@ -1840,7 +1809,7 @@ private fun DiaryScreen(
                                             horizontalArrangement = Arrangement.spacedBy(7.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = accent, modifier = Modifier.size(14.dp))
+                                            Icon(Icons.Default.CalendarToday, contentDescription = null, tint = accent, modifier = Modifier.size(14.dp))
                                             Text(displayHaliMeoDate(entry.memoryDate), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
                                             Surface(shape = RoundedCornerShape(50), color = accent.copy(alpha = 0.13f)) {
                                                 Text(entry.category.ifBlank { "Ricordo" }, modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp), color = accent, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1848,10 +1817,6 @@ private fun DiaryScreen(
                                         }
                                     }
                                     val isFavorite = entry.id in favoriteIds
-                                    IconButton(onClick = { feedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onToggleFeatured(entry) }) {
-                                        Icon(Icons.Default.AutoAwesome, contentDescription = if (entry.id in featuredIds) "Rimuovi da In evidenza" else "Aggiungi a In evidenza",
-                                            tint = if (entry.id in featuredIds) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
                                     IconButton(onClick = { feedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onToggleFavorite(entry) }) {
                                         Icon(
                                             if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -1937,36 +1902,6 @@ private fun DiaryScreen(
             }
         }
     }
-    }
-    if (showHighlightsSettings) {
-        var titleDraft by remember(highlightsTitle) { mutableStateOf(highlightsTitle) }
-        AlertDialog(
-            onDismissRequest = { showHighlightsSettings = false },
-            title = { Text("Personalizza i momenti") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(value = titleDraft, onValueChange = { titleDraft = it.take(32) }, label = { Text("Titolo della raccolta") }, singleLine = true)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Ordine dei momenti", fontWeight = FontWeight.SemiBold)
-                            Text("Prima i più recenti oppure i più vecchi", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Switch(checked = highlightsNewestFirst, onCheckedChange = {
-                            highlightsNewestFirst = it
-                            highlightsPrefs.edit().putBoolean("newest_first", it).apply()
-                        })
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    highlightsTitle = titleDraft.trim().ifBlank { "I vostri momenti" }
-                    highlightsPrefs.edit().putString("title", highlightsTitle).apply()
-                    showHighlightsSettings = false
-                }) { Text("Salva") }
-            },
-            dismissButton = { TextButton(onClick = { showHighlightsSettings = false }) { Text("Annulla") } }
-        )
     }
     if (pendingDelete != null) {
         AlertDialog(
