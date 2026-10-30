@@ -1,11 +1,14 @@
 import os, sqlite3, secrets, hashlib, time, uuid, mimetypes
 from pathlib import Path
+from dotenv import load_dotenv
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Depends, Header, UploadFile, File
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr, Field
 from passlib.context import CryptContext
 from jose import jwt
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 DATA_DIR = Path(os.getenv("HALIMEO_DATA_DIR", "/data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
