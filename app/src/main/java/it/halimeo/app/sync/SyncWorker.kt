@@ -12,6 +12,12 @@ class SyncWorker(c:Context,p:WorkerParameters):CoroutineWorker(c,p) {
     }
 }
 object SyncScheduler {
+    fun requestImmediate(c: Context) {
+        val work = OneTimeWorkRequestBuilder<SyncWorker>()
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .build()
+        WorkManager.getInstance(c).enqueueUniqueWork("halimeo-sync-now", ExistingWorkPolicy.KEEP, work)
+    }
     fun schedule(c:Context) {
         val work=PeriodicWorkRequestBuilder<SyncWorker>(15,java.util.concurrent.TimeUnit.MINUTES)
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()).build()
