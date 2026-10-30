@@ -560,7 +560,7 @@ class MainActivity:ComponentActivity() {
                     when (page) {
                         0 -> DiaryScreen(entries, repo,
                             { editing = it; nav.navigate("edit") },
-                            { entry -> activity.lifecycleScope.launch { repo.toggleFavorite(entry.id) } },
+                            { entry -> activity.lifecycleScope.launch { repo.setFavorite(entry.id, entry.isFavorite) } },
                             { entry -> activity.lifecycleScope.launch { repo.delete(entry.id) } },
                             { entry -> nav.navigate("memory/${entry.id}") }
                         )
@@ -2003,6 +2003,7 @@ private fun DiaryScreen(
     var query by remember { mutableStateOf("") }
     var searchExpanded by remember { mutableStateOf(false) }
     var favoritesOnly by remember { mutableStateOf(false) }
+    var favoriteOverrides by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     var selectedDate by remember { mutableStateOf<String?>(null) }
     var showCalendar by remember { mutableStateOf(false) }
     val calendarState = rememberDatePickerState()
@@ -2083,12 +2084,20 @@ private fun DiaryScreen(
         animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "diaryHeaderTitleScale"
     )
-    val filtered = remember(entries, query, selectedDate, favoritesOnly) {
-        entries.asSequence().filter {
-            (it.title.contains(query, true) || it.body.contains(query, true)) &&
-                (selectedDate == null || it.memoryDate == selectedDate) &&
-                (!favoritesOnly || it.isFavorite)
+    val filtered = remember(entries, query, selectedDate, favoritesOnly, favoriteOverrides) {
+        entries.asSequence().filter { entry ->
+            val isFavorite = favoriteOverrides[entry.id] ?: entry.isFavorite
+            (entry.title.contains(query, true) || entry.body.contains(query, true)) &&
+                (selectedDate == null || entry.memoryDate == selectedDate) &&
+                (!favoritesOnly || isFavorite)
         }.sortedByDescending { parseHaliMeoDate(it.memoryDate) ?: java.time.LocalDate.MIN }.toList()
+    }
+
+    fun toggleDiaryFavorite(entry: DiaryEntry) {
+        val current = favoriteOverrides[entry.id] ?: entry.isFavorite
+        val next = !current
+        favoriteOverrides = favoriteOverrides + (entry.id to next)
+        onToggleFavorite(entry.copy(isFavorite = next))
     }
 
     if (showCalendar) {
@@ -2397,8 +2406,9 @@ private fun DiaryScreen(
                             value = entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 1800) }
                         }
                         val social = socialEntries[entry.id]
+                        val displayedEntry = entry.copy(isFavorite = favoriteOverrides[entry.id] ?: entry.isFavorite)
                         SocialMemoryPost(
-                            entry = entry,
+                            entry = displayedEntry,
                             authorName = social?.authorName ?: "Diario condiviso",
                             photo = entryPhoto,
                             expanded = expanded,
@@ -2436,7 +2446,7 @@ private fun DiaryScreen(
                                 }
                             },
                             onOpen = { onOpenMemory(entry) },
-                            onToggleFavorite = { onToggleFavorite(entry) },
+                            onToggleFavorite = { toggleDiaryFavorite(entry) },
                             onToggleCaption = {
                                 expandedEntryIds = if (expanded) expandedEntryIds - entry.id else expandedEntryIds + entry.id
                             },
@@ -2525,7 +2535,19 @@ private fun DiaryScreen(
                     commentsBusy = true
                     socialScope.launch {
                         runCatching { repo.addEntryComment(target.id, draft) }
-                            .onSuccess { comments = comments + it; commentDraft = "" }
+                            .onSuccess {
+                                comments = comments + it.let { response ->
+                                    it.halimeo.app.network.SocialComment(
+                                        id = response.id,
+                                        body = response.body,
+                                        userId = response.userId,
+                                        authorName = response.authorName,
+                                        createdAt = response.createdAt,
+                                        updatedAt = response.updatedAt
+                                    )
+                                }
+                                commentDraft = ""
+                            }
                         commentsBusy = false
                     }
                 }) { Text("Invia") }
