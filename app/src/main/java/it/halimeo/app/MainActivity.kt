@@ -2001,6 +2001,15 @@ private fun AnimatedPageTitle(
 
 @Composable
 private fun TripsScreen(onOpenMonaco: () -> Unit) {
+    val tripsHaze = rememberHazeState()
+    val tripsGlassTint = frostedSurfaceColor()
+    val tripsGlassStyle = remember(tripsGlassTint) {
+        HazeBlurStyle {
+            backgroundColor(Color(0xFF101419))
+            colorEffects(listOf(HazeColorEffect.tint(tripsGlassTint.copy(alpha = 0.48f))))
+            fallbackColorEffect(HazeColorEffect.tint(tripsGlassTint))
+        }
+    }
     val tripsScrollState = rememberScrollState()
     val tripsHeaderCollapsed by remember { derivedStateOf { tripsScrollState.value > 48 } }
     val tripsTitleScale by animateFloatAsState(
@@ -2009,7 +2018,7 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
         label = "tripsTitleScale"
     )
     Column(
-        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(tripsScrollState).padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 112.dp),
+        Modifier.fillMaxSize().background(Color.Transparent).hazeSource(tripsHaze).verticalScroll(tripsScrollState).padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 112.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text(
@@ -2039,7 +2048,9 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
         )
         Surface(
             modifier = Modifier.fillMaxWidth()
-                .graphicsLayer { scaleX = tripScale; scaleY = tripScale }
+                 .graphicsLayer { scaleX = tripScale; scaleY = tripScale }
+                .hazeBlur(HazeInput.Sources(tripsHaze), tripsGlassStyle)
+                .clip(RoundedCornerShape(26.dp))
                 .clickable(interactionSource = tripInteraction, indication = null, onClick = onOpenMonaco),
             shape = RoundedCornerShape(26.dp),
             color = frostedSurfaceColor(),
