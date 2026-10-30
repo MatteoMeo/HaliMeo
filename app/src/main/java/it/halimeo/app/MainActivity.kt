@@ -877,6 +877,19 @@ private fun FloatingNavItem(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
+@Composable
+private fun SettingsCategoryIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color) {
+    Box(
+        modifier = Modifier
+            .size(42.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(tint.copy(alpha = if (androidx.compose.foundation.isSystemInDarkTheme()) 0.22f else 0.12f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
+    }
+}
+
 private fun SettingsScreen(
     displayName: String,
     session: SessionStore,
@@ -1044,7 +1057,7 @@ private fun SettingsScreen(
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.AccountCircle, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
+                    SettingsCategoryIcon(Icons.Default.AccountCircle, Color(0xFF4389E8))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("PROFILO E ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                         if ("profile" !in expandedSettingsSections) Text("Il vostro account e la foto profilo", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
@@ -1119,7 +1132,7 @@ private fun SettingsScreen(
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.MarkEmailRead, contentDescription = null, tint = accentText, modifier = Modifier.size(22.dp))
+                    SettingsCategoryIcon(Icons.Default.MarkEmailRead, Color(0xFFEA9842))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("INVITI", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                         if ("invites" !in expandedSettingsSections) Text("Crea e condividi un invito privato", color = secondaryText, style = MaterialTheme.typography.bodySmall)
@@ -1233,7 +1246,7 @@ private fun SettingsScreen(
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.Palette, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
+                    SettingsCategoryIcon(Icons.Default.Palette, Color(0xFF9A78E8))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("PERSONALIZZAZIONE", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                         if ("appearance" !in expandedSettingsSections) Text("Tema, colori, sfondo e prestazioni", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
@@ -1561,7 +1574,7 @@ private fun SettingsScreen(
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.Event, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
+                    SettingsCategoryIcon(Icons.Default.Event, Color(0xFFE4779C))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("DATA SPECIALE", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                         if ("date" !in expandedSettingsSections) Text("Date importanti e promemoria", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
@@ -1606,7 +1619,7 @@ private fun SettingsScreen(
         ) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.CloudSync, contentDescription = null, tint = accentText, modifier = Modifier.size(20.dp))
+                    SettingsCategoryIcon(Icons.Default.CloudSync, Color(0xFF27A99A))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("SINCRONIZZAZIONE", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                         if ("sync" !in expandedSettingsSections) Text("Backup e stato dei tuoi ricordi", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
@@ -1616,7 +1629,7 @@ private fun SettingsScreen(
                 AnimatedVisibility(visible = "sync" in expandedSettingsSections, enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(if (pendingSyncCount == 0) Icons.Default.CloudDone else Icons.Default.CloudUpload, contentDescription = null, tint = accentText, modifier = Modifier.size(26.dp))
+                    Icon(if (pendingSyncCount == 0) Icons.Default.CloudDone else Icons.Default.CloudUpload, contentDescription = null, tint = Color(0xFF27A99A), modifier = Modifier.size(26.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text(if (pendingSyncCount == 0) "Tutto aggiornato" else "$pendingSyncCount ricordi in attesa", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text(if (pendingSyncCount == 0) "Non ci sono modifiche da inviare." else "I dati restano sul dispositivo finché la sincronizzazione non riesce.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
@@ -1682,7 +1695,7 @@ private fun SettingsScreen(
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)) {
-                        Icon(Icons.Default.Info, contentDescription = null, tint = accentText, modifier = Modifier.padding(9.dp).size(20.dp))
+                        SettingsCategoryIcon(Icons.Default.Info, Color(0xFF399FC5))
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("INFORMAZIONI APP", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
@@ -1724,7 +1737,7 @@ private fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)) {
-                        Icon(if (developerUnlocked) Icons.Default.Code else Icons.Default.Lock, contentDescription = null, tint = accentText, modifier = Modifier.padding(9.dp).size(20.dp))
+                        SettingsCategoryIcon(if (developerUnlocked) Icons.Default.Code else Icons.Default.Lock, Color(0xFF4DA879))
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("OPZIONI SVILUPPATORE", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
