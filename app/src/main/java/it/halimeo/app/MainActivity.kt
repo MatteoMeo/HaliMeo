@@ -914,51 +914,29 @@ private fun SettingsScreen(
                     "indigo" to Color(0xFF6575F5), "violet" to Color(0xFFB17CFF),
                     "magenta" to Color(0xFFE56CCB)
                 )
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    backgroundOptions.forEach { option ->
-                        val swatch = accentSwatches[option.first] ?: MaterialTheme.colorScheme.primary
-                        FilterChip(
-                            selected = backgroundColor == option.first,
-                            onClick = {
-                                backgroundColor = option.first
-                                backgroundPhoto = null
-                                customBackgroundColorState.value = option.first
-                                customBackgroundUriState.value = null
-                                ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putString("background_color", option.first).remove("background_photo").apply()
-                            },
-                            label = { Text(option.second) },
-                            leadingIcon = { Box(Modifier.size(13.dp).clip(CircleShape).background(swatch)) },
-                            shape = RoundedCornerShape(20.dp)
-                        )
-                    }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedButton(onClick = { backgroundPicker.launch(arrayOf("image/*")) }, shape = RoundedCornerShape(22.dp)) {
-                        Icon(Icons.Default.Image, contentDescription = null)
-                        Spacer(Modifier.width(7.dp))
-                        Text(if (backgroundColor == "photo") "Cambia foto" else "Usa una foto")
-                    }
-                    if (backgroundColor == "photo") {
-                        TextButton(onClick = {
-                            backgroundColor = "default"
-                            backgroundPhoto = null
-                            customBackgroundColorState.value = "default"
-                            customBackgroundUriState.value = null
-                            ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putString("background_color", "default").remove("background_photo").apply()
-                        }) { Text("Rimuovi") }
-                    }
-                }
-                Text("Puoi scegliere un colore oppure una foto dalla galleria.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
-                AnimatedVisibility(visible = backgroundColor == "photo") {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Sfocatura", color = primaryText, style = MaterialTheme.typography.labelLarge)
-                            Spacer(Modifier.weight(1f))
-                            Text("${backgroundBlur.toInt()} dp", color = secondaryText, style = MaterialTheme.typography.labelMedium)
+                backgroundOptions.chunked(4).forEach { optionRow ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        optionRow.forEach { option ->
+                            val swatch = accentSwatches[option.first] ?: MaterialTheme.colorScheme.primary
+                            FilterChip(
+                                modifier = Modifier.weight(1f),
+                                selected = backgroundColor == option.first,
+                                onClick = {
+                                    backgroundColor = option.first
+                                    backgroundPhoto = null
+                                    customBackgroundColorState.value = option.first
+                                    customBackgroundUriState.value = null
+                                    ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putString("background_color", option.first).remove("background_photo").apply()
+                                },
+                                label = { Text(option.second, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                leadingIcon = { Box(Modifier.size(10.dp).clip(CircleShape).background(swatch)) },
+                                shape = RoundedCornerShape(18.dp)
+                            )
                         }
-                        Slider(value = backgroundBlur, onValueChange = { backgroundBlur = it; saveBackgroundTuning() }, valueRange = 0f..24f, colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary, inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant))
+                        repeat(4 - optionRow.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
+                Text("Scegli il colore d'accento dell'app.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
                 Text("Prestazioni e movimento", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
@@ -1705,44 +1683,6 @@ private fun DiaryScreen(
                                 }
                             }
                         }
-                        item(key = "featured_memories") {
-                            val featured = featuredMemories
-                            if (featured.isNotEmpty() || upcomingSpecial != null) {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 4.dp)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                                        Text("In evidenza", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                    }
-                                    featured.forEach { favorite ->
-                                        Surface(
-                                            modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(18.dp)).clickable { onOpenMemory(favorite) },
-                                            shape = RoundedCornerShape(18.dp), color = frostedSurfaceStrongColor(),
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, categoryAccent(favorite.category).copy(alpha = 0.30f))
-                                        ) {
-                                            Row(Modifier.padding(horizontal = 13.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                                Icon(Icons.Default.Favorite, contentDescription = null, tint = categoryAccent(favorite.category), modifier = Modifier.size(18.dp))
-                                                Column(Modifier.weight(1f)) {
-                                                    Text(favorite.title, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                                    Text(displayHaliMeoDate(favorite.memoryDate), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    upcomingSpecial?.let { (item, date, daysUntil) ->
-                                        Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(18.dp))) {
-                                            Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                                Icon(Icons.Default.Event, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                                Column(Modifier.weight(1f)) {
-                                                    Text(item.label, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
-                                                    Text(if (daysUntil == 0L) "È oggi!" else "Mancano $daysUntil giorni · ${displayHaliMeoDate(date.toString())}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
                     itemsIndexed(filtered, key = { _, entry -> entry.id }, contentType = { _, _ -> "diary_entry" }) { _, entry ->
                         val expanded = entry.id in expandedEntryIds
                         val accent = categoryAccent(entry.category, entry.id)
