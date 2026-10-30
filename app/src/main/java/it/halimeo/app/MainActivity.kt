@@ -139,28 +139,31 @@ private fun applyLauncherIcon(context: android.content.Context, variant: String)
     )
     val selected = if (variant in aliases) variant else "ocean"
     val packageManager = context.packageManager
-    val changes = aliases.map { (key, className) ->
-        android.content.pm.PackageManager.ComponentEnabledSetting(
-            android.content.ComponentName(context.packageName, className),
-            if (key == selected) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-            else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-            android.content.pm.PackageManager.DONT_KILL_APP
-        )
+    val components = aliases.mapValues { (_, className) ->
+        android.content.ComponentName(context.packageName, className)
     }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        // Android 13+: apply the alias switch atomically.
+        // Android 13+: build API 33 settings only on supported versions and switch atomically.
+        val changes = aliases.map { (key, _) ->
+            android.content.pm.PackageManager.ComponentEnabledSetting(
+                components.getValue(key),
+                if (key == selected) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                android.content.pm.PackageManager.DONT_KILL_APP
+            )
+        }
         packageManager.setComponentEnabledSettings(changes)
     } else {
         // Older Android versions: enable the new entry before disabling the others.
-        val target = changes.first { it.componentName.className == aliases.getValue(selected) }
+        val target = components.getValue(selected)
         packageManager.setComponentEnabledSetting(
-            target.componentName,
+            target,
             android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
             android.content.pm.PackageManager.DONT_KILL_APP
         )
-        changes.filter { it.componentName != target.componentName }.forEach { setting ->
+        components.filterValues { it != target }.values.forEach { component ->
             packageManager.setComponentEnabledSetting(
-                setting.componentName,
+                component,
                 android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                 android.content.pm.PackageManager.DONT_KILL_APP
             )
