@@ -151,14 +151,12 @@ def sync(data: SyncIn, user=Depends(current_user)):
             old = c.execute("SELECT updated_at,photo_updated_at,photo_deleted_at,photo_filename FROM entries WHERE id=?", (e.id,)).fetchone()
             if old and old["updated_at"] > e.updatedAt: continue
             c.execute("""
-            INSERT INTO entries(id,owner_id,title,body,category,memory_date,created_at,updated_at,deleted_at,photo_updated_at,photo_deleted_at,photo_filename)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+            INSERT INTO entries(id,owner_id,title,body,category,memory_date,created_at,updated_at,deleted_at)
+            VALUES(?,?,?,?,?,?,?,?,?)
             ON CONFLICT(id) DO UPDATE SET title=excluded.title,body=excluded.body,category=excluded.category,
-            memory_date=excluded.memory_date,updated_at=excluded.updated_at,deleted_at=excluded.deleted_at,
-            photo_updated_at=MAX(entries.photo_updated_at,excluded.photo_updated_at),
-            photo_deleted_at=CASE WHEN excluded.photo_deleted_at IS NOT NULL AND excluded.photo_deleted_at >= entries.photo_updated_at THEN excluded.photo_deleted_at ELSE entries.photo_deleted_at END
+            memory_date=excluded.memory_date,updated_at=excluded.updated_at,deleted_at=excluded.deleted_at
             WHERE entries.updated_at <= excluded.updated_at
-            """, (e.id,user["id"],e.title,e.body,e.category,e.memoryDate,e.createdAt,e.updatedAt,e.deletedAt,e.photoUpdatedAt,e.photoDeletedAt,old["photo_filename"] if old else None))
+            """, (e.id,user["id"],e.title,e.body,e.category,e.memoryDate,e.createdAt,e.updatedAt,e.deletedAt))
         cursor = data.lastSyncAt or 0
         rows = c.execute("SELECT * FROM entries WHERE updated_at > ? ORDER BY updated_at ASC LIMIT 1000", (cursor,)).fetchall()
     return {"changes":[{"id":r["id"],"title":r["title"],"body":r["body"],"category":r["category"],
