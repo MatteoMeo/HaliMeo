@@ -323,6 +323,7 @@ class MainActivity:ComponentActivity() {
     val backStackEntry by nav.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { 3 })
+    val navigationGlassTint = frostedSurfaceColor()
     val navigationScope = rememberCoroutineScope()
     val primaryTab = pagerState.currentPage
     fun selectPrimaryTab(index: Int) {
