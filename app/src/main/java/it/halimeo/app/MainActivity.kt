@@ -136,11 +136,17 @@ private fun applyLauncherIcon(context: android.content.Context, variant: String)
         "rose" to "${context.packageName}.LauncherRose"
     )
     val selected = if (variant in aliases) variant else "ocean"
-    aliases.forEach { (key, className) ->
-        context.packageManager.setComponentEnabledSetting(
+    val packageManager = context.packageManager
+    // Enable the destination first so the app never temporarily loses its launcher entry.
+    packageManager.setComponentEnabledSetting(
+        android.content.ComponentName(context, aliases.getValue(selected)),
+        android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+        android.content.pm.PackageManager.DONT_KILL_APP
+    )
+    aliases.filterKeys { it != selected }.values.forEach { className ->
+        packageManager.setComponentEnabledSetting(
             android.content.ComponentName(context, className),
-            if (key == selected) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-            else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
             android.content.pm.PackageManager.DONT_KILL_APP
         )
     }
@@ -864,10 +870,9 @@ private fun SettingsScreen(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.AccountCircle, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("PROFILO E ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge)
-                        if ("profile" !in expandedSettingsSections) Text("Il vostro account e la foto profilo", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                        Text("PROFILO E ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                        if ("profile" !in expandedSettingsSections) Text("Il vostro account e la foto profilo", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     }
-                    Spacer(Modifier.weight(1f))
                     Icon(if ("profile" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("profile" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
                 AnimatedVisibility(
@@ -940,10 +945,9 @@ private fun SettingsScreen(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.Palette, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("PERSONALIZZAZIONE", color = accentText, style = MaterialTheme.typography.labelLarge)
-                        if ("appearance" !in expandedSettingsSections) Text("Tema, colori, sfondo e prestazioni", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                        Text("PERSONALIZZAZIONE", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                        if ("appearance" !in expandedSettingsSections) Text("Tema, colori, sfondo e prestazioni", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     }
-                    Spacer(Modifier.weight(1f))
                     Icon(if ("appearance" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("appearance" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
                 AnimatedVisibility(visible = "appearance" in expandedSettingsSections, enter = fadeIn(tween(150, easing = OneUiMotionEasing)) + expandVertically(animationSpec = spring(dampingRatio = 0.9f, stiffness = 420f)), exit = fadeOut(tween(100)) + shrinkVertically(animationSpec = tween(150, easing = OneUiMotionEasing))) {
@@ -1030,6 +1034,60 @@ private fun SettingsScreen(
                 }
                 Text("Scegli il colore d'accento dell'app.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+                Text("Icona dell’app", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text("Scegli l’aspetto di HaliMeo nella schermata Home.", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val iconChoices = listOf(
+                    Triple("ocean", "Oceano", R.mipmap.ic_launcher),
+                    Triple("lavender", "Lavanda", R.mipmap.ic_launcher_lavender),
+                    Triple("mint", "Menta", R.mipmap.ic_launcher_mint),
+                    Triple("rose", "Rosa", R.mipmap.ic_launcher_rose)
+                )
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    iconChoices.forEach { (key, label, iconRes) ->
+                        Column(
+                            modifier = Modifier.width(68.dp).clip(RoundedCornerShape(16.dp)).clickable {
+                                runCatching { applyLauncherIcon(ctx, key) }
+                                    .onSuccess {
+                                        selectedAppIcon = key
+                                        profilePrefs.edit().putString("app_icon_variant", key).apply()
+                                        Toast.makeText(ctx, "Icona $label selezionata", Toast.LENGTH_SHORT).show()
+                                    }
+                                    .onFailure {
+                                        Toast.makeText(ctx, "Cambio icona non riuscito: ${it.localizedMessage ?: it.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+                                    }
+                            }.padding(vertical = 6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(7.dp)
+                        ) {
+                            Box(
+                                Modifier.size(62.dp).clip(RoundedCornerShape(18.dp))
+                                    .border(
+                                        width = if (selectedAppIcon == key) 2.dp else 1.dp,
+                                        color = if (selectedAppIcon == key) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
+                                        shape = RoundedCornerShape(18.dp)
+                                    ).padding(3.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Image(
+                                    painter = androidx.compose.ui.res.painterResource(iconRes),
+                                    contentDescription = "Icona HaliMeo $label",
+                                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp))
+                                )
+                                if (selectedAppIcon == key) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = "Selezionata", tint = Color.White, modifier = Modifier.align(Alignment.BottomEnd).size(19.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
+                                }
+                            }
+                            Text(label, color = if (selectedAppIcon == key) primaryText else secondaryText, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                        }
+                    }
+                }
+                Text("Il launcher potrebbe aggiornare l’icona dopo qualche secondo.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
                 Text("Prestazioni e movimento", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
                 var selectedRefreshRate by remember { mutableIntStateOf(prefs.getInt("preferred_refresh_rate", 120)) }
@@ -1092,45 +1150,7 @@ private fun SettingsScreen(
             }
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
-                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
-        ) {
-            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Icon(Icons.Default.Apps, contentDescription = null, tint = accentText, modifier = Modifier.size(20.dp))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("ICONA DELL’APP", color = accentText, style = MaterialTheme.typography.labelLarge)
-                        Text("Personalizza anche l’icona nella schermata Home.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-                val iconChoices = listOf(
-                    Triple("ocean", "Oceano", Color(0xFF286A9E)),
-                    Triple("lavender", "Lavanda", Color(0xFF8063B6)),
-                    Triple("mint", "Menta", Color(0xFF258D7E)),
-                    Triple("rose", "Rosa", Color(0xFFB65B83))
-                )
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    iconChoices.forEach { (key, label, swatch) ->
-                        FilterChip(
-                            selected = selectedAppIcon == key,
-                            onClick = {
-                                selectedAppIcon = key
-                                profilePrefs.edit().putString("app_icon_variant", key).apply()
-                                runCatching { applyLauncherIcon(ctx, key) }
-                                    .onFailure { Toast.makeText(ctx, "Impossibile cambiare icona su questo launcher", Toast.LENGTH_LONG).show() }
-                            },
-                            label = { Text(label) },
-                            leadingIcon = { Box(Modifier.size(12.dp).clip(CircleShape).background(swatch)) },
-                            shape = RoundedCornerShape(18.dp)
-                        )
-                    }
-                }
-                Text("La nuova icona potrebbe comparire dopo qualche secondo, in base al launcher.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
-            }
-        }
+
 
         Card(
             modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle).clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
@@ -1141,10 +1161,9 @@ private fun SettingsScreen(
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { expandedSettingsSections = if ("date" in expandedSettingsSections) expandedSettingsSections - "date" else expandedSettingsSections + "date" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.Event, contentDescription = null, tint = accentText, modifier = Modifier.size(18.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("DATA SPECIALE", color = accentText, style = MaterialTheme.typography.labelLarge)
-                        if ("date" !in expandedSettingsSections) Text("Date importanti e promemoria", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                        Text("DATA SPECIALE", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                        if ("date" !in expandedSettingsSections) Text("Date importanti e promemoria", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     }
-                    Spacer(Modifier.weight(1f))
                     Icon(if ("date" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("date" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
                 AnimatedVisibility(visible = "date" in expandedSettingsSections, enter = fadeIn(tween(75)) + expandVertically(tween(110)), exit = fadeOut(tween(45)) + shrinkVertically(tween(85))) {
@@ -1187,10 +1206,9 @@ private fun SettingsScreen(
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { expandedSettingsSections = if ("sync" in expandedSettingsSections) expandedSettingsSections - "sync" else expandedSettingsSections + "sync" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.CloudSync, contentDescription = null, tint = accentText, modifier = Modifier.size(20.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("SINCRONIZZAZIONE", color = accentText, style = MaterialTheme.typography.labelLarge)
-                        if ("sync" !in expandedSettingsSections) Text("Backup e stato dei tuoi ricordi", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                        Text("SINCRONIZZAZIONE", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                        if ("sync" !in expandedSettingsSections) Text("Backup e stato dei tuoi ricordi", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     }
-                    Spacer(Modifier.weight(1f))
                     Icon(if ("sync" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("sync" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
                 AnimatedVisibility(visible = "sync" in expandedSettingsSections, enter = fadeIn(tween(75)) + expandVertically(tween(110)), exit = fadeOut(tween(45)) + shrinkVertically(tween(85))) {
@@ -1266,7 +1284,6 @@ private fun SettingsScreen(
                         Text("INVITI", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                         if ("invites" !in expandedSettingsSections) Text("Crea e condividi un invito privato", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
-                    Spacer(Modifier.weight(1f))
                     Icon(if ("invites" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("invites" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
                 AnimatedVisibility(visible = "invites" in expandedSettingsSections, enter = fadeIn(tween(75)) + expandVertically(tween(110)), exit = fadeOut(tween(45)) + shrinkVertically(tween(85))) {
