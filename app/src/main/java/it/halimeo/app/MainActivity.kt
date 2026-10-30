@@ -471,13 +471,14 @@ class MainActivity:ComponentActivity() {
                     syncFailed -> "Offline"
                     pendingSyncCount > 0 -> "$pendingSyncCount da inviare"
                     lastSyncAtState.value > 0L -> "Aggiornato"
-                    else -> "Sul dispositivo"
+                    else -> "Solo locale"
                 }
                 val statusIcon = when {
                     syncInProgress -> Icons.Default.Sync
                     syncFailed -> Icons.Default.CloudOff
                     pendingSyncCount > 0 -> Icons.Default.CloudUpload
-                    else -> Icons.Default.CloudDone
+                    lastSyncAtState.value > 0L -> Icons.Default.CloudDone
+                    else -> Icons.Default.Cloud
                 }
                 Surface(
                     modifier = Modifier.clip(RoundedCornerShape(50)).clickable(enabled = !syncInProgress, onClick = { syncDiary() }),
@@ -2021,6 +2022,7 @@ private fun DiaryScreen(
                                 // Clip the whole card layer before drawing the outline. This prevents
                                 // the rectangular layer from leaking past rounded glass corners.
                                 
+                                .shadow(9.dp, MaterialTheme.shapes.large, ambientColor = accent.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.22f))
                                 .hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle)
                                 .clip(MaterialTheme.shapes.large)
                                 .border(1.dp, frostedEdgeColor().copy(alpha = 0.9f), MaterialTheme.shapes.large)
@@ -2196,17 +2198,18 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Indietro") }
-            Text("Il vostro ricordo", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+            AnimatedPageTitle("Il vostro ricordo", MaterialTheme.typography.headlineSmall)
             IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = "Modifica ricordo") }
         }
         Card(
-            modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(detailHaze), detailStyle)
+            modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(26.dp), ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.24f))
+                .hazeBlur(HazeInput.Sources(detailHaze), detailStyle)
                 .clip(RoundedCornerShape(26.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(26.dp)),
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text(entry.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text(entry.title, style = MaterialTheme.typography.headlineLarge.copy(letterSpacing = (-0.8).sp), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.CalendarToday, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
                     Text(displayHaliMeoDate(entry.memoryDate), color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2300,10 +2303,10 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(title, { title = it }, label = { Text("Titolo") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(date, { date = it.take(10) }, label = { Text("Data (gg/mm/aa)") }, placeholder = { Text("26/12/26") }, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(title, { title = it }, label = { Text("Titolo") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), singleLine = true)
+                OutlinedTextField(date, { date = it.take(10) }, label = { Text("Data (gg/mm/aa)") }, placeholder = { Text("26/12/26") }, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth(), singleLine = true)
 
-                OutlinedTextField(body, { body = it }, label = { Text("Ricordo") }, modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp), minLines = 5)
+                OutlinedTextField(body, { body = it }, label = { Text("Ricordo") }, modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp), shape = RoundedCornerShape(18.dp), minLines = 5)
                 Text("FOTO DEL RICORDO", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                 if (photoBitmap != null) {
                     Image(
@@ -2327,12 +2330,12 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { photoPicker.launch(arrayOf("image/*")) }, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(onClick = { photoPicker.launch(arrayOf("image/*")) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp)) {
                         Icon(Icons.Default.PhotoLibrary, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
                         Text(if (photoUri == null) "Galleria" else "Cambia foto", maxLines = 1)
                     }
-                    OutlinedButton(onClick = { launchFullResolutionCamera() }, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(onClick = { launchFullResolutionCamera() }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp)) {
                         Icon(Icons.Default.PhotoCamera, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
                         Text("Fotocamera", maxLines = 1)
@@ -2346,12 +2349,12 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) { Text("Annulla") }
+                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp)) { Text("Annulla") }
                     Button(onClick = {
                         val parsedDate = parseHaliMeoDate(date)
                         if (title.isNotBlank() && body.isNotBlank() && parsedDate != null) onSave(title, body, cat, parsedDate.toString(), photoUri)
                         else if (parsedDate == null) Toast.makeText(context, "Inserisci una data valida nel formato gg/mm/aa", Toast.LENGTH_SHORT).show()
-                    }, modifier = Modifier.weight(1f), enabled = title.isNotBlank() && body.isNotBlank()) {
+                    }, modifier = Modifier.weight(1f), enabled = title.isNotBlank() && body.isNotBlank(), shape = RoundedCornerShape(16.dp)) {
                         Icon(Icons.Default.Check, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
                         Text("Salva")
