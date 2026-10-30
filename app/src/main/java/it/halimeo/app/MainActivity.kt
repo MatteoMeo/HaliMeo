@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.net.Uri
+import android.media.ExifInterface
 import android.os.Bundle
 import android.os.Build
 import android.webkit.*
@@ -103,6 +104,26 @@ import it.halimeo.app.sync.SyncScheduler
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
+
+private suspend fun decodeMemoryPhoto(context: android.content.Context, uri: String, maxDimension: Int): android.graphics.Bitmap? {
+    val decoded = decodeScaledBitmap(context, uri, maxDimension) ?: return null
+    val orientation = runCatching {
+        context.contentResolver.openInputStream(Uri.parse(uri))?.use { ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL) }
+    }.getOrNull() ?: ExifInterface.ORIENTATION_NORMAL
+    val matrix = android.graphics.Matrix().apply {
+        when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> postRotate(90f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> postRotate(180f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> postRotate(270f)
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> postScale(-1f, 1f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> postScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> { postRotate(90f); postScale(-1f, 1f) }
+            ExifInterface.ORIENTATION_TRANSVERSE -> { postRotate(270f); postScale(-1f, 1f) }
+        }
+    }
+    if (matrix.isIdentity) return decoded
+    return runCatching { android.graphics.Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true) }.getOrDefault(decoded)
+}
 
 private val Ink = Color.Black
 private val Panel = Color(0xFF0D1420)
@@ -1475,7 +1496,7 @@ private fun DiaryScreen(
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconButton(onClick = { calendarState.selectedDateMillis = selectedDate?.let { runCatching { java.time.LocalDate.parse(it).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli() }.getOrNull() }; showCalendar = true }) {
-                    Icon(Icons.Default.CalendarToday, contentDescription = "Filtra per data", tint = if (selectedDate != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.Default.CalendarMonth, contentDescription = "Filtra per data", modifier = Modifier.size(25.dp), tint = if (selectedDate != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 IconButton(
                     onClick = {
@@ -1484,7 +1505,7 @@ private fun DiaryScreen(
                     }
                 ) {
                     Icon(
-                        if (searchExpanded) Icons.Default.Close else Icons.Default.ManageSearch,
+                        if (searchExpanded) Icons.Default.Close else Icons.Default.Search,
                         contentDescription = if (searchExpanded) "Chiudi ricerca" else "Cerca ricordi",
                         tint = MaterialTheme.colorScheme.primary
                     )
@@ -1637,7 +1658,7 @@ private fun DiaryScreen(
                                         photoHighlights.forEach { highlight ->
                                             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
                                                 val storyBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, highlight.photoUri) {
-                                                    value = highlight.photoUri?.let { decodeScaledBitmap(diaryContext, it, maxDimension = 720) }
+                                                    value = highlight.photoUri?.let { decodeMemoryPhoto(diaryContext, it, maxDimension = 720) }
                                                 }
                                                 Surface(
                                                     modifier = Modifier.size(62.dp).hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(CircleShape).clickable { onOpenMemory(highlight) },
@@ -1690,7 +1711,7 @@ private fun DiaryScreen(
                         val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext, expanded) {
                             // Decode only after opening a card; eagerly decoding every visible photo
                             // causes avoidable IO, allocations and frame drops while scrolling.
-                            value = entry.photoUri?.let { decodeScaledBitmap(photoContext, it, maxDimension = 2400) }
+                            value = entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 2400) }
                         }
                         Card(
                             modifier = Modifier.fillMaxWidth()
@@ -1858,7 +1879,7 @@ private fun DiaryScreen(
 private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: () -> Unit) {
     val context = LocalContext.current
     val bitmap by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri) {
-        value = entry.photoUri?.let { decodeScaledBitmap(context, it, maxDimension = 2800) }
+        value = entry.photoUri?.let { decodeMemoryPhoto(context, it, maxDimension = 2800) }
     }
     val detailHaze = rememberHazeState()
     val detailTint = frostedSurfaceColor()
@@ -1947,7 +1968,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
         }.onFailure { Toast.makeText(context, "Fotocamera non disponibile: ${it.message}", Toast.LENGTH_LONG).show() }
     }
     val photoBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, photoUri, context) {
-        value = photoUri?.takeIf { it.isNotBlank() }?.let { decodeScaledBitmap(context, it, maxDimension = 2400) }
+        value = photoUri?.takeIf { it.isNotBlank() }?.let { decodeMemoryPhoto(context, it, maxDimension = 2400) }
     }
 
     Column(
