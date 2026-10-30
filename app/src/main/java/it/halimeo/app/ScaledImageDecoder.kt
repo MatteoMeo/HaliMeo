@@ -13,7 +13,7 @@ import kotlinx.coroutines.withContext
  * maximum dimension so callers never receive an image decoded at an unsuitable resolution.
  */
 private val scaledBitmapCache = object : LruCache<String, Bitmap>(
-    (Runtime.getRuntime().maxMemory() / 1024L / 8L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    (Runtime.getRuntime().maxMemory() / 1024L / 16L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
 ) {
     override fun sizeOf(key: String, value: Bitmap): Int = (value.byteCount / 1024).coerceAtLeast(1)
 }
@@ -22,6 +22,10 @@ private val scaledBitmapCache = object : LruCache<String, Bitmap>(
  * Decode user images away from the UI thread, downsample before display, and reuse recent
  * decodes to avoid repeated content-provider IO and bitmap allocations when cards are reopened.
  */
+internal fun trimScaledBitmapCache() {
+    scaledBitmapCache.evictAll()
+}
+
 internal suspend fun decodeScaledBitmap(
     context: Context,
     uriString: String,
