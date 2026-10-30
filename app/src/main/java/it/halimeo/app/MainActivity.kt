@@ -558,7 +558,7 @@ class MainActivity:ComponentActivity() {
                     key = { it }
                 ) { page ->
                     when (page) {
-                        0 -> DiaryScreen(entries,
+                        0 -> DiaryScreen(entries, repo,
                             { editing = it; nav.navigate("edit") },
                             { entry -> activity.lifecycleScope.launch { repo.toggleFavorite(entry.id) } },
                             { entry -> activity.lifecycleScope.launch { repo.delete(entry.id) } },
@@ -1994,6 +1994,7 @@ private fun categoryIcon(category: String): androidx.compose.ui.graphics.vector.
 @Composable
 private fun DiaryScreen(
     entries: List<DiaryEntry>,
+    repo: DiaryRepository,
     onEdit: (DiaryEntry) -> Unit,
     onToggleFavorite: (DiaryEntry) -> Unit,
     onDelete: (DiaryEntry) -> Unit,
@@ -2007,6 +2008,16 @@ private fun DiaryScreen(
     val calendarState = rememberDatePickerState()
     var pendingDelete by remember { mutableStateOf<DiaryEntry?>(null) }
     var expandedEntryIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var socialEntries by remember { mutableStateOf<Map<String, it.halimeo.app.network.SocialFeedEntry>>(emptyMap()) }
+    var commentsEntry by remember { mutableStateOf<DiaryEntry?>(null) }
+    var comments by remember { mutableStateOf<List<it.halimeo.app.network.SocialComment>>(emptyList()) }
+    var commentDraft by remember { mutableStateOf("") }
+    var commentsBusy by remember { mutableStateOf(false) }
+    val socialScope = rememberCoroutineScope()
+    LaunchedEffect(entries.map { it.updatedAt }) {
+        runCatching { repo.loadSocialFeed().entries.associateBy { it.id } }
+            .onSuccess { socialEntries = it }
+    }
     val diaryHaze = rememberHazeState()
     val diaryGlassTint = frostedSurfaceColor()
     val diaryGlassStyleBackground = MaterialTheme.colorScheme.surface
@@ -2381,11 +2392,34 @@ private fun DiaryScreen(
                             // at a bounded resolution suitable for the post preview.
                             value = entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 1800) }
                         }
+                        val social = socialEntries[entry.id]
                         SocialMemoryPost(
                             entry = entry,
-                            authorName = "Diario condiviso",
+                            authorName = social?.authorName ?: "Diario condiviso",
                             photo = entryPhoto,
                             expanded = expanded,
+                            likeCount = social?.likeCount ?: 0,
+                            likedByMe = social?.likedByMe ?: false,
+                            onToggleLike = {
+                                val wasLiked = social?.likedByMe ?: false
+                                socialEntries = socialEntries + (entry.id to (social?.copy(
+                                    likeCount = (social.likeCount + if (wasLiked) -1 else 1).coerceAtLeast(0),
+                                    likedByMe = !wasLiked
+                                ) ?: return@SocialMemoryPost))
+                                socialScope.launch {
+                                    runCatching { repo.setEntryLiked(entry.id, !wasLiked) }
+                                        .onFailure { socialEntries = socialEntries - entry.id }
+                                        .onSuccess { runCatching { repo.loadSocialFeed().entries.associateBy { it.id } }.onSuccess { socialEntries = it } }
+                                }
+                            },
+                            onComments = {
+                                commentsEntry = entry
+                                commentsBusy = true
+                                socialScope.launch {
+                                    comments = runCatching { repo.loadEntryComments(entry.id) }.getOrDefault(emptyList())
+                                    commentsBusy = false
+                                }
+                            },
                             onOpen = { onOpenMemory(entry) },
                             onToggleFavorite = { onToggleFavorite(entry) },
                             onToggleCaption = {
@@ -2399,6 +2433,41 @@ private fun DiaryScreen(
             }
         }
     }
+    }
+    if (commentsEntry != null) {
+        AlertDialog(
+            onDismissRequest = { commentsEntry = null },
+            title = { Text("Commenti") },
+            text = {
+                Column(Modifier.fillMaxWidth().heightIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (commentsBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
+                    else if (comments.isEmpty()) Text("Ancora nessun commento. Inizia tu!", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    else Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        comments.forEach { comment ->
+                            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(frostedSurfaceColor()).padding(10.dp)) {
+                                Text(comment.authorName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                                Text(comment.body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                        }
+                    }
+                    OutlinedTextField(value = commentDraft, onValueChange = { commentDraft = it.take(4000) },
+                        modifier = Modifier.fillMaxWidth(), label = { Text("Scrivi un commento") }, maxLines = 3)
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = commentDraft.isNotBlank() && !commentsBusy, onClick = {
+                    val target = commentsEntry ?: return@TextButton
+                    val draft = commentDraft.trim()
+                    commentsBusy = true
+                    socialScope.launch {
+                        runCatching { repo.addEntryComment(target.id, draft) }
+                            .onSuccess { comments = comments + it; commentDraft = "" }
+                        commentsBusy = false
+                    }
+                }) { Text("Invia") }
+            },
+            dismissButton = { TextButton(onClick = { commentsEntry = null }) { Text("Chiudi") } }
+        )
     }
     if (pendingDelete != null) {
         AlertDialog(
@@ -2415,6 +2484,7 @@ private fun DiaryScreen(
 @Composable
 private fun SocialMemoryPost(
     entry: DiaryEntry, authorName: String, photo: android.graphics.Bitmap?, expanded: Boolean,
+    likeCount: Int = 0, likedByMe: Boolean = false, onToggleLike: () -> Unit = {}, onComments: () -> Unit = {},
     onOpen: () -> Unit, onToggleFavorite: () -> Unit, onToggleCaption: () -> Unit,
     onEdit: () -> Unit, onDelete: () -> Unit, showManagement: Boolean = true
 ) {
@@ -2469,9 +2539,19 @@ private fun SocialMemoryPost(
                     contentDescription = if (entry.isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti",
                     tint = if (entry.isFavorite) Color(0xFFE66F8B) else MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(25.dp))
             }
-            Text(if (entry.isFavorite) "Tra i vostri preferiti" else "Aggiungi ai preferiti",
+            Text(if (entry.isFavorite) "Preferito" else "Preferiti",
                 color = if (entry.isFavorite) Color(0xFFE66F8B) else MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.labelMedium)
+            Spacer(Modifier.width(12.dp))
+            IconButton(onClick = onToggleLike, modifier = Modifier.size(40.dp)) {
+                Icon(if (likedByMe) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = if (likedByMe) "Rimuovi mi piace" else "Mi piace",
+                    tint = if (likedByMe) Color(0xFFE66F8B) else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text(likeCount.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+            IconButton(onClick = onComments, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Commenti", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Spacer(Modifier.weight(1f))
             TextButton(onClick = onOpen) {
                 Text("Apri ricordo", color = accent, fontWeight = FontWeight.SemiBold)
