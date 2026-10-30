@@ -315,7 +315,7 @@ class MainActivity:ComponentActivity() {
                 // keeping the indicator and page content on the exact same pager timeline.
                 pagerState.animateScrollToPage(
                     page = index,
-                    animationSpec = spring(dampingRatio = 0.92f, stiffness = 1100f)
+                    animationSpec = spring(dampingRatio = 0.96f, stiffness = 1800f)
                 )
             }
         }
@@ -351,7 +351,8 @@ class MainActivity:ComponentActivity() {
                         0 -> DiaryScreen(entries, favoriteIds,
                             { editing = it; nav.navigate("edit") },
                             { toggleFavorite(it.id) },
-                            { entry -> activity.lifecycleScope.launch { repo.delete(entry.id) } }
+                            { entry -> activity.lifecycleScope.launch { repo.delete(entry.id) } },
+                            { entry -> nav.navigate("memory/${entry.id}") }
                         )
                         1 -> TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })
                         else -> SettingsScreen(displayName = displayName, session = session, repo = repo, activity = activity, ctx = ctx)
@@ -388,6 +389,15 @@ class MainActivity:ComponentActivity() {
                     runCatching { repo.syncNow() }
                 }
             }, { editing = null; nav.popBackStack() }) }
+            composable("memory/{entryId}") { backStack ->
+                val entryId = backStack.arguments?.getString("entryId")
+                val memory = entries.firstOrNull { it.id == entryId }
+                if (memory != null) MemoryDetailScreen(memory, onBack = { nav.popBackStack() }, onEdit = {
+                    editing = memory
+                    nav.navigate("edit")
+                })
+                else LaunchedEffect(entryId) { nav.popBackStack() }
+            }
             composable("tripMonaco") { MissionScreen() }
         }
     })
@@ -408,7 +418,25 @@ class MainActivity:ComponentActivity() {
         border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor()),
         tonalElevation = 0.dp
     ) {
-        BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp)) {
+        BoxWithConstraints(
+            Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp)
+                .pointerInput(pagerState, navigationScope) {
+                    detectDragGestures(
+                        onDragEnd = {
+                            navigationScope.launch {
+                                val destination = pagerState.targetPage.coerceIn(0, 2)
+                                if (reduceAnimationsState.value) pagerState.scrollToPage(destination)
+                                else pagerState.animateScrollToPage(destination, spring(dampingRatio = 0.94f, stiffness = 1500f))
+                            }
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            val pageWidth = pagerState.layoutInfo.pageSize.coerceAtLeast(size.width)
+                            pagerState.dispatchRawDelta(-dragAmount.x * pageWidth / size.width.coerceAtLeast(1))
+                        }
+                    )
+                }
+        ) {
             val tabWidth = (maxWidth - 6.dp) / 3
             // The indicator is purely visual; only each tab handles taps, so it cannot steal or
             // reinterpret a click while moving between destinations.
@@ -436,30 +464,7 @@ class MainActivity:ComponentActivity() {
                     .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50))
             )
             Row(
-                Modifier.fillMaxSize().pointerInput(pagerState, navigationScope) {
-                    var totalDrag = 0f
-                    detectDragGestures(
-                        onDragStart = { totalDrag = 0f },
-                        onDragEnd = {
-                            navigationScope.launch {
-                                val destination = pagerState.targetPage.coerceIn(0, 2)
-                                if (reduceAnimationsState.value) pagerState.scrollToPage(destination)
-                                else pagerState.animateScrollToPage(
-                                    destination,
-                                    animationSpec = spring(dampingRatio = 0.88f, stiffness = 900f)
-                                )
-                            }
-                        },
-                        onDragCancel = { totalDrag = 0f },
-                        onDrag = { change, dragAmount ->
-                            // Dragging the navigation rail directly drives the same pager
-                            // used by full-screen swipes; the glass pill follows its offset.
-                            totalDrag += dragAmount.x
-                            change.consume()
-                            pagerState.dispatchRawDelta(-dragAmount.x)
-                        }
-                    )
-                },
+                Modifier.fillMaxSize(),
                 horizontalArrangement = Arrangement.spacedBy(3.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1358,6 +1363,7 @@ private fun DiaryScreen(
     onEdit: (DiaryEntry) -> Unit,
     onToggleFavorite: (DiaryEntry) -> Unit,
     onDelete: (DiaryEntry) -> Unit,
+    onOpenMemory: (DiaryEntry) -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     var searchExpanded by remember { mutableStateOf(false) }
@@ -1663,16 +1669,22 @@ private fun DiaryScreen(
                                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                                         photoHighlights.forEach { highlight ->
                                             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
+                                                val storyBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, highlight.photoUri) {
+                                                    value = highlight.photoUri?.let { decodeScaledBitmap(diaryContext, it, maxDimension = 720) }
+                                                }
                                                 Surface(
-                                                    modifier = Modifier.size(62.dp).clickable {
-                                                        expandedEntryIds = expandedEntryIds + highlight.id
-                                                    },
+                                                    modifier = Modifier.size(62.dp).hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(CircleShape).clickable { onOpenMemory(highlight) },
                                                     shape = CircleShape,
                                                     color = categoryAccent(highlight.category).copy(alpha = 0.18f),
                                                     border = androidx.compose.foundation.BorderStroke(2.dp, categoryAccent(highlight.category).copy(alpha = 0.8f))
                                                 ) {
                                                     Box(contentAlignment = Alignment.Center) {
-                                                        Icon(Icons.Default.Photo, contentDescription = null, tint = categoryAccent(highlight.category), modifier = Modifier.size(26.dp))
+                                                        if (storyBitmap != null) Image(
+                                                            bitmap = storyBitmap!!.asImageBitmap(),
+                                                            contentDescription = "Apri ${highlight.title}",
+                                                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                                            contentScale = ContentScale.Crop
+                                                        ) else Icon(Icons.Default.Photo, contentDescription = null, tint = categoryAccent(highlight.category), modifier = Modifier.size(26.dp))
                                                     }
                                                 }
                                                 Text(highlight.title, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1691,7 +1703,7 @@ private fun DiaryScreen(
                                     }
                                     memoriesToday.forEach { memory ->
                                         Surface(
-                                            modifier = Modifier.fillMaxWidth().clickable { expandedEntryIds = expandedEntryIds + memory.id },
+                                            modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(18.dp)).clickable { onOpenMemory(memory) },
                                             shape = RoundedCornerShape(18.dp), color = frostedSurfaceColor(),
                                             border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor())
                                         ) {
@@ -1714,7 +1726,7 @@ private fun DiaryScreen(
                                     }
                                     featured.forEach { favorite ->
                                         Surface(
-                                            modifier = Modifier.fillMaxWidth().clickable { expandedEntryIds = expandedEntryIds + favorite.id },
+                                            modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(18.dp)).clickable { onOpenMemory(favorite) },
                                             shape = RoundedCornerShape(18.dp), color = frostedSurfaceColor(),
                                             border = androidx.compose.foundation.BorderStroke(1.dp, categoryAccent(favorite.category).copy(alpha = 0.30f))
                                         ) {
@@ -1749,7 +1761,7 @@ private fun DiaryScreen(
                         val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext, expanded) {
                             // Decode only after opening a card; eagerly decoding every visible photo
                             // causes avoidable IO, allocations and frame drops while scrolling.
-                            value = entry.photoUri?.let { decodeScaledBitmap(photoContext, it, maxDimension = 1000) }
+                            value = entry.photoUri?.let { decodeScaledBitmap(photoContext, it, maxDimension = 2400) }
                         }
                         Card(
                             modifier = Modifier.fillMaxWidth()
@@ -1848,8 +1860,8 @@ private fun DiaryScreen(
                                         Image(
                                             bitmap = entryPhoto!!.asImageBitmap(),
                                             contentDescription = "Foto del ricordo: " + entry.title,
-                                            modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp).clip(RoundedCornerShape(18.dp)),
-                                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                            modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp).clip(RoundedCornerShape(18.dp)),
+                                            contentScale = androidx.compose.ui.layout.ContentScale.Fit
                                         )
                                     }
                                 }
@@ -1913,6 +1925,56 @@ private fun DiaryScreen(
     }
 }
 
+@Composable
+private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: () -> Unit) {
+    val context = LocalContext.current
+    val bitmap by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri) {
+        value = entry.photoUri?.let { decodeScaledBitmap(context, it, maxDimension = 2800) }
+    }
+    val detailHaze = rememberHazeState()
+    val detailTint = frostedSurfaceColor()
+    val detailStyle = remember(detailTint) {
+        HazeBlurStyle {
+            backgroundColor(Color(0xFF101419))
+            colorEffects(listOf(HazeColorEffect.tint(detailTint.copy(alpha = 0.50f))))
+            fallbackColorEffect(HazeColorEffect.tint(detailTint))
+        }
+    }
+    Column(
+        Modifier.fillMaxSize().hazeSource(detailHaze).verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro") }
+            Text("Il vostro ricordo", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = "Modifica ricordo") }
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(detailHaze), detailStyle)
+                .clip(RoundedCornerShape(26.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(26.dp)),
+            shape = RoundedCornerShape(26.dp),
+            colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
+        ) {
+            Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text(entry.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(displayHaliMeoDate(entry.memoryDate), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    AssistChip(onClick = {}, label = { Text(entry.category) })
+                }
+                if (bitmap != null) {
+                    Image(bitmap!!.asImageBitmap(), contentDescription = "Foto del ricordo", modifier = Modifier.fillMaxWidth()
+                        .heightIn(max = 620.dp).clip(RoundedCornerShape(18.dp)), contentScale = ContentScale.Fit)
+                }
+                SelectionContainer {
+                    Text(entry.body, style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 26.sp), color = MaterialTheme.colorScheme.onSurface)
+                }
+            }
+        }
+        Spacer(Modifier.height(100.dp))
+    }
+}
+
 @Composable private fun EditScreen(existing: DiaryEntry?, onSave: (String,String,String,String,String?)->Unit, onCancel:()->Unit) {
     var title by remember(existing?.id) { mutableStateOf(existing?.title.orEmpty()) }
     var body by remember(existing?.id) { mutableStateOf(existing?.body.orEmpty()) }
@@ -1952,7 +2014,7 @@ private fun DiaryScreen(
         }
     }
     val photoBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, photoUri, context) {
-        value = photoUri?.takeIf { it.isNotBlank() }?.let { decodeScaledBitmap(context, it, maxDimension = 1200) }
+        value = photoUri?.takeIf { it.isNotBlank() }?.let { decodeScaledBitmap(context, it, maxDimension = 2400) }
     }
 
     Column(
@@ -1993,8 +2055,8 @@ private fun DiaryScreen(
                     Image(
                         bitmap = photoBitmap!!.asImageBitmap(),
                         contentDescription = "Foto allegata al ricordo",
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp).clip(RoundedCornerShape(20.dp)),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp).clip(RoundedCornerShape(20.dp)),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
                     )
                 } else {
                     Surface(
