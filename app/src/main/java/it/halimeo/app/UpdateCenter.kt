@@ -53,7 +53,7 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
                     result.versionCode <= BuildConfig.VERSION_CODE.toLong() -> "Hai già installato l'ultima versione di questo canale."
                     else -> "È disponibile un aggiornamento."
                 }
-            } catch (error: Exception) { status = "Controllo non riuscito: \${error.message ?: "verifica la connessione"}" }
+            } catch (error: Exception) { status = "Controllo non riuscito: ${error.message ?: "verifica la connessione"}" }
             finally { busy = false }
         }
     }
@@ -64,14 +64,14 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
         scope.launch {
             try {
                 val apk = withContext(Dispatchers.IO) {
-                    val target = File(context.cacheDir, "updates/\${item.apkName}")
+                    val target = File(context.cacheDir, "updates/${item.apkName}")
                     target.parentFile?.mkdirs()
                     val connection = (URL(item.apkUrl).openConnection() as HttpURLConnection).apply {
                         connectTimeout = 20_000; readTimeout = 60_000; instanceFollowRedirects = true
                     }
                     try {
                         connection.connect()
-                        if (connection.responseCode !in 200..299) error("Download GitHub non riuscito (\${connection.responseCode})")
+                        if (connection.responseCode !in 200..299) error("Download GitHub non riuscito (${connection.responseCode})")
                         val total = connection.contentLengthLong
                         connection.inputStream.use { input ->
                             target.outputStream().use { output ->
@@ -91,9 +91,9 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
                     target
                 }
                 downloading = false
-                val uri = FileProvider.getUriForFile(context, "\${BuildConfig.APPLICATION_ID}.fileprovider", apk)
+                val uri = FileProvider.getUriForFile(context, "${BuildConfig.APPLICATION_ID}.fileprovider", apk)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
-                    activity.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:\${BuildConfig.APPLICATION_ID}")))
+                    activity.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${BuildConfig.APPLICATION_ID}")))
                     status = "Consenti a HaliMeo di installare aggiornamenti e poi premi di nuovo Installa."
                 } else {
                     activity.startActivity(Intent(Intent.ACTION_VIEW).apply {
@@ -102,7 +102,7 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
                     })
                     status = "Installazione avviata: conferma nella finestra di Android."
                 }
-            } catch (error: Exception) { downloading = false; status = "Aggiornamento non riuscito: \${error.message ?: "errore imprevisto"}" }
+            } catch (error: Exception) { downloading = false; status = "Aggiornamento non riuscito: ${error.message ?: "errore imprevisto"}" }
             finally { busy = false }
         }
     }
@@ -125,7 +125,7 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
             release?.let { item ->
                 Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text("v\${item.versionName} · Build \${item.versionCode}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text("v${item.versionName} · Build ${item.versionCode}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     if (item.changelog.isNotBlank()) Text(item.changelog.take(1800), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (item.versionCode > BuildConfig.VERSION_CODE.toLong()) Button(onClick = { downloadAndInstall(item) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Default.Download, contentDescription = null); Text("Scarica e installa", Modifier.padding(start = 8.dp))
@@ -151,7 +151,7 @@ private suspend fun fetchLatestRelease(channel: String): HaliMeoRelease? {
             setRequestProperty("User-Agent", "HaliMeo-Updater")
         }
         try {
-            if (connection.responseCode !in 200..299) error("GitHub ha risposto \${connection.responseCode}")
+            if (connection.responseCode !in 200..299) error("GitHub ha risposto ${connection.responseCode}")
             connection.inputStream.bufferedReader().use { it.readText() }
         } finally { connection.disconnect() }
     }
