@@ -2179,6 +2179,26 @@ private fun DiaryScreen(
                 ) {
                     IconButton(
                         onClick = {
+                            albumsBrowserOpen = true
+                            albumBusy = true
+                            socialScope.launch {
+                                albums = runCatching { repo.loadAlbums().albums }.getOrDefault(emptyList())
+                                albumBusy = false
+                            }
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(Icons.Default.CollectionsBookmark, contentDescription = "Apri album", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(19.dp))
+                    }
+                }
+                Box(
+                    modifier = Modifier.size(36.dp)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), CircleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    IconButton(
+                        onClick = {
                             searchExpanded = !searchExpanded
                             if (!searchExpanded) query = ""
                         },
@@ -2236,21 +2256,6 @@ private fun DiaryScreen(
                 AssistChip(onClick = { selectedDate = null }, label = { Text("Data: ${selectedDate?.let(::displayHaliMeoDate)} · Rimuovi filtro") }, leadingIcon = { Icon(Icons.Default.Event, contentDescription = null) }, trailingIcon = { Icon(Icons.Default.Close, contentDescription = null) })
             }
         }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
-            IconButton(onClick = {
-                albumsBrowserOpen = true
-                albumBusy = true
-                socialScope.launch {
-                    albums = runCatching { repo.loadAlbums().albums }.getOrDefault(emptyList())
-                    albumBusy = false
-                }
-            }) {
-                Icon(Icons.Default.CollectionsBookmark, contentDescription = "Apri album", tint = MaterialTheme.colorScheme.primary)
-            }
-        }
-
-        Spacer(Modifier.height(4.dp))
-
         when {
             entries.isEmpty() -> {
                 Box(
