@@ -43,7 +43,31 @@ with db() as c:
     CREATE TABLE IF NOT EXISTS audit_log(
       id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, action TEXT NOT NULL, at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS entry_likes(
+      entry_id TEXT NOT NULL, user_id TEXT NOT NULL, created_at INTEGER NOT NULL,
+      PRIMARY KEY(entry_id,user_id), FOREIGN KEY(entry_id) REFERENCES entries(id) ON DELETE CASCADE,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS entry_comments(
+      id TEXT PRIMARY KEY, entry_id TEXT NOT NULL, user_id TEXT NOT NULL, body TEXT NOT NULL,
+      created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, deleted_at INTEGER,
+      FOREIGN KEY(entry_id) REFERENCES entries(id) ON DELETE CASCADE,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS albums(
+      id TEXT PRIMARY KEY, created_by TEXT NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+      created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, deleted_at INTEGER,
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+    CREATE TABLE IF NOT EXISTS album_entries(
+      album_id TEXT NOT NULL, entry_id TEXT NOT NULL, added_by TEXT NOT NULL, added_at INTEGER NOT NULL,
+      PRIMARY KEY(album_id,entry_id), FOREIGN KEY(album_id) REFERENCES albums(id) ON DELETE CASCADE,
+      FOREIGN KEY(entry_id) REFERENCES entries(id) ON DELETE CASCADE,
+      FOREIGN KEY(added_by) REFERENCES users(id)
+    );
     CREATE INDEX IF NOT EXISTS idx_entries_updated ON entries(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_comments_entry ON entry_comments(entry_id,created_at);
+    CREATE INDEX IF NOT EXISTS idx_album_entries_album ON album_entries(album_id,added_at);
     """)
     columns = {row[1] for row in c.execute("PRAGMA table_info(entries)").fetchall()}
     if "photo_updated_at" not in columns:
@@ -96,6 +120,16 @@ class Entry(BaseModel):
 class SyncIn(BaseModel):
     changes: List[Entry] = Field(default_factory=list, max_length=500)
     lastSyncAt: Optional[int] = None
+
+class CommentIn(BaseModel):
+    body: str = Field(min_length=1, max_length=4000)
+
+class AlbumIn(BaseModel):
+    title: str = Field(min_length=1, max_length=100)
+    description: str = Field(default="", max_length=2000)
+
+class AlbumEntryIn(BaseModel):
+    entryId: str = Field(min_length=1, max_length=80)
 
 @app.get("/v1/health")
 def health(): return {"status":"ok","service":"halimeo","time":now_ms()}
@@ -162,6 +196,150 @@ def sync(data: SyncIn, user=Depends(current_user)):
     return {"changes":[{"id":r["id"],"title":r["title"],"body":r["body"],"category":r["category"],
       "memoryDate":r["memory_date"],"createdAt":r["created_at"],"updatedAt":r["updated_at"],"deletedAt":r["deleted_at"],"photoUpdatedAt":r["photo_updated_at"],"photoDeletedAt":r["photo_deleted_at"]} for r in rows],
       "serverTime":now}
+
+
+def require_entry(c, entry_id):
+    row = c.execute("SELECT id FROM entries WHERE id=? AND deleted_at IS NULL", (entry_id,)).fetchone()
+    if not row: raise HTTPException(404, "Ricordo non trovato")
+    return row
+
+@app.get("/v1/social/feed")
+def social_feed(user=Depends(current_user)):
+    with db() as c:
+        rows = c.execute("""
+          SELECT e.*, u.display_name AS author_name,
+            (SELECT COUNT(*) FROM entry_likes l WHERE l.entry_id=e.id) AS like_count,
+            EXISTS(SELECT 1 FROM entry_likes l WHERE l.entry_id=e.id AND l.user_id=?) AS liked_by_me
+          FROM entries e LEFT JOIN users u ON u.id=e.owner_id
+          WHERE e.deleted_at IS NULL ORDER BY e.memory_date DESC,e.created_at DESC LIMIT 500
+        """, (user["id"],)).fetchall()
+        result = []
+        for r in rows:
+            comments = c.execute("""
+              SELECT cm.id,cm.body,cm.created_at AS createdAt,cm.updated_at AS updatedAt,
+                cm.user_id AS userId,u.display_name AS authorName
+              FROM entry_comments cm JOIN users u ON u.id=cm.user_id
+              WHERE cm.entry_id=? AND cm.deleted_at IS NULL ORDER BY cm.created_at ASC LIMIT 100
+            """, (r["id"],)).fetchall()
+            result.append({
+              "id":r["id"],"title":r["title"],"body":r["body"],"category":r["category"],
+              "memoryDate":r["memory_date"],"createdAt":r["created_at"],"updatedAt":r["updated_at"],
+              "authorId":r["owner_id"],"authorName":r["author_name"] or "Account disattivato",
+              "likeCount":r["like_count"],"likedByMe":bool(r["liked_by_me"]),
+              "comments":[dict(x) for x in comments]
+            })
+    return {"entries":result,"serverTime":now_ms()}
+
+@app.post("/v1/entries/{entry_id}/like")
+def like_entry(entry_id: str, user=Depends(current_user)):
+    with db() as c:
+        require_entry(c, entry_id)
+        c.execute("INSERT OR IGNORE INTO entry_likes(entry_id,user_id,created_at) VALUES(?,?,?)",
+                  (entry_id,user["id"],now_ms()))
+        count = c.execute("SELECT COUNT(*) FROM entry_likes WHERE entry_id=?", (entry_id,)).fetchone()[0]
+    return {"liked":True,"likeCount":count}
+
+@app.delete("/v1/entries/{entry_id}/like")
+def unlike_entry(entry_id: str, user=Depends(current_user)):
+    with db() as c:
+        require_entry(c, entry_id)
+        c.execute("DELETE FROM entry_likes WHERE entry_id=? AND user_id=?", (entry_id,user["id"]))
+        count = c.execute("SELECT COUNT(*) FROM entry_likes WHERE entry_id=?", (entry_id,)).fetchone()[0]
+    return {"liked":False,"likeCount":count}
+
+@app.get("/v1/entries/{entry_id}/comments")
+def list_comments(entry_id: str, user=Depends(current_user)):
+    with db() as c:
+        require_entry(c, entry_id)
+        rows = c.execute("""
+          SELECT cm.id,cm.body,cm.created_at AS createdAt,cm.updated_at AS updatedAt,
+            cm.user_id AS userId,u.display_name AS authorName
+          FROM entry_comments cm JOIN users u ON u.id=cm.user_id
+          WHERE cm.entry_id=? AND cm.deleted_at IS NULL ORDER BY cm.created_at ASC LIMIT 200
+        """, (entry_id,)).fetchall()
+    return {"comments":[dict(r) for r in rows]}
+
+@app.post("/v1/entries/{entry_id}/comments")
+def create_comment(entry_id: str, data: CommentIn, user=Depends(current_user)):
+    now=now_ms()
+    comment_id=uuid.uuid4().hex
+    body=data.body.strip()
+    if not body: raise HTTPException(422,"Il commento non può essere vuoto")
+    with db() as c:
+        require_entry(c, entry_id)
+        c.execute("INSERT INTO entry_comments(id,entry_id,user_id,body,created_at,updated_at) VALUES(?,?,?,?,?,?)",
+                  (comment_id,entry_id,user["id"],body,now,now))
+    return {"id":comment_id,"entryId":entry_id,"body":body,"userId":user["id"],
+            "authorName":user["display_name"],"createdAt":now,"updatedAt":now}
+
+@app.delete("/v1/comments/{comment_id}")
+def delete_comment(comment_id: str, user=Depends(current_user)):
+    now=now_ms()
+    with db() as c:
+        row=c.execute("SELECT user_id FROM entry_comments WHERE id=? AND deleted_at IS NULL",(comment_id,)).fetchone()
+        if not row: raise HTTPException(404,"Commento non trovato")
+        if row["user_id"] != user["id"] and (not OWNER_ID or user["id"] != OWNER_ID):
+            raise HTTPException(403,"Non puoi eliminare questo commento")
+        c.execute("UPDATE entry_comments SET deleted_at=?,updated_at=? WHERE id=?",(now,now,comment_id))
+    return {"deleted":True}
+
+@app.get("/v1/albums")
+def list_albums(user=Depends(current_user)):
+    with db() as c:
+        rows=c.execute("""
+          SELECT a.*,COUNT(ae.entry_id) AS entry_count
+          FROM albums a LEFT JOIN album_entries ae ON ae.album_id=a.id
+          WHERE a.deleted_at IS NULL GROUP BY a.id ORDER BY a.updated_at DESC
+        """).fetchall()
+    return {"albums":[{"id":r["id"],"title":r["title"],"description":r["description"],
+      "createdBy":r["created_by"],"createdAt":r["created_at"],"updatedAt":r["updated_at"],
+      "entryCount":r["entry_count"]} for r in rows]}
+
+@app.post("/v1/albums")
+def create_album(data: AlbumIn, user=Depends(current_user)):
+    now=now_ms()
+    album_id=uuid.uuid4().hex
+    title=data.title.strip()
+    if not title: raise HTTPException(422,"Il titolo dell'album non può essere vuoto")
+    with db() as c:
+        c.execute("INSERT INTO albums(id,created_by,title,description,created_at,updated_at) VALUES(?,?,?,?,?,?)",
+                  (album_id,user["id"],title,data.description.strip(),now,now))
+    return {"id":album_id,"title":title,"description":data.description.strip(),
+            "createdBy":user["id"],"createdAt":now,"updatedAt":now,"entryCount":0}
+
+@app.get("/v1/albums/{album_id}")
+def get_album(album_id: str, user=Depends(current_user)):
+    with db() as c:
+        album=c.execute("SELECT * FROM albums WHERE id=? AND deleted_at IS NULL",(album_id,)).fetchone()
+        if not album: raise HTTPException(404,"Album non trovato")
+        rows=c.execute("""
+          SELECT e.*,u.display_name AS author_name FROM album_entries ae
+          JOIN entries e ON e.id=ae.entry_id LEFT JOIN users u ON u.id=e.owner_id
+          WHERE ae.album_id=? AND e.deleted_at IS NULL ORDER BY ae.added_at DESC
+        """,(album_id,)).fetchall()
+    return {"id":album["id"],"title":album["title"],"description":album["description"],
+      "createdBy":album["created_by"],"entries":[{"id":r["id"],"title":r["title"],"body":r["body"],
+      "category":r["category"],"memoryDate":r["memory_date"],"authorId":r["owner_id"],
+      "authorName":r["author_name"] or "Account disattivato"} for r in rows]}
+
+@app.post("/v1/albums/{album_id}/entries")
+def add_album_entry(album_id: str, data: AlbumEntryIn, user=Depends(current_user)):
+    now=now_ms()
+    with db() as c:
+        album=c.execute("SELECT id FROM albums WHERE id=? AND deleted_at IS NULL",(album_id,)).fetchone()
+        if not album: raise HTTPException(404,"Album non trovato")
+        require_entry(c,data.entryId)
+        c.execute("INSERT OR IGNORE INTO album_entries(album_id,entry_id,added_by,added_at) VALUES(?,?,?,?)",
+                  (album_id,data.entryId,user["id"],now))
+        c.execute("UPDATE albums SET updated_at=? WHERE id=?",(now,album_id))
+    return {"added":True}
+
+@app.delete("/v1/albums/{album_id}/entries/{entry_id}")
+def remove_album_entry(album_id: str, entry_id: str, user=Depends(current_user)):
+    with db() as c:
+        c.execute("DELETE FROM album_entries WHERE album_id=? AND entry_id=?",(album_id,entry_id))
+        c.execute("UPDATE albums SET updated_at=? WHERE id=?",(now_ms(),album_id))
+    return {"removed":True}
 
 @app.post("/v1/entries/{entry_id}/photo")
 async def upload_entry_photo(entry_id: str, photoUpdatedAt: int, photo: UploadFile = File(...), user=Depends(current_user)):
