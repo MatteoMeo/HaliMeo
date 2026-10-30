@@ -185,7 +185,7 @@ async def upload_entry_photo(entry_id: str, photoUpdatedAt: int, photo: UploadFi
             return {"ignored": True, "photoUpdatedAt": row["photo_updated_at"]}
         filename = uuid.uuid4().hex + PHOTO_TYPES[content_type]
         (PHOTO_DIR / filename).write_bytes(payload)
-        stamp = photoUpdatedAt
+        stamp = max(photoUpdatedAt, now_ms())
         c.execute("UPDATE entries SET photo_filename=?,photo_updated_at=?,photo_deleted_at=NULL,updated_at=MAX(updated_at,?) WHERE id=?", (filename,stamp,now_ms(),entry_id))
         old_filename = row["photo_filename"]
     if old_filename and old_filename != filename:
@@ -205,13 +205,13 @@ def download_entry_photo(entry_id: str, user=Depends(current_user)):
 
 @app.delete("/v1/entries/{entry_id}/photo")
 def delete_entry_photo(entry_id: str, photoUpdatedAt: int, user=Depends(current_user)):
-    stamp = photoUpdatedAt
     with db() as c:
         row = c.execute("SELECT photo_filename,photo_updated_at FROM entries WHERE id=?", (entry_id,)).fetchone()
         if not row:
             raise HTTPException(404, "Ricordo non trovato")
-        if stamp < row["photo_updated_at"]:
+        if photoUpdatedAt < row["photo_updated_at"]:
             return {"ignored": True, "photoUpdatedAt": row["photo_updated_at"]}
+        stamp = max(photoUpdatedAt, now_ms())
         old_filename = row["photo_filename"]
         c.execute("UPDATE entries SET photo_filename=NULL,photo_updated_at=?,photo_deleted_at=?,updated_at=MAX(updated_at,?) WHERE id=?", (stamp,stamp,now_ms(),entry_id))
     if old_filename:
