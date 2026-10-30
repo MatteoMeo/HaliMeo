@@ -1212,13 +1212,14 @@ private fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
+                    }
+                }
 
                 if (inviteMessage.isNotBlank() && isOwner != false) {
                     Text(inviteMessage, color = if (inviteCode.isNotBlank()) accentText else secondaryText, style = MaterialTheme.typography.bodySmall)
                 }
                 Text("Versione ${BuildConfig.VERSION_NAME}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             }
-        }
         }
 
         Card(
