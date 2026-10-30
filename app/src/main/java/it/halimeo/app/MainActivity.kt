@@ -1940,7 +1940,7 @@ private fun DiaryScreen(
         animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "diaryHeaderTitleScale"
     )
-    val filtered = remember(entries, query, selectedDate, favoritesOnly, favoriteIds) {
+    val filtered = remember(entries, query, selectedDate, favoritesOnly) {
         val matches = entries.filter {
             (it.title.contains(query, true) || it.body.contains(query, true)) &&
                 (selectedDate == null || it.memoryDate == selectedDate) &&
