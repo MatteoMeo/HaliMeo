@@ -2356,12 +2356,24 @@ private fun DiaryScreen(
                         }
                     itemsIndexed(filtered, key = { _, entry -> entry.id }, contentType = { _, _ -> "diary_entry" }) { _, entry ->
                         val expanded = entry.id in expandedEntryIds
-                        val accent = MaterialTheme.colorScheme.primary
                         val photoContext = LocalContext.current
                         val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext) {
-                            // Lightweight feed preview; the shared decoder/cache avoids full-size allocations.
                             value = entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 1080) }
                         }
+                        Column(Modifier.animateItem()) {
+                            SocialMemoryPost(
+                                entry = entry,
+                                authorName = authorName,
+                                photo = entryPhoto,
+                                expanded = expanded,
+                                onOpen = { onOpenMemory(entry) },
+                                onToggleFavorite = { onToggleFavorite(entry) },
+                                onToggleCaption = { expandedEntryIds = if (expanded) expandedEntryIds - entry.id else expandedEntryIds + entry.id },
+                                onEdit = { onEdit(entry) },
+                                onDelete = { pendingDelete = entry }
+                            )
+                        }
+                    }
                         SocialMemoryPost(
                             entry = entry,
                             authorName = authorName,
