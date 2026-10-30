@@ -84,6 +84,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import android.view.HapticFeedbackConstants
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -769,9 +770,10 @@ private fun SettingsScreen(
 
     val settingsHaze = rememberHazeState()
     val settingsGlassTint = frostedSurfaceColor()
+    val settingsGlassStyleBackground = MaterialTheme.colorScheme.surface
     val settingsGlassStyle = remember(settingsGlassTint) {
         HazeBlurStyle {
-            backgroundColor(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
+            backgroundColor(settingsGlassStyleBackground.copy(alpha = 0.82f))
             colorEffects(listOf(HazeColorEffect.tint(settingsGlassTint.copy(alpha = 0.48f))))
             fallbackColorEffect(HazeColorEffect.tint(settingsGlassTint))
         }
@@ -1291,9 +1293,10 @@ private fun SettingsScreen(
 @Composable private fun AuthScreen(onLogin:(String,String,(String)->Unit)->Unit,onRedeem:(String,String,String,String,(String)->Unit)->Unit){
         val authHaze = rememberHazeState()
     val authGlassTint = frostedSurfaceStrongColor()
+    val authGlassStyleBackground = MaterialTheme.colorScheme.surface
     val authGlassStyle = remember(authGlassTint) {
         HazeBlurStyle {
-            backgroundColor(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
+            backgroundColor(authGlassStyleBackground.copy(alpha = 0.82f))
             colorEffects(listOf(HazeColorEffect.tint(authGlassTint.copy(alpha = 0.48f))))
             fallbackColorEffect(HazeColorEffect.tint(authGlassTint))
         }
@@ -1413,9 +1416,10 @@ private fun DiaryScreen(
     var expandedEntryIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     val diaryHaze = rememberHazeState()
     val diaryGlassTint = frostedSurfaceColor()
+    val diaryGlassStyleBackground = MaterialTheme.colorScheme.surface
     val diaryGlassStyle = remember(diaryGlassTint) {
         HazeBlurStyle {
-            backgroundColor(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
+            backgroundColor(diaryGlassStyleBackground.copy(alpha = 0.82f))
             colorEffects(listOf(HazeColorEffect.tint(diaryGlassTint.copy(alpha = 0.48f))))
             fallbackColorEffect(HazeColorEffect.tint(diaryGlassTint))
         }
@@ -1904,9 +1908,10 @@ private fun DiaryScreen(
 private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: () -> Unit) {
     val detailHaze = rememberHazeState()
     val detailTint = frostedSurfaceColor()
+    val detailStyleBackground = MaterialTheme.colorScheme.surface
     val detailStyle = remember(detailTint) {
         HazeBlurStyle {
-            backgroundColor(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
+            backgroundColor(detailStyleBackground.copy(alpha = 0.82f))
             colorEffects(listOf(HazeColorEffect.tint(detailTint.copy(alpha = 0.50f))))
             fallbackColorEffect(HazeColorEffect.tint(detailTint))
         }
@@ -1959,9 +1964,10 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
     val context = LocalContext.current
     val editHaze = rememberHazeState()
     val editGlassTint = frostedSurfaceColor()
+    val editGlassStyleBackground = MaterialTheme.colorScheme.surface
     val editGlassStyle = remember(editGlassTint) {
         HazeBlurStyle {
-            backgroundColor(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
+            backgroundColor(editGlassStyleBackground.copy(alpha = 0.82f))
             colorEffects(listOf(HazeColorEffect.tint(editGlassTint.copy(alpha = 0.48f))))
             fallbackColorEffect(HazeColorEffect.tint(editGlassTint))
         }
@@ -2123,9 +2129,10 @@ private fun AnimatedPageTitle(
 private fun TripsScreen(onOpenMonaco: () -> Unit) {
     val tripsHaze = rememberHazeState()
     val tripsGlassTint = frostedSurfaceColor()
+    val tripsGlassStyleBackground = MaterialTheme.colorScheme.surface
     val tripsGlassStyle = remember(tripsGlassTint) {
         HazeBlurStyle {
-            backgroundColor(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
+            backgroundColor(tripsGlassStyleBackground.copy(alpha = 0.82f))
             colorEffects(listOf(HazeColorEffect.tint(tripsGlassTint.copy(alpha = 0.48f))))
             fallbackColorEffect(HazeColorEffect.tint(tripsGlassTint))
         }
