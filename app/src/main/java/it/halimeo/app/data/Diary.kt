@@ -37,7 +37,7 @@ data class PendingSocialAction(
     @PrimaryKey val id: String,
     val entryId: String,
     val type: String,
-    val payload: String = "",
+    @ColumnInfo(defaultValue = "''") val payload: String = "",
     val createdAt: Long
 )
 
