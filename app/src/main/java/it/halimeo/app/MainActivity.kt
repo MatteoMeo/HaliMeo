@@ -442,9 +442,10 @@ class MainActivity:ComponentActivity() {
                     lastSyncAtState.value = now
                     Toast.makeText(ctx, "Sincronizzazione completata", Toast.LENGTH_SHORT).show()
                 }
-                .onFailure {
+                .onFailure { error ->
                     syncFailed = true
-                    Toast.makeText(ctx, "Offline: i ricordi restano salvati sul dispositivo", Toast.LENGTH_LONG).show()
+                    val reason = error.localizedMessage?.takeIf { it.isNotBlank() } ?: "errore sconosciuto"
+                    Toast.makeText(ctx, "Sincronizzazione non riuscita: $reason", Toast.LENGTH_LONG).show()
                 }
             syncInProgress = false
         }
