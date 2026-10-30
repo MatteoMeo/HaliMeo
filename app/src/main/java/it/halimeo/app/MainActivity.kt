@@ -101,6 +101,7 @@ import dev.chrisbanes.haze.blur.HazeColorEffect
 import dev.chrisbanes.haze.blur.hazeBlur
 import androidx.compose.ui.graphics.compositeOver
 import androidx.lifecycle.lifecycleScope
+import androidx.metrics.performance.JankStats
 import androidx.navigation.compose.*
 import it.halimeo.app.data.*
 import it.halimeo.app.network.*
@@ -354,6 +355,8 @@ private val TextPrimary = Color(0xFFF5F7FA)
         )
 }
 class MainActivity:ComponentActivity() {
+    private var frameStats: JankStats? = null
+
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW || level == android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
@@ -365,6 +368,14 @@ class MainActivity:ComponentActivity() {
         super.onCreate(savedInstanceState)
         ApiClient.initialize(applicationContext)
         SyncScheduler.schedule(this)
+        if (BuildConfig.DEBUG) {
+            // Debug-only frame diagnostics: no per-frame logging in release builds.
+            frameStats = JankStats.createAndTrack(window) { frame ->
+                if (frame.isJank) {
+                    android.util.Log.d("HaliMeoFrames", "Janky frame: ${frame.frameDurationUiNanos / 1_000_000} ms")
+                }
+            }
+        }
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         window.statusBarColor = android.graphics.Color.TRANSPARENT
@@ -376,6 +387,12 @@ class MainActivity:ComponentActivity() {
         // switch dynamically between 120/96/90/60Hz based on content and power.
         lastSyncAtState.value = getSharedPreferences("halimeo_preferences", MODE_PRIVATE).getLong("last_sync_at", 0L)
         setContent { HaliMeoTheme { HaliMeoRoot() } }
+    }
+
+    override fun onDestroy() {
+        frameStats?.isTrackingEnabled = false
+        frameStats = null
+        super.onDestroy()
     }
 }
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
