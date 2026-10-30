@@ -436,7 +436,30 @@ class MainActivity:ComponentActivity() {
                     .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50))
             )
             Row(
-                Modifier.fillMaxSize(),
+                Modifier.fillMaxSize().pointerInput(pagerState, navigationScope) {
+                    var totalDrag = 0f
+                    detectDragGestures(
+                        onDragStart = { totalDrag = 0f },
+                        onDragEnd = {
+                            navigationScope.launch {
+                                val destination = pagerState.targetPage.coerceIn(0, 2)
+                                if (reduceAnimationsState.value) pagerState.scrollToPage(destination)
+                                else pagerState.animateScrollToPage(
+                                    destination,
+                                    animationSpec = spring(dampingRatio = 0.88f, stiffness = 900f)
+                                )
+                            }
+                        },
+                        onDragCancel = { totalDrag = 0f },
+                        onDrag = { change, dragAmount ->
+                            // Dragging the navigation rail directly drives the same pager
+                            // used by full-screen swipes; the glass pill follows its offset.
+                            totalDrag += dragAmount.x
+                            change.consume()
+                            pagerState.dispatchRawDelta(-dragAmount.x)
+                        }
+                    )
+                },
                 horizontalArrangement = Arrangement.spacedBy(3.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
