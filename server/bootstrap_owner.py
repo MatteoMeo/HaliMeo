@@ -1,8 +1,10 @@
 """Run inside the server container to create the first private owner account."""
 import os, secrets, sqlite3, getpass, time
 from pathlib import Path
+from dotenv import load_dotenv
 from passlib.context import CryptContext
 
+load_dotenv(Path(__file__).resolve().parent / ".env")
 data_dir = Path(os.getenv("HALIMEO_DATA_DIR", "/data"))
 data_dir.mkdir(parents=True, exist_ok=True)
 db_path = data_dir / "halimeo.sqlite3"
