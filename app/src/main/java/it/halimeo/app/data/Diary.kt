@@ -16,16 +16,20 @@ data class DiaryEntry(
     val updatedAt: Long,
     val deletedAt: Long? = null,
     val syncState: String = "PENDING",
-    val photoUri: String? = null
+    val photoUri: String? = null,
+    val photoUpdatedAt: Long = 0L,
+    val photoDeletedAt: Long? = null,
+    val photoSyncState: String = "SYNCED"
 )
 
 data class DiaryEntryDto(
     val id: String, val title: String, val body: String, val category: String,
-    val memoryDate: String, val createdAt: Long, val updatedAt: Long, val deletedAt: Long? = null
+    val memoryDate: String, val createdAt: Long, val updatedAt: Long, val deletedAt: Long? = null,
+    val photoUpdatedAt: Long = 0L, val photoDeletedAt: Long? = null
 )
 
-fun DiaryEntry.toDto() = DiaryEntryDto(id,title,body,category,memoryDate,createdAt,updatedAt,deletedAt)
-fun DiaryEntryDto.toEntity() = DiaryEntry(id,title,body,category,memoryDate,createdAt,updatedAt,deletedAt,"SYNCED")
+fun DiaryEntry.toDto() = DiaryEntryDto(id,title,body,category,memoryDate,createdAt,updatedAt,deletedAt,photoUpdatedAt,photoDeletedAt)
+fun DiaryEntryDto.toEntity() = DiaryEntry(id,title,body,category,memoryDate,createdAt,updatedAt,deletedAt,"SYNCED",null,photoUpdatedAt,photoDeletedAt,"PENDING")
 
 @Dao
 interface DiaryDao {
@@ -35,6 +39,10 @@ interface DiaryDao {
     suspend fun get(id: String): DiaryEntry?
     @Query("SELECT * FROM diary_entries WHERE syncState != 'SYNCED' ORDER BY updatedAt")
     suspend fun pending(): List<DiaryEntry>
+    @Query("SELECT * FROM diary_entries WHERE photoSyncState != 'SYNCED' ORDER BY photoUpdatedAt")
+    suspend fun pendingPhotos(): List<DiaryEntry>
+    @Query("UPDATE diary_entries SET photoSyncState='SYNCED' WHERE id=:id AND photoUpdatedAt=:photoUpdatedAt")
+    suspend fun markPhotoSynced(id: String, photoUpdatedAt: Long)
     @Insert(onConflict=OnConflictStrategy.REPLACE) suspend fun upsert(entry: DiaryEntry)
     @Insert(onConflict=OnConflictStrategy.REPLACE) suspend fun upsertAll(entries: List<DiaryEntry>)
     @Query("UPDATE diary_entries SET syncState='SYNCED' WHERE id=:id AND updatedAt=:updatedAt")
@@ -43,7 +51,7 @@ interface DiaryDao {
     suspend fun allForBackup(): List<DiaryEntry>
 }
 
-@Database(entities=[DiaryEntry::class], version=2, exportSchema=true)
+@Database(entities=[DiaryEntry::class], version=3, exportSchema=true)
 abstract class HaliMeoDatabase : RoomDatabase() {
     abstract fun diaryDao(): DiaryDao
     companion object {
@@ -52,10 +60,17 @@ abstract class HaliMeoDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE diary_entries ADD COLUMN photoUri TEXT")
             }
         }
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE diary_entries ADD COLUMN photoUpdatedAt INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE diary_entries ADD COLUMN photoDeletedAt INTEGER")
+                database.execSQL("ALTER TABLE diary_entries ADD COLUMN photoSyncState TEXT NOT NULL DEFAULT 'SYNCED'")
+            }
+        }
         @Volatile private var instance: HaliMeoDatabase? = null
         fun get(context: android.content.Context) = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, HaliMeoDatabase::class.java, "halimeo.db")
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build().also { instance=it }
         }
     }
