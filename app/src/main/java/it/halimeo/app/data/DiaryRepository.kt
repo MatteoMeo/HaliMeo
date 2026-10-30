@@ -249,10 +249,11 @@ class DiaryRepository(context: Context) {
                 SocialComment(action.id, action.payload, userId, authorName, action.createdAt, action.createdAt)
             }
             val visibleComments = entry.comments.filterNot { it.id in deletedCommentIds } + comments
+            val visibleCommentCount = (entry.commentCount - deletedCommentIds.size + comments.size).coerceAtLeast(0)
             when (likeAction?.type) {
-                "LIKE" -> entry.copy(likeCount = if (entry.likedByMe) entry.likeCount else entry.likeCount + 1, likedByMe = true, comments = visibleComments)
-                "UNLIKE" -> entry.copy(likeCount = (entry.likeCount - if (entry.likedByMe) 1 else 0).coerceAtLeast(0), likedByMe = false, comments = visibleComments)
-                else -> entry.copy(comments = visibleComments)
+                "LIKE" -> entry.copy(likeCount = if (entry.likedByMe) entry.likeCount else entry.likeCount + 1, likedByMe = true, commentCount = visibleCommentCount, comments = visibleComments)
+                "UNLIKE" -> entry.copy(likeCount = (entry.likeCount - if (entry.likedByMe) 1 else 0).coerceAtLeast(0), likedByMe = false, commentCount = visibleCommentCount, comments = visibleComments)
+                else -> entry.copy(commentCount = visibleCommentCount, comments = visibleComments)
             }
         })
     }
