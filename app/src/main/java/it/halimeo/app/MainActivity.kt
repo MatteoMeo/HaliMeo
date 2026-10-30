@@ -1107,6 +1107,120 @@ private fun SettingsScreen(
             }
         }
 
+
+        Card(
+            modifier = Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
+        ) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { expandedSettingsSections = if ("invites" in expandedSettingsSections) expandedSettingsSections - "invites" else expandedSettingsSections + "invites" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.MarkEmailRead, contentDescription = null, tint = accentText, modifier = Modifier.size(22.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("INVITI", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                        if ("invites" !in expandedSettingsSections) Text("Crea e condividi un invito privato", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Icon(if ("invites" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("invites" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
+                }
+                AnimatedVisibility(visible = "invites" in expandedSettingsSections, enter = fadeIn(tween(75)) + expandVertically(tween(110)), exit = fadeOut(tween(45)) + shrinkVertically(tween(85))) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Crea un codice monouso valido 7 giorni e condividilo direttamente dal telefono.", color = secondaryText)
+
+                when (isOwner) {
+                    null -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Text("Verifica dei permessi…", color = secondaryText)
+                    }
+                    true -> {
+                        Button(
+                            enabled = !inviteBusy,
+                            onClick = {
+                                inviteBusy = true
+                                inviteMessage = ""
+                                inviteCode = ""
+                                activity.lifecycleScope.launch {
+                                    val token = session.token()
+                                    if (token.isNullOrBlank()) {
+                                        inviteMessage = "Sessione scaduta. Accedi di nuovo."
+                                        inviteBusy = false
+                                    } else {
+                                        runCatching { ApiClient.api.createInvite("Bearer $token", InviteRequest()) }
+                                            .onSuccess {
+                                                inviteCode = it.inviteCode
+                                                inviteMessage = "Invito creato. Valido per 7 giorni e utilizzabile una sola volta."
+                                            }
+                                            .onFailure {
+                                                inviteMessage = "Non sono riuscito a creare l'invito. Controlla la connessione e riprova."
+                                            }
+                                        inviteBusy = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (inviteBusy) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            else Icon(Icons.Default.PersonAdd, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(if (inviteBusy) "Creo l'invito…" else "Genera codice d'invito")
+                        }
+
+                        if (inviteCode.isNotBlank()) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle).clip(RoundedCornerShape(20.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(20.dp)),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
+                            ) {
+                                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Text("IL TUO CODICE", color = accentText, style = MaterialTheme.typography.labelLarge)
+                                    SelectionContainer { Text(inviteCode, color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                val clipboard = ctx.getSystemService(android.content.ClipboardManager::class.java)
+                                                clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Codice invito HaliMeo", inviteCode))
+                                                Toast.makeText(ctx, "Codice copiato", Toast.LENGTH_SHORT).show()
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(Icons.Default.ContentCopy, contentDescription = null)
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Copia")
+                                        }
+                                        Button(
+                                            onClick = {
+                                                val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                                    type = "text/plain"
+                                                    putExtra(Intent.EXTRA_TEXT, "Ti invito su HaliMeo! Inserisci questo codice nell'app per registrarti: $inviteCode")
+                                                }
+                                                ctx.startActivity(Intent.createChooser(sendIntent, "Condividi invito HaliMeo"))
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(Icons.Default.Share, contentDescription = null)
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Condividi")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    false -> Text(
+                        if (inviteMessage.isNotBlank()) inviteMessage else "La creazione degli inviti è riservata al proprietario.",
+                        color = secondaryText,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                if (inviteMessage.isNotBlank() && isOwner != false) {
+                    Text(inviteMessage, color = if (inviteCode.isNotBlank()) accentText else secondaryText, style = MaterialTheme.typography.bodySmall)
+                }
+                Text("Versione ${BuildConfig.VERSION_NAME}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        }
+
         Card(
             modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp))
@@ -1556,8 +1670,6 @@ private fun SettingsScreen(
             }
         }
 
-        UpdateCenterCard(activity)
-
         Card(
             modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
@@ -1590,6 +1702,7 @@ private fun SettingsScreen(
                 }
                 Text("Package: ${BuildConfig.APPLICATION_ID}", color = secondaryText, style = MaterialTheme.typography.labelSmall)
                 Text("Diario privato condiviso · Android API 37", color = secondaryText, style = MaterialTheme.typography.labelSmall)
+                UpdateCenterCard(activity)
             }
         }
 
@@ -1750,118 +1863,6 @@ private fun SettingsScreen(
             )
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
-        ) {
-            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { expandedSettingsSections = if ("invites" in expandedSettingsSections) expandedSettingsSections - "invites" else expandedSettingsSections + "invites" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.MarkEmailRead, contentDescription = null, tint = accentText, modifier = Modifier.size(22.dp))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("INVITI", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                        if ("invites" !in expandedSettingsSections) Text("Crea e condividi un invito privato", color = secondaryText, style = MaterialTheme.typography.bodySmall)
-                    }
-                    Icon(if ("invites" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("invites" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
-                }
-                AnimatedVisibility(visible = "invites" in expandedSettingsSections, enter = fadeIn(tween(75)) + expandVertically(tween(110)), exit = fadeOut(tween(45)) + shrinkVertically(tween(85))) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Crea un codice monouso valido 7 giorni e condividilo direttamente dal telefono.", color = secondaryText)
-
-                when (isOwner) {
-                    null -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        Text("Verifica dei permessi…", color = secondaryText)
-                    }
-                    true -> {
-                        Button(
-                            enabled = !inviteBusy,
-                            onClick = {
-                                inviteBusy = true
-                                inviteMessage = ""
-                                inviteCode = ""
-                                activity.lifecycleScope.launch {
-                                    val token = session.token()
-                                    if (token.isNullOrBlank()) {
-                                        inviteMessage = "Sessione scaduta. Accedi di nuovo."
-                                        inviteBusy = false
-                                    } else {
-                                        runCatching { ApiClient.api.createInvite("Bearer $token", InviteRequest()) }
-                                            .onSuccess {
-                                                inviteCode = it.inviteCode
-                                                inviteMessage = "Invito creato. Valido per 7 giorni e utilizzabile una sola volta."
-                                            }
-                                            .onFailure {
-                                                inviteMessage = "Non sono riuscito a creare l'invito. Controlla la connessione e riprova."
-                                            }
-                                        inviteBusy = false
-                                    }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            if (inviteBusy) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                            else Icon(Icons.Default.PersonAdd, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(if (inviteBusy) "Creo l'invito…" else "Genera codice d'invito")
-                        }
-
-                        if (inviteCode.isNotBlank()) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle).clip(RoundedCornerShape(20.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(20.dp)),
-                                shape = RoundedCornerShape(20.dp),
-                                colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
-                            ) {
-                                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    Text("IL TUO CODICE", color = accentText, style = MaterialTheme.typography.labelLarge)
-                                    SelectionContainer { Text(inviteCode, color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        OutlinedButton(
-                                            onClick = {
-                                                val clipboard = ctx.getSystemService(android.content.ClipboardManager::class.java)
-                                                clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Codice invito HaliMeo", inviteCode))
-                                                Toast.makeText(ctx, "Codice copiato", Toast.LENGTH_SHORT).show()
-                                            },
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Icon(Icons.Default.ContentCopy, contentDescription = null)
-                                            Spacer(Modifier.width(6.dp))
-                                            Text("Copia")
-                                        }
-                                        Button(
-                                            onClick = {
-                                                val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                                                    type = "text/plain"
-                                                    putExtra(Intent.EXTRA_TEXT, "Ti invito su HaliMeo! Inserisci questo codice nell'app per registrarti: $inviteCode")
-                                                }
-                                                ctx.startActivity(Intent.createChooser(sendIntent, "Condividi invito HaliMeo"))
-                                            },
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Icon(Icons.Default.Share, contentDescription = null)
-                                            Spacer(Modifier.width(6.dp))
-                                            Text("Condividi")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    false -> Text(
-                        if (inviteMessage.isNotBlank()) inviteMessage else "La creazione degli inviti è riservata al proprietario.",
-                        color = secondaryText,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-
-                if (inviteMessage.isNotBlank() && isOwner != false) {
-                    Text(inviteMessage, color = if (inviteCode.isNotBlank()) accentText else secondaryText, style = MaterialTheme.typography.bodySmall)
-                }
-                Text("Versione ${BuildConfig.VERSION_NAME}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-            }
-        }
-        }
     }
 }
 
