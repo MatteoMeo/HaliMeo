@@ -32,7 +32,7 @@ data class DiaryEntryDto(
 fun DiaryEntry.toDto() = DiaryEntryDto(id,title,body,category,memoryDate,createdAt,updatedAt,deletedAt,photoUpdatedAt,photoDeletedAt)
 fun DiaryEntryDto.toEntity() = DiaryEntry(id,title,body,category,memoryDate,createdAt,updatedAt,deletedAt,"SYNCED",null,photoUpdatedAt,photoDeletedAt,"PENDING")
 
-@Entity(tableName = "pending_social_actions", indices = [Index("entryId"), Index("createdAt")])
+@Entity(tableName = "pending_social_actions", indices = [Index(value = ["entryId"]), Index(value = ["createdAt"])])
 data class PendingSocialAction(
     @PrimaryKey val id: String,
     val entryId: String,
