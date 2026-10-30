@@ -3262,6 +3262,8 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
     }
 }
 
+private const val MONACO_TRIP_URL = "https://matteomeo.github.io/compleanno-alex/"
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun MissionScreen() {
@@ -3283,6 +3285,7 @@ private fun MissionScreen() {
                     overScrollMode = android.view.View.OVER_SCROLL_NEVER
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
+                    settings.cacheMode = WebSettings.LOAD_DEFAULT
                     settings.allowFileAccess = true
                     settings.allowContentAccess = true
                     settings.loadsImagesAutomatically = true
@@ -3330,18 +3333,19 @@ private fun MissionScreen() {
                             val uri = request.url
                             if (uri.scheme == "file" || uri.scheme == "about" || uri.scheme == "data") return false
                             if ((uri.scheme == "https" || uri.scheme == "http") && request.isForMainFrame) {
+                                if (uri.host.equals("matteomeo.github.io", ignoreCase = true)) return false
                                 runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
                                 return true
                             }
                             return false
                         }
                     }
-                    loadUrl("file:///android_asset/missione-monaco.html")
+                    loadUrl(MONACO_TRIP_URL)
                 }
             },
             update = { view ->
                 webViewRef = view
-                if (view.url.isNullOrBlank()) view.loadUrl("file:///android_asset/missione-monaco.html")
+                if (view.url.isNullOrBlank()) view.loadUrl(MONACO_TRIP_URL)
             }
         )
 
