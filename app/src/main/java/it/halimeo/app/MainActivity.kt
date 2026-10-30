@@ -10,6 +10,7 @@ import android.os.Build
 import android.webkit.*
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.core.content.FileProvider
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -2004,14 +2005,18 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
             photoUri = uri.toString()
         }
     }
-    val cameraCapture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        if (bitmap != null) {
+    var pendingCameraUri by remember(existing?.id) { mutableStateOf<Uri?>(null) }
+    val cameraCapture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
+        if (saved) pendingCameraUri?.let { photoUri = it.toString() }
+        pendingCameraUri = null
+    }
+    fun launchFullResolutionCamera() {
+        runCatching {
             val target = java.io.File(context.cacheDir, "halimeo-camera-${System.currentTimeMillis()}.jpg")
-            runCatching {
-                target.outputStream().use { output -> bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, output) }
-                photoUri = Uri.fromFile(target).toString()
-            }.onFailure { Toast.makeText(context, "Non sono riuscito a salvare la foto", Toast.LENGTH_SHORT).show() }
-        }
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", target)
+            pendingCameraUri = uri
+            cameraCapture.launch(uri)
+        }.onFailure { Toast.makeText(context, "Fotocamera non disponibile: ${it.message}", Toast.LENGTH_LONG).show() }
     }
     val photoBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, photoUri, context) {
         value = photoUri?.takeIf { it.isNotBlank() }?.let { decodeScaledBitmap(context, it, maxDimension = 2400) }
@@ -2078,7 +2083,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
                         Spacer(Modifier.width(6.dp))
                         Text(if (photoUri == null) "Galleria" else "Cambia foto", maxLines = 1)
                     }
-                    OutlinedButton(onClick = { cameraCapture.launch(null) }, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(onClick = { launchFullResolutionCamera() }, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Default.PhotoCamera, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
                         Text("Fotocamera", maxLines = 1)
