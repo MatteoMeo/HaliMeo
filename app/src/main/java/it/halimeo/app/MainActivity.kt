@@ -621,11 +621,14 @@ class MainActivity:ComponentActivity() {
     // Read the continuously changing pager offset in the graphics layer, not the root composition.
     if (currentRoute != "edit" && currentRoute != "tripMonaco") Surface(
         modifier = Modifier.align(Alignment.BottomStart)
-            .padding(start = 12.dp, end = 78.dp)
+            // Keep the right edge anchored to the + action while shortening the bar
+            // from the left, so the two controls read as one balanced bottom cluster.
+            .padding(start = 28.dp, end = 78.dp)
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(vertical = 4.dp)
-            .height(52.dp)
+            // A little taller and raised: its visual center now lines up with the + button.
+            .padding(vertical = 8.dp)
+            .height(56.dp)
             .then(
                 if (reduceStaticEffectsState.value) Modifier.background(navigationGlassTint, RoundedCornerShape(50))
                 else Modifier.clip(RoundedCornerShape(50)).hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)
