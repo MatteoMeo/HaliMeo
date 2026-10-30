@@ -2631,7 +2631,7 @@ private fun SocialMemoryPost(
             Text(dateLabel.uppercase(), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                 style = MaterialTheme.typography.labelSmall, letterSpacing = 0.8.sp)
             if (expanded && showManagement) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f), Modifier.padding(top = 5.dp))
+                HorizontalDivider(modifier = Modifier.padding(top = 5.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onEdit) { Icon(Icons.Default.Edit, null, Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text("Modifica") }
                     TextButton(onClick = onDelete) { Icon(Icons.Default.DeleteOutline, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text("Elimina", color = MaterialTheme.colorScheme.error) }
