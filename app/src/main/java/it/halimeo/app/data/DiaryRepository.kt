@@ -10,6 +10,7 @@ import it.halimeo.app.network.SocialFeedResponse
 import it.halimeo.app.network.SocialComment
 import it.halimeo.app.network.SocialFeedEntry
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import it.halimeo.app.network.SocialCommentRequest
 import it.halimeo.app.network.SocialCommentResponse
 import it.halimeo.app.network.SocialAlbum
@@ -249,8 +250,9 @@ class DiaryRepository(context: Context) {
             val comments = pending.filter { it.type == "COMMENT" }.map { action ->
                 SocialComment(action.id, action.payload, userId, authorName, action.createdAt, action.createdAt)
             }
-            val visibleComments = entry.comments.filterNot { it.id in deletedCommentIds } + comments
-            val visibleCommentCount = (entry.commentCount - deletedCommentIds.size + comments.size).coerceAtLeast(0)
+            val uniquePendingComments = comments.filterNot { pendingComment -> entry.comments.any { it.id == pendingComment.id } }
+            val visibleComments = entry.comments.filterNot { it.id in deletedCommentIds } + uniquePendingComments
+            val visibleCommentCount = (entry.commentCount - deletedCommentIds.size + uniquePendingComments.size).coerceAtLeast(0)
             when (likeAction?.type) {
                 "LIKE" -> entry.copy(likeCount = if (entry.likedByMe) entry.likeCount else entry.likeCount + 1, likedByMe = true, commentCount = visibleCommentCount, comments = visibleComments)
                 "UNLIKE" -> entry.copy(likeCount = (entry.likeCount - if (entry.likedByMe) 1 else 0).coerceAtLeast(0), likedByMe = false, commentCount = visibleCommentCount, comments = visibleComments)
@@ -294,7 +296,30 @@ class DiaryRepository(context: Context) {
         val pending = actions.filter { it.type == "COMMENT" }.map { action ->
             SocialComment(action.id, action.payload, session.userId(), session.name().ifBlank { "Tu" }, action.createdAt, action.createdAt)
         }
-        return remote.filterNot { it.id in deletedIds } + pending
+        return remote.filterNot { it.id in deletedIds } + pending.filterNot { local -> remote.any { it.id == local.id } }
+    }
+
+    suspend fun loadLocalSocialFeed(): List<SocialFeedEntry> {
+        val userId = session.userId()
+        val authorName = session.name().ifBlank { "Tu" }
+        val actions = dao.pendingSocialActions().groupBy { it.entryId }
+        return dao.observeAll().first().map { entry ->
+            val pending = actions[entry.id].orEmpty()
+            val likeAction = pending.lastOrNull { it.type == "LIKE" || it.type == "UNLIKE" }
+            val comments = pending.filter { it.type == "COMMENT" }.map { action ->
+                SocialComment(action.id, action.payload, userId, authorName, action.createdAt, action.createdAt)
+            }
+            val deletedCount = pending.count { it.type == "DELETE_COMMENT" }
+            SocialFeedEntry(
+                id = entry.id, title = entry.title, body = entry.body, category = entry.category,
+                memoryDate = entry.memoryDate, createdAt = entry.createdAt, updatedAt = entry.updatedAt,
+                authorId = userId, authorName = authorName,
+                likeCount = if (likeAction?.type == "LIKE") 1 else 0,
+                likedByMe = likeAction?.type == "LIKE",
+                commentCount = (comments.size - deletedCount).coerceAtLeast(0),
+                comments = comments
+            )
+        }
     }
 
     suspend fun deleteEntryComment(entryId: String, commentId: String): Map<String, Boolean> {
