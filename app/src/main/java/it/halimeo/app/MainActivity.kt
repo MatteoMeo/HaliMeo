@@ -47,6 +47,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.clickable
@@ -430,7 +431,7 @@ class MainActivity:ComponentActivity() {
         BoxWithConstraints(
             Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp)
                 .pointerInput(pagerState, navigationScope) {
-                    detectDragGestures(
+                    detectHorizontalDragGestures(
                         onDragEnd = {
                             navigationScope.launch {
                                 val destination = pagerState.targetPage.coerceIn(0, 2)
@@ -438,10 +439,10 @@ class MainActivity:ComponentActivity() {
                                 else pagerState.animateScrollToPage(destination, spring(dampingRatio = 0.94f, stiffness = 1500f))
                             }
                         },
-                        onDrag = { change, dragAmount ->
+                        onHorizontalDrag = { change, dragAmount ->
                             change.consume()
                             val pageWidth = pagerState.layoutInfo.pageSize.coerceAtLeast(size.width)
-                            pagerState.dispatchRawDelta(-dragAmount.x * pageWidth / size.width.coerceAtLeast(1))
+                            pagerState.dispatchRawDelta(-dragAmount * pageWidth.toFloat() / size.width.coerceAtLeast(1).toFloat())
                         }
                     )
                 }
