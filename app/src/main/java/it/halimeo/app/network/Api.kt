@@ -20,8 +20,8 @@ interface HaliMeoApi {
     @GET("v1/auth/me") suspend fun me(@Header("Authorization") auth: String): AccountInfo
     @POST("v1/admin/invites") suspend fun createInvite(@Header("Authorization") auth: String, @Body request: InviteRequest): InviteResponse
     @POST("v1/sync") suspend fun sync(@Header("Authorization") auth: String, @Body request: SyncRequest): SyncResponse
-    @Multipart @POST("v1/entries/{entryId}/photo") suspend fun uploadPhoto(@Header("Authorization") auth: String, @Path("entryId") entryId: String, @Part photo: MultipartBody.Part): Map<String, Any>
+    @Multipart @POST("v1/entries/{entryId}/photo") suspend fun uploadPhoto(@Header("Authorization") auth: String, @Path("entryId") entryId: String, @Query("photoUpdatedAt") photoUpdatedAt: Long, @Part photo: MultipartBody.Part): Map<String, Any>
     @Streaming @GET("v1/entries/{entryId}/photo") suspend fun downloadPhoto(@Header("Authorization") auth: String, @Path("entryId") entryId: String): ResponseBody
-    @DELETE("v1/entries/{entryId}/photo") suspend fun deletePhoto(@Header("Authorization") auth: String, @Path("entryId") entryId: String): Map<String, Any>
+    @DELETE("v1/entries/{entryId}/photo") suspend fun deletePhoto(@Header("Authorization") auth: String, @Path("entryId") entryId: String, @Query("photoUpdatedAt") photoUpdatedAt: Long): Map<String, Any>
     @GET("v1/health") suspend fun health(): Map<String, Any>
 }
