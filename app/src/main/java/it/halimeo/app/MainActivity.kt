@@ -57,6 +57,7 @@ import androidx.compose.foundation.border
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -205,9 +206,10 @@ private val FrostedSurfaceStrong = Color(0xD90D1420)
 private val OneUiMotionEasing = CubicBezierEasing(0.22f, 0.25f, 0f, 1f)
 @Composable private fun frostedEdgeColor(): Color = Color.White.copy(alpha = 0.20f)
 @Composable private fun frostedGlassBrush(): Brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.065f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.075f)))
-@Composable private fun isHaliMeoDark(): Boolean = true
-@Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.08f else 0.14f).compositeOver(Color(0xD9101419)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.10f).compositeOver(Color(0xE6FFFFFF))
-@Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.10f else 0.18f).compositeOver(Color(0xE60C0F12)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f).compositeOver(Color(0xF0FFFFFF))
+@Composable private fun isHaliMeoDark(): Boolean = when (appThemeModeState.value) { "light" -> false; "system" -> isSystemInDarkTheme(); else -> true }
+@Composable private fun frostedEdgeColor(): Color = if (isHaliMeoDark()) Color.White.copy(alpha = 0.20f) else Color(0xFF59647A).copy(alpha = 0.22f)
+@Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.08f else 0.14f).compositeOver(Color(0xD9101419)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.055f).compositeOver(Color(0xF2FFFFFF))
+@Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.10f else 0.18f).compositeOver(Color(0xE60C0F12)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.09f).compositeOver(Color(0xFAFFFFFF))
 private val customBackgroundColorState = mutableStateOf("default")
 private val customBackgroundUriState = mutableStateOf<String?>(null)
 private val backgroundBlurState = mutableStateOf(0f)
@@ -247,6 +249,7 @@ private fun displayHaliMeoDate(value: String): String {
 private val lastSyncAtState = mutableStateOf(0L)
 private val reduceAnimationsState = mutableStateOf(false)
 private val reduceStaticEffectsState = mutableStateOf(false)
+private val appThemeModeState = mutableStateOf("dark")
 @Composable private fun haliMeoAuthBackdrop(): Brush = if (isHaliMeoDark()) Brush.verticalGradient(listOf(Color(0xFF0A1426), Color(0xFF0B1220), Color(0xFF080D16))) else Brush.verticalGradient(listOf(Color(0xFFF4F8FC), Color(0xFFE7F0F8), Color(0xFFF5F0FA)))
 private val TextPrimary = Color(0xFFF5F7FA)
 
@@ -254,7 +257,8 @@ private val TextPrimary = Color(0xFFF5F7FA)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable private fun HaliMeoTheme(content: @Composable () -> Unit) {
-    val darkTheme = true
+    val themeMode = appThemeModeState.value
+    val darkTheme = when (themeMode) { "light" -> false; "system" -> isSystemInDarkTheme(); else -> true }
     val context = LocalContext.current
     SideEffect {
         (context as? ComponentActivity)?.window?.let { window ->
@@ -272,6 +276,7 @@ private val TextPrimary = Color(0xFFF5F7FA)
     }
     LaunchedEffect(context) {
         val prefs = context.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+        appThemeModeState.value = prefs.getString("app_theme_mode", "dark")?.takeIf { it in setOf("dark", "light", "system") } ?: "dark"
         customBackgroundColorState.value = (prefs.getString("background_color", "default") ?: "default").takeUnless { it == "photo" } ?: "default"
         customBackgroundUriState.value = null
         backgroundBlurState.value = prefs.getFloat("background_blur", 0f)
@@ -290,23 +295,23 @@ private val TextPrimary = Color(0xFFF5F7FA)
     }
     val staticFontWidth = 100f
     val staticFontRoundness = 28f
-    // Android 12+ supplies Material You / Monet colors derived from the device wallpaper.
-    // Keep the app dark with a true-black canvas for AMOLED displays.
-    val scheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        dynamicDarkColorScheme(context).copy(
-            background = Color.Black,
-            surface = Color(0xFF080D16),
-            surfaceVariant = Color(0xFF121B2A),
-            onBackground = Color(0xFFF5F7FA),
-            onSurface = Color(0xFFF5F7FA),
-            onSurfaceVariant = Color(0xFFD0D4DC),
-            outline = Color(0xFF334155)
-        )
-    } else {
+    // Keep the same hand-tuned palette in both modes: only luminance and surface
+    // hierarchy change, while the user's selected accent remains untouched.
+    val scheme = if (darkTheme) {
         darkColorScheme(
             primary = Mint, onPrimary = Color(0xFF102A3A), secondary = Color(0xFF61D9E8), onSecondary = Color(0xFF06272D),
-            background = Ink, onBackground = TextPrimary, surface = Panel, onSurface = TextPrimary,
-            surfaceVariant = Elevated, onSurfaceVariant = Muted, outline = Color(0xFF334155)
+            background = Color(0xFF090B12), onBackground = Color(0xFFF5F3FA),
+            surface = Color(0xFF171522), onSurface = Color(0xFFF5F3FA),
+            surfaceVariant = Color(0xFF252236), onSurfaceVariant = Color(0xFFD0CCDE),
+            outline = Color(0xFF625B78), surfaceTint = Mint
+        )
+    } else {
+        lightColorScheme(
+            primary = Mint, onPrimary = Color.White, secondary = Color(0xFF5267B8), onSecondary = Color.White,
+            background = Color(0xFFF5F2FA), onBackground = Color(0xFF252235),
+            surface = Color(0xFFFFFCFF), onSurface = Color(0xFF252235),
+            surfaceVariant = Color(0xFFECE7F4), onSurfaceVariant = Color(0xFF625D70),
+            outline = Color(0xFFB9B1C8), surfaceTint = Mint
         )
     }
     val atmosphere = haliMeoAtmosphere(customBackgroundColorState.value)
@@ -489,7 +494,7 @@ class MainActivity:ComponentActivity() {
             }
         }
     }
-    Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA))) {
+    Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color(0xFF090B12) else Color(0xFFF5F2FA))) {
     HaliMeoAmbientBackdrop(Modifier.fillMaxSize())
     Scaffold(containerColor=Color.Transparent,topBar={TopAppBar(
         title={
@@ -745,11 +750,14 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     val driftX = 0f
     val driftY = 0f
     val accent = palette.primary
-    val customBase = Color(
+    val customBase = if (isHaliMeoDark()) Color(
         red = (accent.red * 0.12f).coerceAtMost(0.12f),
         green = (accent.green * 0.12f).coerceAtMost(0.12f),
-        blue = (accent.blue * 0.12f).coerceAtMost(0.12f),
-        alpha = 1f
+        blue = (accent.blue * 0.12f).coerceAtMost(0.12f), alpha = 1f
+    ) else Color(
+        red = (0.965f - accent.red * 0.035f).coerceIn(0.91f, 0.98f),
+        green = (0.955f - accent.green * 0.025f).coerceIn(0.91f, 0.98f),
+        blue = (0.985f - accent.blue * 0.015f).coerceIn(0.93f, 0.99f), alpha = 1f
     )
     val backgroundBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, backgroundUri, context) {
         value = backgroundUri?.let { decodeScaledBitmap(context, it, maxDimension = 1600) }
@@ -779,22 +787,22 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             Box(Modifier.fillMaxSize().background(overlayColor.copy(alpha = effectiveOverlay)))
         } else if (haliMeoAtmosphere(backgroundChoice) != null) {
             val atmosphere = haliMeoAtmosphere(backgroundChoice)!!
-            Box(
-                Modifier.fillMaxSize().background(
-                    Brush.verticalGradient(
-                        0.0f to atmosphere.top,
-                        0.52f to atmosphere.top.copy(red = (atmosphere.top.red * 0.72f + atmosphere.primary.red * 0.28f).coerceIn(0f, 1f), green = (atmosphere.top.green * 0.72f + atmosphere.primary.green * 0.28f).coerceIn(0f, 1f), blue = (atmosphere.top.blue * 0.72f + atmosphere.primary.blue * 0.28f).coerceIn(0f, 1f)),
-                        1.0f to atmosphere.bottom
-                    )
-                )
-            )
+            val lightTop = Color(0xFFF7F3FC).compositeOver(atmosphere.primary.copy(alpha = 0.035f))
+            val lightBottom = Color(0xFFECE8F5).compositeOver(atmosphere.secondary.copy(alpha = 0.045f))
+            Box(Modifier.fillMaxSize().background(
+                if (isHaliMeoDark()) Brush.verticalGradient(
+                    0.0f to atmosphere.top,
+                    0.52f to atmosphere.top.copy(red = (atmosphere.top.red * 0.72f + atmosphere.primary.red * 0.28f).coerceIn(0f, 1f), green = (atmosphere.top.green * 0.72f + atmosphere.primary.green * 0.28f).coerceIn(0f, 1f), blue = (atmosphere.top.blue * 0.72f + atmosphere.primary.blue * 0.28f).coerceIn(0f, 1f)),
+                    1.0f to atmosphere.bottom
+                ) else Brush.verticalGradient(listOf(lightTop, atmosphere.primary.copy(alpha = 0.045f).compositeOver(Color(0xFFF2EEF8)), lightBottom))
+            ))
         } else if (backgroundChoice == "default") {
             Box(
                 Modifier.fillMaxSize().background(
                     Brush.verticalGradient(
                         0.0f to customBase.copy(red = (customBase.red + 0.035f).coerceAtMost(1f), green = (customBase.green + 0.035f).coerceAtMost(1f), blue = (customBase.blue + 0.035f).coerceAtMost(1f)),
                         0.48f to customBase.copy(red = (customBase.red + 0.012f).coerceAtMost(1f), green = (customBase.green + 0.012f).coerceAtMost(1f), blue = (customBase.blue + 0.012f).coerceAtMost(1f)),
-                        1.0f to Color(0xFF05070C)
+                        1.0f to if (isHaliMeoDark()) Color(0xFF05070C) else Color(0xFFECE8F5)
                     )
                 )
             )
@@ -1115,7 +1123,23 @@ private fun SettingsScreen(
                 }
                 AnimatedVisibility(visible = "appearance" in expandedSettingsSections, enter = fadeIn(tween(150, easing = OneUiMotionEasing)) + expandVertically(animationSpec = spring(dampingRatio = 0.9f, stiffness = 420f)), exit = fadeOut(tween(100)) + shrinkVertically(animationSpec = tween(150, easing = OneUiMotionEasing))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Tema scuro AMOLED sempre attivo, con accento dinamico.", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
+                Text("Aspetto dell'app", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                var selectedThemeMode by remember { mutableStateOf(appThemeModeState.value) }
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    listOf("dark" to "Scuro", "light" to "Chiaro", "system" to "Sistema").forEachIndexed { index, item ->
+                        SegmentedButton(
+                            selected = selectedThemeMode == item.first,
+                            onClick = {
+                                selectedThemeMode = item.first
+                                appThemeModeState.value = item.first
+                                ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+                                    .edit().putString("app_theme_mode", item.first).apply()
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index, 3)
+                        ) { Text(item.second, maxLines = 1) }
+                    }
+                }
+                Text("Il tema chiaro mantiene gli stessi accenti, sfondi e personalizzazioni del tema scuro.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 Text("Anteprima in tempo reale", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Surface(
                     modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle).clip(RoundedCornerShape(22.dp)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(22.dp)),
