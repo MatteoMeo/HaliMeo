@@ -166,7 +166,7 @@ def sync(data: SyncIn, user=Depends(current_user)):
       "serverTime":now}
 
 @app.post("/v1/entries/{entry_id}/photo")
-async def upload_entry_photo(entry_id: str, photo: UploadFile = File(...), user=Depends(current_user)):
+async def upload_entry_photo(entry_id: str, photoUpdatedAt: int, photo: UploadFile = File(...), user=Depends(current_user)):
     content_type = (photo.content_type or "").lower().split(";")[0].strip()
     if content_type not in PHOTO_TYPES:
         raise HTTPException(415, "Formato foto non supportato: usa JPG, PNG o WebP")
@@ -180,7 +180,7 @@ async def upload_entry_photo(entry_id: str, photo: UploadFile = File(...), user=
     if content_type == "image/webp" and not (payload.startswith(b"RIFF") and payload[8:12] == b"WEBP"):
         raise HTTPException(400, "File WebP non valido")
     with db() as c:
-        row = c.execute("SELECT id,photo_filename FROM entries WHERE id=?", (entry_id,)).fetchone()
+        row = c.execute("SELECT id,photo_filename,photo_updated_at FROM entries WHERE id=?", (entry_id,)).fetchone()
         if not row:
             raise HTTPException(404, "Ricordo non trovato")
         filename = uuid.uuid4().hex + PHOTO_TYPES[content_type]
@@ -195,7 +195,7 @@ async def upload_entry_photo(entry_id: str, photo: UploadFile = File(...), user=
 @app.get("/v1/entries/{entry_id}/photo")
 def download_entry_photo(entry_id: str, user=Depends(current_user)):
     with db() as c:
-        row = c.execute("SELECT photo_filename FROM entries WHERE id=?", (entry_id,)).fetchone()
+        row = c.execute("SELECT photo_filename,photo_updated_at FROM entries WHERE id=?", (entry_id,)).fetchone()
     if not row or not row["photo_filename"]:
         raise HTTPException(404, "Foto non disponibile")
     path = PHOTO_DIR / row["photo_filename"]
