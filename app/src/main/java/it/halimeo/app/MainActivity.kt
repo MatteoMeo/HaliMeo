@@ -1387,12 +1387,12 @@ private fun DiaryScreen(
     val calendarState = rememberDatePickerState()
     var pendingDelete by remember { mutableStateOf<DiaryEntry?>(null) }
     var expandedEntryIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    val diaryContext = LocalContext.current
     var showHighlightsSettings by remember { mutableStateOf(false) }
     val highlightsPrefs = remember { diaryContext.getSharedPreferences("halimeo_highlights", android.content.Context.MODE_PRIVATE) }
     var highlightsTitle by remember { mutableStateOf(highlightsPrefs.getString("title", "I vostri momenti") ?: "I vostri momenti") }
     var highlightsNewestFirst by remember { mutableStateOf(highlightsPrefs.getBoolean("newest_first", true)) }
     val feedbackView = LocalView.current
-    val diaryContext = LocalContext.current
     val diaryHaze = rememberHazeState()
     val diaryGlassTint = frostedSurfaceColor()
     val diaryGlassStyle = remember(diaryGlassTint) {
