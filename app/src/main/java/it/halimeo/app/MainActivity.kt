@@ -437,6 +437,7 @@ class MainActivity:ComponentActivity() {
         }
     }
     val navigationScope = rememberCoroutineScope()
+    val navigationFeedbackView = LocalView.current
     val primaryTab = pagerState.currentPage
     fun selectPrimaryTab(index: Int) {
         if (currentRoute != "main") nav.popBackStack("main", inclusive = false)
@@ -493,7 +494,7 @@ class MainActivity:ComponentActivity() {
         actions={
             IconButton(
                 onClick = { activity.lifecycleScope.launch { session.clear(); signed = false } },
-                modifier = Modifier.padding(horizontal = 8.dp).size(42.dp)
+                modifier = Modifier.padding(horizontal = 8.dp).size(48.dp)
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
                     .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape)
             ) {
@@ -647,28 +648,39 @@ class MainActivity:ComponentActivity() {
                 FloatingNavItem(
                     Modifier.weight(1f), primaryTab == 0, "Diario", Icons.Default.Book
                 ) {
+                    navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                     selectPrimaryTab(0)
                 }
                 FloatingNavItem(
                     Modifier.weight(1f), primaryTab == 1, "Viaggi", Icons.Default.FlightTakeoff
                 ) {
+                    navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                     selectPrimaryTab(1)
                 }
                 FloatingNavItem(
                     Modifier.weight(1f), primaryTab == 2, "Impostazioni", Icons.Default.Settings
                 ) {
+                    navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                     selectPrimaryTab(2)
                 }
             }
         }
     }
 
+    val fabInteraction = remember { MutableInteractionSource() }
+    val fabPressed by fabInteraction.collectIsPressedAsState()
+    val fabScale by animateFloatAsState(
+        targetValue = if (fabPressed) 0.92f else 1f,
+        animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.72f, stiffness = 850f),
+        label = "newMemoryFabScale"
+    )
     Surface(
         modifier = Modifier.align(Alignment.BottomEnd)
             .padding(end = 12.dp)
             .navigationBarsPadding()
             .padding(bottom = 11.dp)
             .size(58.dp)
+            .graphicsLayer { scaleX = fabScale; scaleY = fabScale }
             .clip(RoundedCornerShape(24.dp))
             .then(if (reduceStaticEffectsState.value) Modifier else Modifier.hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)),
         shape = RoundedCornerShape(24.dp),
@@ -676,7 +688,7 @@ class MainActivity:ComponentActivity() {
         border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor()),
         shadowElevation = 7.dp
     ) {
-        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)).clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = "Nuovo ricordo") { editing = null; nav.navigate("edit") }, contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)).clickable(interactionSource = fabInteraction, indication = null, role = androidx.compose.ui.semantics.Role.Button, onClickLabel = "Nuovo ricordo") { navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); editing = null; nav.navigate("edit") }, contentAlignment = Alignment.Center) {
             Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(25.dp), tint = MaterialTheme.colorScheme.onPrimary)
         }
     }
