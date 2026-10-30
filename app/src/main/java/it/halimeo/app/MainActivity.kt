@@ -784,7 +784,7 @@ private fun SettingsScreen(
         animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "settingsTitleScale"
     )
-    Column(Modifier.fillMaxSize().background(Color.Transparent)) {
+    Column(Modifier.fillMaxSize().background(Color.Transparent).hazeSource(settingsHaze)) {
         // Keep the settings title pinned while it scales down as the options list scrolls.
         Column(
             Modifier.fillMaxWidth().padding(start = 20.dp, top = 8.dp, end = 20.dp, bottom = 6.dp),
@@ -819,7 +819,7 @@ private fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
         Card(
-            modifier = Modifier.fillMaxWidth().shadow(6.dp, RoundedCornerShape(24.dp))
+            modifier = Modifier.fillMaxWidth().shadow(6.dp, RoundedCornerShape(24.dp)).hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp))
                 .clickable { expandedSettingsSections = if ("profile" in expandedSettingsSections) expandedSettingsSections - "profile" else expandedSettingsSections + "profile" },
             shape = RoundedCornerShape(24.dp),
@@ -895,7 +895,7 @@ private fun SettingsScreen(
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp))
                 .clickable { expandedSettingsSections = if ("appearance" in expandedSettingsSections) expandedSettingsSections - "appearance" else expandedSettingsSections + "appearance" },
             shape = RoundedCornerShape(24.dp),
@@ -916,7 +916,7 @@ private fun SettingsScreen(
                 Text("Tema scuro AMOLED sempre attivo, con accento dinamico.", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
                 Text("Anteprima in tempo reale", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Surface(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(22.dp)),
+                    modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle).clip(RoundedCornerShape(22.dp)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(22.dp)),
                     shape = RoundedCornerShape(22.dp), color = frostedSurfaceStrongColor()
                 ) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1076,7 +1076,7 @@ private fun SettingsScreen(
                 }, modifier = Modifier.fillMaxWidth()) { Text("Aggiungi data") }
                 if (specialDates.isNotEmpty()) {
                     Text("Le tue date", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                    specialDates.forEach { item -> Surface(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp), color = frostedSurfaceStrongColor(), border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor())) {
+                    specialDates.forEach { item -> Surface(modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle).clip(RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp), color = frostedSurfaceStrongColor(), border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor())) {
                         Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) { Text(item.label, color = primaryText, fontWeight = FontWeight.SemiBold); Text(displayHaliMeoDate(item.date), color = secondaryText, style = MaterialTheme.typography.bodySmall) }
                             IconButton(onClick = { specialDates = specialDates.filterNot { it == item }; val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE); saveHaliMeoSpecialDates(prefs, specialDates); val next = specialDates.firstOrNull(); prefs.edit().putString("special_date_label", next?.label.orEmpty()).putString("special_date", next?.date.orEmpty()).apply(); Toast.makeText(ctx, "Data speciale eliminata", Toast.LENGTH_SHORT).show() }) { Icon(Icons.Default.DeleteOutline, contentDescription = "Elimina ${item.label}", tint = MaterialTheme.colorScheme.error) }
@@ -1314,8 +1314,8 @@ private fun SettingsScreen(
             delay(15000)
         }
     }
-    Column(Modifier.fillMaxSize().background(haliMeoAuthBackdrop()).verticalScroll(rememberScrollState()).imePadding().padding(20.dp),verticalArrangement=Arrangement.Center){Text("HaliMeo",style=MaterialTheme.typography.displayMedium,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black);Text("Un posto solo vostro.",color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.height(16.dp))
-        Card(colors=CardDefaults.cardColors(containerColor=frostedSurfaceStrongColor()), modifier=Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)), shape=RoundedCornerShape(24.dp)) {
+    Column(Modifier.fillMaxSize().background(haliMeoAuthBackdrop()).hazeSource(authHaze).verticalScroll(rememberScrollState()).imePadding().padding(20.dp),verticalArrangement=Arrangement.Center){Text("HaliMeo",style=MaterialTheme.typography.displayMedium,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black);Text("Un posto solo vostro.",color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.height(16.dp))
+        Card(colors=CardDefaults.cardColors(containerColor=frostedSurfaceStrongColor()), modifier=Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(authHaze), authGlassStyle).clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)), shape=RoundedCornerShape(24.dp)) {
             Column(Modifier.padding(12.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     val dotColor = when (serverOnline) { true -> Color(0xFF86E3B0); false -> Color(0xFFFF8E9B); null -> Color(0xFFFFD18A) }
@@ -1490,7 +1490,7 @@ private fun DiaryScreen(
         Modifier
             .fillMaxSize()
             .background(Color.Transparent)
-            
+            .hazeSource(diaryHaze)
             .padding(horizontal = 16.dp)
     ) {
         Spacer(Modifier.height(if (headerCollapsed) 2.dp else 8.dp))
@@ -1551,7 +1551,7 @@ private fun DiaryScreen(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)),
+                modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(28.dp)),
                 singleLine = true,
                 shape = RoundedCornerShape(28.dp),
                 placeholder = { Text("Cerca un ricordo…") },
@@ -1699,7 +1699,7 @@ private fun DiaryScreen(
                                                     value = highlight.photoUri?.let { decodeMemoryPhoto(diaryContext, it, maxDimension = 720) }
                                                 }
                                                 Surface(
-                                                    modifier = Modifier.size(62.dp).clip(CircleShape).clickable { onOpenMemory(highlight) },
+                                                    modifier = Modifier.size(62.dp).hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(CircleShape).clickable { onOpenMemory(highlight) },
                                                     shape = CircleShape,
                                                     color = categoryAccent(highlight.category).copy(alpha = 0.18f),
                                                     border = androidx.compose.foundation.BorderStroke(2.dp, categoryAccent(highlight.category).copy(alpha = 0.8f))
@@ -1729,7 +1729,7 @@ private fun DiaryScreen(
                                     }
                                     memoriesToday.forEach { memory ->
                                         Surface(
-                                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { onOpenMemory(memory) },
+                                            modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(18.dp)).clickable { onOpenMemory(memory) },
                                             shape = RoundedCornerShape(18.dp), color = frostedSurfaceStrongColor(),
                                             border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor())
                                         ) {
@@ -1762,6 +1762,7 @@ private fun DiaryScreen(
                                 // Clip the whole card layer before drawing the outline. This prevents
                                 // the rectangular layer from leaking past rounded glass corners.
                                 
+                                .hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle)
                                 .clip(MaterialTheme.shapes.large)
                                 .border(1.dp, frostedEdgeColor().copy(alpha = 0.9f), MaterialTheme.shapes.large)
                                 .clickable(
@@ -1929,7 +1930,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
         value = entry.photoUri?.let { decodeMemoryPhoto(context, it, maxDimension = 2800) }
     }
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+        Modifier.fillMaxSize().hazeSource(detailHaze).verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -1939,7 +1940,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
             IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = "Modifica ricordo") }
         }
         Card(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(detailHaze), detailStyle)
                 .clip(RoundedCornerShape(26.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(26.dp)),
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
@@ -2010,7 +2011,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
     }
 
     Column(
-        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(editScrollState).imePadding().padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 150.dp),
+        Modifier.fillMaxSize().background(Color.Transparent).hazeSource(editHaze).verticalScroll(editScrollState).imePadding().padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 150.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text(
@@ -2033,7 +2034,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
             style = MaterialTheme.typography.bodyMedium
         )
         Card(
-            modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(26.dp)).clip(RoundedCornerShape(26.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(26.dp)),
+            modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(26.dp)).hazeBlur(HazeInput.Sources(editHaze), editGlassStyle).clip(RoundedCornerShape(26.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(26.dp)),
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
         ) {
@@ -2151,7 +2152,7 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
         label = "tripsTitleScale"
     )
     Column(
-        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(tripsScrollState).padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 112.dp),
+        Modifier.fillMaxSize().background(Color.Transparent).hazeSource(tripsHaze).verticalScroll(tripsScrollState).padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 112.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text(
