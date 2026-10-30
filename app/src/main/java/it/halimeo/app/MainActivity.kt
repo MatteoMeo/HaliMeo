@@ -599,7 +599,8 @@ class MainActivity:ComponentActivity() {
                 if (memory != null) MemoryDetailScreen(
                     memory,
                     onBack = { nav.popBackStack() },
-                    onEdit = { editing = memory; nav.navigate("edit") }                )
+                    onEdit = { editing = memory; nav.navigate("edit") }
+                )
                 else LaunchedEffect(entryId) { nav.popBackStack() }
             }
             composable("tripMonaco") { MissionScreen() }
@@ -2028,8 +2029,8 @@ private fun DiaryScreen(
     val highlightsTitle = "Highlights"
     val feedbackView = LocalView.current
     val listState = rememberLazyListState()
-    // Cache diary header data instead of sorting favourites and parsing special dates
-    // again whenever Compose recomposes the LazyColumn.
+    // Cache diary header data and parsed special dates instead of recomputing them
+    // whenever Compose recomposes the LazyColumn.
     val memoriesToday = remember(entries) {
         val today = java.time.LocalDate.now()
         entries.mapNotNull { entry ->
