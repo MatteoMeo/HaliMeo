@@ -129,7 +129,7 @@ private suspend fun decodeMemoryPhoto(context: android.content.Context, uri: Str
     }
     if (matrix.isIdentity) return decoded
     return runCatching { android.graphics.Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true) }
-        .getOrDefault(decoded).also { transformed -> if (transformed !== decoded) decoded.recycle() }
+        .getOrDefault(decoded) // decodeScaledBitmap returns a cache-owned bitmap; never recycle it here.
 }
 
 private fun applyLauncherIcon(context: android.content.Context, variant: String) {
