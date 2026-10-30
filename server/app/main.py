@@ -186,7 +186,7 @@ async def upload_entry_photo(entry_id: str, photo: UploadFile = File(...), user=
         filename = uuid.uuid4().hex + PHOTO_TYPES[content_type]
         (PHOTO_DIR / filename).write_bytes(payload)
         stamp = now_ms()
-        c.execute("UPDATE entries SET photo_filename=?,photo_updated_at=?,photo_deleted_at=NULL WHERE id=?", (filename,stamp,entry_id))
+        c.execute("UPDATE entries SET photo_filename=?,photo_updated_at=?,photo_deleted_at=NULL,updated_at=MAX(updated_at,?) WHERE id=?", (filename,stamp,stamp,entry_id))
         old_filename = row["photo_filename"]
     if old_filename and old_filename != filename:
         (PHOTO_DIR / old_filename).unlink(missing_ok=True)
@@ -211,7 +211,7 @@ def delete_entry_photo(entry_id: str, user=Depends(current_user)):
         if not row:
             raise HTTPException(404, "Ricordo non trovato")
         old_filename = row["photo_filename"]
-        c.execute("UPDATE entries SET photo_filename=NULL,photo_updated_at=?,photo_deleted_at=? WHERE id=?", (stamp,stamp,entry_id))
+        c.execute("UPDATE entries SET photo_filename=NULL,photo_updated_at=?,photo_deleted_at=?,updated_at=MAX(updated_at,?) WHERE id=?", (stamp,stamp,stamp,entry_id))
     if old_filename:
         (PHOTO_DIR / old_filename).unlink(missing_ok=True)
     return {"photoDeletedAt": stamp}
