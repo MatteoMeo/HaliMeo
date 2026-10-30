@@ -2535,17 +2535,15 @@ private fun DiaryScreen(
                     commentsBusy = true
                     socialScope.launch {
                         runCatching { repo.addEntryComment(target.id, draft) }
-                            .onSuccess {
-                                comments = comments + it.let { response ->
-                                    it.halimeo.app.network.SocialComment(
-                                        id = response.id,
-                                        body = response.body,
-                                        userId = response.userId,
-                                        authorName = response.authorName,
-                                        createdAt = response.createdAt,
-                                        updatedAt = response.updatedAt
-                                    )
-                                }
+                            .onSuccess { response ->
+                                comments = comments + it.halimeo.app.network.SocialComment(
+                                    id = response.id,
+                                    body = response.body,
+                                    userId = response.userId,
+                                    authorName = response.authorName,
+                                    createdAt = response.createdAt,
+                                    updatedAt = response.updatedAt
+                                )
                                 commentDraft = ""
                             }
                         commentsBusy = false
