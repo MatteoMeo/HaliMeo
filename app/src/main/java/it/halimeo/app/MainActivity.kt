@@ -786,8 +786,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             Box(Modifier.fillMaxSize().background(overlayColor.copy(alpha = effectiveOverlay)))
         } else if (haliMeoAtmosphere(backgroundChoice) != null) {
             val atmosphere = haliMeoAtmosphere(backgroundChoice)!!
-            val lightTop = Color(0xFFF7F3FC).compositeOver(atmosphere.primary.copy(alpha = 0.035f))
-            val lightBottom = Color(0xFFECE8F5).compositeOver(atmosphere.secondary.copy(alpha = 0.045f))
+            val lightTop = atmosphere.primary.copy(alpha = 0.075f).compositeOver(Color(0xFFF7F3FC))
+            val lightBottom = atmosphere.secondary.copy(alpha = 0.095f).compositeOver(Color(0xFFECE8F5))
             Box(Modifier.fillMaxSize().background(
                 if (isHaliMeoDark()) Brush.verticalGradient(
                     0.0f to atmosphere.top,
