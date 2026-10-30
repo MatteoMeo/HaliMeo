@@ -1929,8 +1929,8 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text(entry.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.CalendarToday, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
                     Text(displayHaliMeoDate(entry.memoryDate), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    
                 }
                 if (bitmap != null) {
                     Image(bitmap!!.asImageBitmap(), contentDescription = "Foto del ricordo", modifier = Modifier.fillMaxWidth()
