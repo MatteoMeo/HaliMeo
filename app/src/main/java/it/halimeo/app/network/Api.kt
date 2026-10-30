@@ -22,7 +22,7 @@ data class SocialFeedEntry(
     val id: String, val title: String, val body: String, val category: String,
     val memoryDate: String, val createdAt: Long, val updatedAt: Long,
     val authorId: String, val authorName: String, val likeCount: Int,
-    val likedByMe: Boolean, val comments: List<SocialComment> = emptyList()
+    val likedByMe: Boolean, val commentCount: Int = 0, val comments: List<SocialComment> = emptyList()
 )
 data class SocialFeedResponse(val entries: List<SocialFeedEntry>, val serverTime: Long)
 data class SocialCommentRequest(val body: String, val clientId: String? = null)
