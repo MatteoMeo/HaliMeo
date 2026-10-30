@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.graphics.BitmapFactory
 import it.halimeo.app.network.ApiClient
+import it.halimeo.app.sync.SyncScheduler
 import it.halimeo.app.network.SyncRequest
 import it.halimeo.app.network.SocialFeedResponse
 import it.halimeo.app.network.SocialComment
@@ -265,6 +266,7 @@ class DiaryRepository(context: Context) {
             if (liked) ApiClient.api.likeEntry(auth, entryId) else ApiClient.api.unlikeEntry(auth, entryId)
         }.getOrElse {
             dao.upsertSocialAction(PendingSocialAction(UUID.randomUUID().toString(), entryId, if (liked) "LIKE" else "UNLIKE", createdAt = System.currentTimeMillis()))
+            SyncScheduler.requestImmediate(appContext)
             mapOf("queued" to true)
         }
     }
@@ -279,6 +281,7 @@ class DiaryRepository(context: Context) {
         }.getOrElse {
             val now = System.currentTimeMillis()
             dao.upsertSocialAction(PendingSocialAction(clientId, entryId, "COMMENT", cleanBody, now))
+            SyncScheduler.requestImmediate(appContext)
             SocialCommentResponse(clientId, entryId, cleanBody, session.userId(), session.name().ifBlank { "Tu" }, now, now)
         }
     }
@@ -302,6 +305,7 @@ class DiaryRepository(context: Context) {
         }
         return runCatching { ApiClient.api.deleteComment(authorizedHeader(), commentId) }.getOrElse {
             dao.upsertSocialAction(PendingSocialAction(UUID.randomUUID().toString(), entryId, "DELETE_COMMENT", commentId, System.currentTimeMillis()))
+            SyncScheduler.requestImmediate(appContext)
             mapOf("deleted" to true)
         }
     }
