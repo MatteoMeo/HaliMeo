@@ -305,7 +305,20 @@ class MainActivity:ComponentActivity() {
     val primaryTab = pagerState.currentPage
     fun selectPrimaryTab(index: Int) {
         if (currentRoute != "main") nav.popBackStack("main", inclusive = false)
-        navigationScope.launch { pagerState.animateScrollToPage(index) }
+        navigationScope.launch {
+            // Ignore duplicate taps while the same destination is already being reached.
+            if (pagerState.targetPage == index) return@launch
+            if (reduceAnimationsState.value) {
+                pagerState.scrollToPage(index)
+            } else {
+                // A firmer spring shortens the perceived response to navbar taps while
+                // keeping the indicator and page content on the exact same pager timeline.
+                pagerState.animateScrollToPage(
+                    page = index,
+                    animationSpec = spring(dampingRatio = 0.92f, stiffness = 1100f)
+                )
+            }
+        }
     }
     Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA))) {
     HaliMeoAmbientBackdrop(Modifier.fillMaxSize())
