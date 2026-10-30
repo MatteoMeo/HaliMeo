@@ -83,6 +83,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.semantics
 import android.view.HapticFeedbackConstants
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -208,7 +209,11 @@ private val TextPrimary = Color(0xFFF5F7FA)
         backgroundBlurState.value = prefs.getFloat("background_blur", 0f)
         backgroundOverlayState.value = prefs.getFloat("background_overlay", 0.48f)
         backgroundBrightnessState.value = readBackgroundBrightness(prefs)
-        reduceAnimationsState.value = prefs.getBoolean("reduce_animations", false)
+        val appReduceMotion = prefs.getBoolean("reduce_animations", false)
+        val systemReduceMotion = runCatching {
+            android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+        }.getOrDefault(false)
+        reduceAnimationsState.value = appReduceMotion || systemReduceMotion
         reduceStaticEffectsState.value = prefs.getBoolean("reduce_static_effects", false)
         val preferredHz = prefs.getInt("preferred_refresh_rate", 120).coerceIn(48, 120)
         (context as? ComponentActivity)?.window?.let { window ->
@@ -649,12 +654,12 @@ private fun FloatingNavItem(
 ) {
     val animatedIcon by animateColorAsState(
         targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(durationMillis = 55),
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(durationMillis = 90),
         label = "navItemIcon"
     )
     val itemScale by animateFloatAsState(
         targetValue = if (selected) 1.04f else 0.96f,
-        animationSpec = spring(dampingRatio = 0.78f, stiffness = 900f),
+        animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.78f, stiffness = 900f),
         label = "navItemScale"
     )
     Box(
@@ -1798,7 +1803,7 @@ private fun DiaryScreen(
                                         }
                                     }
                                     val isFavorite = entry.id in favoriteIds
-                                    IconButton(onClick = { feedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onToggleFavorite(entry) }) {
+                                    IconButton(onClick = { feedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onToggleFavorite(entry) }, modifier = Modifier.semantics { contentDescription = if (entry.id in favoriteIds) "Rimuovi dai preferiti" else "Aggiungi ai preferiti" }) {
                                         Icon(
                                             if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                             contentDescription = if (isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti",
