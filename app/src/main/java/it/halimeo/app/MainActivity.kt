@@ -2009,7 +2009,7 @@ private fun DiaryScreen(
                         val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext, expanded) {
                             // Decode only after opening a card; eagerly decoding every visible photo
                             // causes avoidable IO, allocations and frame drops while scrolling.
-                            value = entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 1600) }
+                            value = if (expanded) entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 1600) } else null
                         }
                         Card(
                             modifier = Modifier.fillMaxWidth()
