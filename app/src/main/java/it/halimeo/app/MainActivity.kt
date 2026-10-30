@@ -1255,6 +1255,15 @@ private fun SettingsScreen(
 }
 @Composable private fun AuthScreen(onLogin:(String,String,(String)->Unit)->Unit,onRedeem:(String,String,String,String,(String)->Unit)->Unit){
     var redeem by remember{mutableStateOf(false)};var code by remember{mutableStateOf("")};var name by remember{mutableStateOf("")};var email by remember{mutableStateOf("")};var pass by remember{mutableStateOf("")};var error by remember{mutableStateOf("")};var busy by remember{mutableStateOf(false)}
+    val authHaze = rememberHazeState()
+    val authGlassTint = frostedSurfaceStrongColor()
+    val authGlassStyle = remember(authGlassTint) {
+        HazeBlurStyle {
+            backgroundColor(Color(0xFF101419))
+            colorEffects(listOf(HazeColorEffect.tint(authGlassTint.copy(alpha = 0.48f))))
+            fallbackColorEffect(HazeColorEffect.tint(authGlassTint))
+        }
+    }
     var serverUrl by remember { mutableStateOf(ApiClient.baseUrl().removeSuffix("/")) }
     // Separato dal testo digitato: controlliamo l'URL salvato, non quello ancora in modifica.
     var serverCheckUrl by remember { mutableStateOf(ApiClient.baseUrl().removeSuffix("/")) }
@@ -1276,8 +1285,8 @@ private fun SettingsScreen(
             delay(15000)
         }
     }
-    Column(Modifier.fillMaxSize().background(haliMeoAuthBackdrop()).verticalScroll(rememberScrollState()).imePadding().padding(20.dp),verticalArrangement=Arrangement.Center){Text("HaliMeo",style=MaterialTheme.typography.displayMedium,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black);Text("Un posto solo vostro.",color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.height(16.dp))
-        Card(colors=CardDefaults.cardColors(containerColor=frostedSurfaceStrongColor()), modifier=Modifier.fillMaxWidth().border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)), shape=RoundedCornerShape(24.dp)) {
+    Column(Modifier.fillMaxSize().background(haliMeoAuthBackdrop()).hazeSource(authHaze).verticalScroll(rememberScrollState()).imePadding().padding(20.dp),verticalArrangement=Arrangement.Center){Text("HaliMeo",style=MaterialTheme.typography.displayMedium,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black);Text("Un posto solo vostro.",color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.height(16.dp))
+        Card(colors=CardDefaults.cardColors(containerColor=frostedSurfaceStrongColor()), modifier=Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(authHaze), authGlassStyle).clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)), shape=RoundedCornerShape(24.dp)) {
             Column(Modifier.padding(12.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     val dotColor = when (serverOnline) { true -> Color(0xFF86E3B0); false -> Color(0xFFFF8E9B); null -> Color(0xFFFFD18A) }
@@ -1911,6 +1920,15 @@ private fun DiaryScreen(
     var date by remember(existing?.id) { mutableStateOf(existing?.memoryDate?.let { displayHaliMeoDate(it) } ?: displayHaliMeoDate(java.time.LocalDate.now().toString())) }
     var photoUri by remember(existing?.id) { mutableStateOf(existing?.photoUri) }
     val context = LocalContext.current
+    val editHaze = rememberHazeState()
+    val editGlassTint = frostedSurfaceColor()
+    val editGlassStyle = remember(editGlassTint) {
+        HazeBlurStyle {
+            backgroundColor(Color(0xFF101419))
+            colorEffects(listOf(HazeColorEffect.tint(editGlassTint.copy(alpha = 0.48f))))
+            fallbackColorEffect(HazeColorEffect.tint(editGlassTint))
+        }
+    }
     val editScrollState = rememberScrollState()
     val editHeaderCollapsed by remember { derivedStateOf { editScrollState.value > 48 } }
     val editTitleScale by animateFloatAsState(
@@ -1938,7 +1956,7 @@ private fun DiaryScreen(
     }
 
     Column(
-        Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(editScrollState).imePadding().padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 150.dp),
+        Modifier.fillMaxSize().background(Color.Transparent).hazeSource(editHaze).verticalScroll(editScrollState).imePadding().padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 150.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text(
@@ -1961,7 +1979,7 @@ private fun DiaryScreen(
             style = MaterialTheme.typography.bodyMedium
         )
         Card(
-            modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(26.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(26.dp)),
+            modifier = Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(26.dp)).hazeBlur(HazeInput.Sources(editHaze), editGlassStyle).clip(RoundedCornerShape(26.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(26.dp)),
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
         ) {
