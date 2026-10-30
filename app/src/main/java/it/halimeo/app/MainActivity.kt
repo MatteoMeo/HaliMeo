@@ -2014,6 +2014,7 @@ private fun DiaryScreen(
     var comments by remember { mutableStateOf<List<it.halimeo.app.network.SocialComment>>(emptyList()) }
     var commentDraft by remember { mutableStateOf("") }
     var commentsBusy by remember { mutableStateOf(false) }
+    var currentUserId by remember { mutableStateOf("") }
     var albumEntry by remember { mutableStateOf<DiaryEntry?>(null) }
     var albums by remember { mutableStateOf<List<it.halimeo.app.network.SocialAlbum>>(emptyList()) }
     var albumTitle by remember { mutableStateOf("") }
@@ -2024,6 +2025,7 @@ private fun DiaryScreen(
     var albumDetail by remember { mutableStateOf<it.halimeo.app.network.SocialAlbumDetail?>(null) }
     var albumDetailBusy by remember { mutableStateOf(false) }
     val socialScope = rememberCoroutineScope()
+    LaunchedEffect(Unit) { currentUserId = repo.currentUserId() }
     LaunchedEffect(entries.map { it.updatedAt }) {
         runCatching { repo.loadSocialFeed().entries.associateBy { it.id } }
             .onSuccess { socialEntries = it }
@@ -2426,6 +2428,7 @@ private fun DiaryScreen(
                             expanded = expanded,
                             likeCount = social?.likeCount ?: 0,
                             likedByMe = social?.likedByMe ?: false,
+                            commentCount = social?.commentCount ?: 0,
                             socialEnabled = entry.syncState == "SYNCED",
                             onToggleLike = {
                                 val wasLiked = social?.likedByMe ?: false
@@ -2626,9 +2629,27 @@ private fun DiaryScreen(
                     else if (comments.isEmpty()) Text("Ancora nessun commento. Inizia tu!", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     else Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         comments.forEach { comment ->
-                            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(frostedSurfaceColor()).padding(10.dp)) {
-                                Text(comment.authorName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
-                                Text(comment.body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(frostedSurfaceColor()).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(comment.authorName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                                    Text(comment.body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                                }
+                                if (comment.userId == currentUserId) {
+                                    IconButton(onClick = {
+                                        val target = commentsEntry ?: return@IconButton
+                                        comments = comments.filterNot { it.id == comment.id }
+                                        socialScope.launch {
+                                            runCatching { repo.deleteEntryComment(target.id, comment.id) }
+                                            val existing = socialEntries[target.id]
+                                            if (existing != null) socialEntries = socialEntries + (target.id to existing.copy(
+                                                commentCount = (existing.commentCount - 1).coerceAtLeast(0),
+                                                comments = existing.comments.filterNot { it.id == comment.id }
+                                            ))
+                                        }
+                                    }) {
+                                        Icon(Icons.Default.DeleteOutline, contentDescription = "Elimina commento", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
                             }
                         }
                     }
@@ -2653,6 +2674,17 @@ private fun DiaryScreen(
                                     updatedAt = response.updatedAt
                                 )
                                 commentDraft = ""
+                                val existing = socialEntries[target.id]
+                                if (existing != null) {
+                                    val appended = it.halimeo.app.network.SocialComment(
+                                        id = response.id, body = response.body, userId = response.userId,
+                                        authorName = response.authorName, createdAt = response.createdAt, updatedAt = response.updatedAt
+                                    )
+                                    socialEntries = socialEntries + (target.id to existing.copy(
+                                        commentCount = existing.commentCount + 1,
+                                        comments = existing.comments + appended
+                                    ))
+                                }
                             }
                         commentsBusy = false
                     }
@@ -2676,7 +2708,7 @@ private fun DiaryScreen(
 @Composable
 private fun SocialMemoryPost(
     entry: DiaryEntry, authorName: String, photo: android.graphics.Bitmap?, expanded: Boolean,
-    likeCount: Int = 0, likedByMe: Boolean = false, socialEnabled: Boolean = true,
+    likeCount: Int = 0, likedByMe: Boolean = false, commentCount: Int = 0, socialEnabled: Boolean = true,
     onToggleLike: () -> Unit = {}, onComments: () -> Unit = {}, onAddToAlbum: () -> Unit = {}, onOpen: () -> Unit, onToggleFavorite: () -> Unit, onToggleCaption: () -> Unit,
     onEdit: () -> Unit, onDelete: () -> Unit, showManagement: Boolean = true
 ) {
@@ -2744,6 +2776,7 @@ private fun SocialMemoryPost(
             IconButton(onClick = onComments, enabled = socialEnabled, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Commenti", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            Text(commentCount.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
             IconButton(onClick = onAddToAlbum, enabled = socialEnabled, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Default.CollectionsBookmark, contentDescription = "Aggiungi a un album", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
