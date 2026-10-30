@@ -2376,165 +2376,24 @@ private fun DiaryScreen(
                         val expanded = entry.id in expandedEntryIds
                         val accent = MaterialTheme.colorScheme.primary
                         val photoContext = LocalContext.current
-                        val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext, expanded) {
-                            // Decode only after opening a card; eagerly decoding every visible photo
-                            // causes avoidable IO, allocations and frame drops while scrolling.
-                            value = if (expanded) entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 1600) } else null
+                        val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext) {
+                            // The social feed is image-first: decode only items composed by the lazy list,
+                            // at a bounded resolution suitable for the post preview.
+                            value = entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 1800) }
                         }
-                        Card(
-                            modifier = Modifier.fillMaxWidth()
-                                // Keep list movement attached to each stable diary entry while filtering or deleting.
-                                .animateItem(
-                                    fadeInSpec = if (reduceAnimationsState.value) tween(0) else tween(150, easing = OneUiMotionEasing),
-                                    fadeOutSpec = if (reduceAnimationsState.value) tween(0) else tween(100, easing = OneUiMotionEasing),
-                                    placementSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.86f, stiffness = 420f)
-                                )
-                                // Clip the whole card layer before drawing the outline. This prevents
-                                // the rectangular layer from leaking past rounded glass corners.
-                                
-                                .shadow(6.dp, RoundedCornerShape(24.dp), ambientColor = accent.copy(alpha = 0.08f), spotColor = Color.Black.copy(alpha = 0.16f))
-                                // Repeated scrolling cards use translucent surfaces rather than
-                                // per-item live blur; reserve Haze for the navigation and hero layers.
-                                .animateContentSize(if (reduceAnimationsState.value) tween(0) else tween(210, easing = OneUiMotionEasing))
-                                .clip(RoundedCornerShape(24.dp))
-                                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp))
-                                .clickable(
-                                    onClick = {
-                                        feedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                        expandedEntryIds = if (entry.id in expandedEntryIds) expandedEntryIds - entry.id else expandedEntryIds + entry.id
-                                    }
-                                ),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor()),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                        ) {
-                            Box {
-                                Box(Modifier.matchParentSize().background(Brush.linearGradient(listOf(accent.copy(alpha = 0.11f), Color.Transparent, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.045f)))));
-                                Column(
-                                modifier = Modifier.padding(15.dp),
-                                verticalArrangement = Arrangement.spacedBy(11.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.Top
-                                ) {
-                                    Surface(
-                                        modifier = Modifier.padding(top = 2.dp).size(42.dp),
-                                        shape = RoundedCornerShape(14.dp),
-                                        color = accent.copy(alpha = 0.13f),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.22f))
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = accent, modifier = Modifier.size(21.dp))
-                                        }
-                                    }
-                                    Spacer(Modifier.width(11.dp))
-                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                                        Text(
-                                            entry.title,
-                                            style = MaterialTheme.typography.titleLarge.copy(letterSpacing = (-0.35).sp),
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(7.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(Icons.Default.CalendarToday, contentDescription = null, tint = accent, modifier = Modifier.size(14.dp))
-                                            Text(displayHaliMeoDate(entry.memoryDate), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
-                                            Surface(shape = RoundedCornerShape(50), color = accent.copy(alpha = 0.13f)) {
-                                                
-                                            }
-                                        }
-                                    }
-                                    val isFavorite = entry.isFavorite
-                                    IconButton(onClick = { feedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onToggleFavorite(entry) }, modifier = Modifier.semantics { contentDescription = if (entry.isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti" }) {
-                                        Icon(
-                                            if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                            contentDescription = if (isFavorite) "Rimuovi dai preferiti" else "Aggiungi ai preferiti",
-                                            tint = if (isFavorite) accent else MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    if (entry.syncState != "SYNCED" || entry.photoSyncState != "SYNCED") {
-                                        Surface(
-                                            color = Color(0xFFFFD479).copy(alpha = 0.12f),
-                                            shape = RoundedCornerShape(50)
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                Icon(Icons.Default.CloudOff, contentDescription = null, tint = Color(0xFFFFD479), modifier = Modifier.size(13.dp))
-                                                Text("In attesa", color = Color(0xFFFFD479), style = MaterialTheme.typography.labelSmall)
-                                            }
-                                        }
-                                    }
-                                }
-                                AnimatedVisibility(
-                                    visible = entryPhoto != null,
-                                    enter = fadeIn(tween(180)) + expandVertically(animationSpec = tween(240)),
-                                    exit = fadeOut(tween(120)) + shrinkVertically(animationSpec = tween(180))
-                                ) {
-                                    if (entryPhoto != null) {
-                                        Image(
-                                            bitmap = entryPhoto!!.asImageBitmap(),
-                                            contentDescription = "Foto del ricordo: " + entry.title,
-                                            modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp)
-                                                .graphicsLayer {
-                                                    shape = RoundedCornerShape(22.dp)
-                                                    clip = true
-                                                }
-                                                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(22.dp)),
-                                            contentScale = androidx.compose.ui.layout.ContentScale.Fit
-                                        )
-                                    }
-                                }
-                                Text(
-                                    entry.body,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
-                                    maxLines = if (expanded) Int.MAX_VALUE else 3,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                AnimatedVisibility(
-                                    visible = expanded,
-                                    enter = fadeIn(tween(160)) + expandVertically(animationSpec = tween(220)),
-                                    exit = fadeOut(tween(100)) + shrinkVertically(animationSpec = tween(160))
-                                ) {
-                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.24f))
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.End,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            TextButton(onClick = { onEdit(entry) }) {
-                                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(17.dp))
-                                                Spacer(Modifier.width(6.dp))
-                                                Text("Modifica")
-                                            }
-                                            TextButton(onClick = { pendingDelete = entry }) {
-                                                Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(17.dp))
-                                                Spacer(Modifier.width(6.dp))
-                                                Text("Elimina", color = MaterialTheme.colorScheme.error)
-                                            }
-                                        }
-                                    }
-                                }
-                                if (!expanded && (entry.body.length > 140 || entry.photoUri != null)) {
-                                    Text(
-                                        if (entry.photoUri != null) "Apri ricordo e foto" else "Leggi tutto",
-                                        color = MaterialTheme.colorScheme.primary,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-                            }
-                        }
+                        SocialMemoryPost(
+                            entry = entry,
+                            authorName = "Diario condiviso",
+                            photo = entryPhoto,
+                            expanded = expanded,
+                            onOpen = { onOpenMemory(entry) },
+                            onToggleFavorite = { onToggleFavorite(entry) },
+                            onToggleCaption = {
+                                expandedEntryIds = if (expanded) expandedEntryIds - entry.id else expandedEntryIds + entry.id
+                            },
+                            onEdit = { onEdit(entry) },
+                            onDelete = { pendingDelete = entry }
+                        )
                     }
                 }
             }
