@@ -181,10 +181,12 @@ async def upload_entry_photo(entry_id: str, photoUpdatedAt: int, photo: UploadFi
         row = c.execute("SELECT id,photo_filename,photo_updated_at FROM entries WHERE id=?", (entry_id,)).fetchone()
         if not row:
             raise HTTPException(404, "Ricordo non trovato")
+        if photoUpdatedAt < row["photo_updated_at"]:
+            return {"ignored": True, "photoUpdatedAt": row["photo_updated_at"]}
         filename = uuid.uuid4().hex + PHOTO_TYPES[content_type]
         (PHOTO_DIR / filename).write_bytes(payload)
-        stamp = now_ms()
-        c.execute("UPDATE entries SET photo_filename=?,photo_updated_at=?,photo_deleted_at=NULL,updated_at=MAX(updated_at,?) WHERE id=?", (filename,stamp,stamp,entry_id))
+        stamp = photoUpdatedAt
+        c.execute("UPDATE entries SET photo_filename=?,photo_updated_at=?,photo_deleted_at=NULL,updated_at=MAX(updated_at,?) WHERE id=?", (filename,stamp,now_ms(),entry_id))
         old_filename = row["photo_filename"]
     if old_filename and old_filename != filename:
         (PHOTO_DIR / old_filename).unlink(missing_ok=True)
@@ -202,14 +204,16 @@ def download_entry_photo(entry_id: str, user=Depends(current_user)):
     return FileResponse(path, media_type=mimetypes.guess_type(path.name)[0] or "application/octet-stream")
 
 @app.delete("/v1/entries/{entry_id}/photo")
-def delete_entry_photo(entry_id: str, user=Depends(current_user)):
-    stamp = now_ms()
+def delete_entry_photo(entry_id: str, photoUpdatedAt: int, user=Depends(current_user)):
+    stamp = photoUpdatedAt
     with db() as c:
-        row = c.execute("SELECT photo_filename FROM entries WHERE id=?", (entry_id,)).fetchone()
+        row = c.execute("SELECT photo_filename,photo_updated_at FROM entries WHERE id=?", (entry_id,)).fetchone()
         if not row:
             raise HTTPException(404, "Ricordo non trovato")
+        if stamp < row["photo_updated_at"]:
+            return {"ignored": True, "photoUpdatedAt": row["photo_updated_at"]}
         old_filename = row["photo_filename"]
-        c.execute("UPDATE entries SET photo_filename=NULL,photo_updated_at=?,photo_deleted_at=?,updated_at=MAX(updated_at,?) WHERE id=?", (stamp,stamp,stamp,entry_id))
+        c.execute("UPDATE entries SET photo_filename=NULL,photo_updated_at=?,photo_deleted_at=?,updated_at=MAX(updated_at,?) WHERE id=?", (stamp,stamp,now_ms(),entry_id))
     if old_filename:
         (PHOTO_DIR / old_filename).unlink(missing_ok=True)
     return {"photoDeletedAt": stamp}
