@@ -1296,7 +1296,7 @@ private fun SettingsScreen(
                                 activity.window.attributes = activity.window.attributes.apply { preferredRefreshRate = hz.toFloat() }
                             },
                             shape = SegmentedButtonDefaults.itemShape(index, 4)
-                        ) { Text("$hz", maxLines = 1) }
+                        ) { Text(if (hz == 0) "Auto" else "$hz", maxLines = 1) }
                     }
                 }
                 Text("Auto lascia a One UI la scelta dinamica della frequenza; i valori manuali possono aumentare i consumi.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
@@ -2405,7 +2405,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(
                 onClick = onBack,
-                modifier = Modifier.size(42.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
+                modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
                     .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape)
             ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp)) }
             AnimatedPageTitle("Il vostro ricordo", MaterialTheme.typography.headlineSmall)
@@ -2430,7 +2430,7 @@ private fun MemoryDetailScreen(entry: DiaryEntry, onBack: () -> Unit, onEdit: ()
                 }
                 AnimatedVisibility(
                     visible = bitmap != null,
-                    enter = if (reduceAnimationsState.value) fadeIn(tween(0)) else fadeIn(tween(180, easing = OneUiMotionEasing)) + expandVertically(tween(220, easing = OneUiMotionEasing)),
+                    enter = if (reduceAnimationsState.value) fadeIn(tween(0)) else fadeIn(tween(180, easing = OneUiMotionEasing)) + expandVertically(animationSpec = tween(220, easing = OneUiMotionEasing)),
                     exit = fadeOut(tween(100))
                 ) {
                     bitmap?.let { photo ->
