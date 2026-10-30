@@ -43,6 +43,8 @@ interface DiaryDao {
     suspend fun pendingPhotos(): List<DiaryEntry>
     @Query("UPDATE diary_entries SET photoSyncState='SYNCED' WHERE id=:id AND photoUpdatedAt=:photoUpdatedAt")
     suspend fun markPhotoSynced(id: String, photoUpdatedAt: Long)
+    @Query("UPDATE diary_entries SET photoUpdatedAt=:revision, photoDeletedAt=:deletedAt, photoSyncState='SYNCED' WHERE id=:id AND photoUpdatedAt=:expectedRevision")
+    suspend fun confirmPhotoRevision(id: String, expectedRevision: Long, revision: Long, deletedAt: Long?)
     @Insert(onConflict=OnConflictStrategy.REPLACE) suspend fun upsert(entry: DiaryEntry)
     @Insert(onConflict=OnConflictStrategy.REPLACE) suspend fun upsertAll(entries: List<DiaryEntry>)
     @Query("UPDATE diary_entries SET syncState='SYNCED' WHERE id=:id AND updatedAt=:updatedAt")
