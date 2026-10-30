@@ -878,7 +878,7 @@ private fun SettingsScreen(
                 Text("Tema scuro AMOLED sempre attivo, con accento dinamico.", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
                 Text("Anteprima in tempo reale", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Surface(
-                    modifier = Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(22.dp)),
+                    modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle).clip(RoundedCornerShape(22.dp)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(22.dp)),
                     shape = RoundedCornerShape(22.dp), color = frostedSurfaceStrongColor()
                 ) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1015,7 +1015,7 @@ private fun SettingsScreen(
                         uncheckedBorderColor = Color(0xFF94A3B8)
                     ))
                 }
-                Text("Il blur live è stato rimosso; questa opzione rende le superfici più opache.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                Text("Riduce gli effetti di sfocatura per privilegiare leggibilità e prestazioni.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -1054,7 +1054,7 @@ private fun SettingsScreen(
                 }, modifier = Modifier.fillMaxWidth()) { Text("Aggiungi data") }
                 if (specialDates.isNotEmpty()) {
                     Text("Le tue date", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                    specialDates.forEach { item -> Surface(shape = RoundedCornerShape(16.dp), color = frostedSurfaceStrongColor(), border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor())) {
+                    specialDates.forEach { item -> Surface(modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle).clip(RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp), color = frostedSurfaceStrongColor(), border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor())) {
                         Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) { Text(item.label, color = primaryText, fontWeight = FontWeight.SemiBold); Text(displayHaliMeoDate(item.date), color = secondaryText, style = MaterialTheme.typography.bodySmall) }
                             IconButton(onClick = { specialDates = specialDates.filterNot { it == item }; val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE); saveHaliMeoSpecialDates(prefs, specialDates); val next = specialDates.firstOrNull(); prefs.edit().putString("special_date_label", next?.label.orEmpty()).putString("special_date", next?.date.orEmpty()).apply(); Toast.makeText(ctx, "Data speciale eliminata", Toast.LENGTH_SHORT).show() }) { Icon(Icons.Default.DeleteOutline, contentDescription = "Elimina ${item.label}", tint = MaterialTheme.colorScheme.error) }
@@ -1143,7 +1143,8 @@ private fun SettingsScreen(
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth().border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
+            modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
+                .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
@@ -1705,7 +1706,7 @@ private fun DiaryScreen(
                                     memoriesToday.forEach { memory ->
                                         Surface(
                                             modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(18.dp)).clickable { onOpenMemory(memory) },
-                                            shape = RoundedCornerShape(18.dp), color = frostedSurfaceColor(),
+                                            shape = RoundedCornerShape(18.dp), color = frostedSurfaceStrongColor(),
                                             border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor())
                                         ) {
                                             Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -1728,7 +1729,7 @@ private fun DiaryScreen(
                                     featured.forEach { favorite ->
                                         Surface(
                                             modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(18.dp)).clickable { onOpenMemory(favorite) },
-                                            shape = RoundedCornerShape(18.dp), color = frostedSurfaceColor(),
+                                            shape = RoundedCornerShape(18.dp), color = frostedSurfaceStrongColor(),
                                             border = androidx.compose.foundation.BorderStroke(1.dp, categoryAccent(favorite.category).copy(alpha = 0.30f))
                                         ) {
                                             Row(Modifier.padding(horizontal = 13.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
