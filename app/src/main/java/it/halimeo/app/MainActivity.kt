@@ -1141,7 +1141,7 @@ private fun SettingsScreen(
                                 ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
                                     .edit().putString("app_theme_mode", item.first).apply()
                             },
-                            shape = SegmentedButtonDefaults.itemShape(index, 3),
+                            shape = SegmentedButtonDefaults.itemShape(index, 3, RoundedCornerShape(18.dp)),
                             colors = SegmentedButtonDefaults.colors(
                                 activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
                                 activeContentColor = MaterialTheme.colorScheme.onSurface,
@@ -1375,7 +1375,7 @@ private fun SettingsScreen(
                                 prefs.edit().putInt("preferred_refresh_rate", hz).apply()
                                 activity.window.attributes = activity.window.attributes.apply { preferredRefreshRate = hz.toFloat() }
                             },
-                            shape = SegmentedButtonDefaults.itemShape(index, 5),
+                            shape = SegmentedButtonDefaults.itemShape(index, 5, RoundedCornerShape(18.dp)),
                             colors = SegmentedButtonDefaults.colors(
                                 activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
                                 activeContentColor = MaterialTheme.colorScheme.onSurface,
