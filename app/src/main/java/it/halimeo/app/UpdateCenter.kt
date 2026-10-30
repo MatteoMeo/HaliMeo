@@ -5,6 +5,8 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
@@ -142,14 +144,45 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
         ) {
             Text(status, Modifier.padding(horizontal = 12.dp, vertical = 10.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        if (busy && downloading) LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
         release?.let { item ->
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Text(item.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Text("v${item.versionName} · Build ${item.versionCode}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                if (item.changelog.isNotBlank()) Text(item.changelog.take(1800), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (item.versionCode > BuildConfig.VERSION_CODE.toLong()) Button(onClick = { downloadAndInstall(item) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Download, contentDescription = null); Text("Scarica e installa", Modifier.padding(start = 8.dp))
+                if (item.changelog.isNotBlank()) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.72f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                    ) {
+                        Column(Modifier.verticalScroll(rememberScrollState()).padding(12.dp)) {
+                            Text(item.changelog.take(5000), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                }
+                if (item.versionCode > BuildConfig.VERSION_CODE.toLong()) {
+                    Button(onClick = { downloadAndInstall(item) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Download, contentDescription = null); Text("Scarica e installa", Modifier.padding(start = 8.dp))
+                    }
+                    if (busy && downloading) {
+                        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Download in corso", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(if (progress > 0f) "${(progress * 100).toInt()}%" else "In preparazione", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                            }
+                            Surface(Modifier.fillMaxWidth().height(9.dp), shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceVariant) {
+                                Box {
+                                    Box(
+                                        Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).fillMaxHeight()
+                                            .background(
+                                                androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), MaterialTheme.colorScheme.primary)),
+                                                RoundedCornerShape(50)
+                                            )
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
