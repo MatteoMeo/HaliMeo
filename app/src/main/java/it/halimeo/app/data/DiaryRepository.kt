@@ -99,8 +99,11 @@ class DiaryRepository(context: Context) {
             if (entry.deletedAt != null) continue
             if (entry.photoDeletedAt != null && (entry.photoUri == null || entry.photoUpdatedAt == entry.photoDeletedAt)) {
                 val result = api.deletePhoto(auth, entry.id, entry.photoUpdatedAt)
-                val confirmed = (result["photoDeletedAt"] as? Number)?.toLong() ?: entry.photoUpdatedAt
-                dao.confirmPhotoRevision(entry.id, entry.photoUpdatedAt, confirmed, confirmed)
+                if (result["ignored"] == true) dao.markPhotoSynced(entry.id, entry.photoUpdatedAt)
+                else {
+                    val confirmed = (result["photoDeletedAt"] as? Number)?.toLong() ?: entry.photoUpdatedAt
+                    dao.confirmPhotoRevision(entry.id, entry.photoUpdatedAt, confirmed, confirmed)
+                }
                 continue
             }
             val localUri = entry.photoUri ?: continue
@@ -115,8 +118,11 @@ class DiaryRepository(context: Context) {
             val body = file.asRequestBody(mime.toMediaType())
             val part = MultipartBody.Part.createFormData("photo", file.name, body)
             val result = api.uploadPhoto(auth, entry.id, entry.photoUpdatedAt, part)
-            val confirmed = (result["photoUpdatedAt"] as? Number)?.toLong() ?: entry.photoUpdatedAt
-            dao.confirmPhotoRevision(entry.id, entry.photoUpdatedAt, confirmed, null)
+            if (result["ignored"] == true) dao.markPhotoSynced(entry.id, entry.photoUpdatedAt)
+            else {
+                val confirmed = (result["photoUpdatedAt"] as? Number)?.toLong() ?: entry.photoUpdatedAt
+                dao.confirmPhotoRevision(entry.id, entry.photoUpdatedAt, confirmed, null)
+            }
         }
 
         // Download remote photo revisions after uploads, keeping the file app-private for offline use.
