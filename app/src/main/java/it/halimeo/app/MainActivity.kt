@@ -171,6 +171,23 @@ private fun applyLauncherIcon(context: android.content.Context, variant: String)
     }
 }
 
+private data class HaliMeoAtmosphere(
+    val primary: Color,
+    val secondary: Color,
+    val top: Color,
+    val bottom: Color
+)
+
+private fun haliMeoAtmosphere(key: String): HaliMeoAtmosphere? = when (key) {
+    "aurora" -> HaliMeoAtmosphere(Color(0xFF68A9FF), Color(0xFF9B83FF), Color(0xFF101C38), Color(0xFF090D19))
+    "deep_ocean" -> HaliMeoAtmosphere(Color(0xFF35B8D0), Color(0xFF477FE8), Color(0xFF082A3A), Color(0xFF07111F))
+    "sunset" -> HaliMeoAtmosphere(Color(0xFFFF9B72), Color(0xFFD66C9F), Color(0xFF321A2D), Color(0xFF100E1B))
+    "forest" -> HaliMeoAtmosphere(Color(0xFF62C69A), Color(0xFF8CBF79), Color(0xFF102B26), Color(0xFF091512))
+    "amethyst" -> HaliMeoAtmosphere(Color(0xFFB18CFF), Color(0xFF6D8DFF), Color(0xFF241B3F), Color(0xFF0D1020))
+    "graphite" -> HaliMeoAtmosphere(Color(0xFF9AAFC4), Color(0xFF6C879B), Color(0xFF202B36), Color(0xFF090D13))
+    else -> null
+}
+
 private val Ink = Color.Black
 private val Panel = Color(0xFF0D1420)
 private val Mint = Color(0xFF3E91FF)
@@ -286,7 +303,8 @@ private val TextPrimary = Color(0xFFF5F7FA)
             surfaceVariant = Elevated, onSurfaceVariant = Muted, outline = Color(0xFF334155)
         )
     }
-    val backgroundAccent = when (customBackgroundColorState.value) {
+    val atmosphere = haliMeoAtmosphere(customBackgroundColorState.value)
+    val backgroundAccent = atmosphere?.primary ?: when (customBackgroundColorState.value) {
         "blue" -> Color(0xFF3E91FF)
         "lavender" -> Color(0xFF8878FF)
         "mint" -> Color(0xFF2F9DAB)
@@ -313,7 +331,11 @@ private val TextPrimary = Color(0xFFF5F7FA)
         "slate" -> Color(0xFF78909C)
         else -> scheme.primary
     }
-    val adaptiveScheme = scheme.copy(primary = backgroundAccent, secondary = backgroundAccent.copy(alpha = 0.88f))
+    val adaptiveScheme = scheme.copy(
+        primary = backgroundAccent,
+        secondary = atmosphere?.secondary ?: backgroundAccent.copy(alpha = 0.88f),
+        tertiary = atmosphere?.secondary ?: scheme.tertiary
+    )
     // Material 3 Expressive supplies the expressive motion system and updated component defaults.
     MaterialExpressiveTheme(
             colorScheme = adaptiveScheme,
@@ -440,7 +462,7 @@ class MainActivity:ComponentActivity() {
                 androidx.compose.foundation.pager.HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize().hazeSource(navigationHaze),
-                    beyondViewportPageCount = 1,
+                    beyondViewportPageCount = 0,
                     key = { it }
                 ) { page ->
                     when (page) {
@@ -652,6 +674,17 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             val overlayColor = if (useDarkOverlay) Color.Black else Color.White
             val effectiveOverlay = if (isHaliMeoDark()) maxOf(overlayStrength, 0.68f) else maxOf(overlayStrength, 0.58f)
             Box(Modifier.fillMaxSize().background(overlayColor.copy(alpha = effectiveOverlay)))
+        } else if (haliMeoAtmosphere(backgroundChoice) != null) {
+            val atmosphere = haliMeoAtmosphere(backgroundChoice)!!
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(
+                        0.0f to atmosphere.top,
+                        0.52f to atmosphere.top.copy(red = (atmosphere.top.red * 0.72f + atmosphere.primary.red * 0.28f).coerceIn(0f, 1f), green = (atmosphere.top.green * 0.72f + atmosphere.primary.green * 0.28f).coerceIn(0f, 1f), blue = (atmosphere.top.blue * 0.72f + atmosphere.primary.blue * 0.28f).coerceIn(0f, 1f)),
+                        1.0f to atmosphere.bottom
+                    )
+                )
+            )
         } else if (backgroundChoice == "default") {
             Box(
                 Modifier.fillMaxSize().background(
@@ -990,6 +1023,56 @@ private fun SettingsScreen(
                         Text("Accento e gradienti seguono lo sfondo selezionato.", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                     }
                 }
+                Text("Atmosfere One UI 9", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text("Scegli una profondità di colore completa: sfondo sfumato, luce ambientale e accenti coordinati.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                val atmosphereOptions = listOf(
+                    "aurora" to "Aurora",
+                    "deep_ocean" to "Oceano",
+                    "sunset" to "Tramonto",
+                    "forest" to "Foresta",
+                    "amethyst" to "Ametista",
+                    "graphite" to "Grafite"
+                )
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    atmosphereOptions.forEach { option ->
+                        val colors = haliMeoAtmosphere(option.first)!!
+                        Column(
+                            modifier = Modifier.width(82.dp).clip(RoundedCornerShape(18.dp))
+                                .clickable {
+                                    feedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    backgroundColor = option.first
+                                    backgroundPhoto = null
+                                    customBackgroundColorState.value = option.first
+                                    customBackgroundUriState.value = null
+                                    ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+                                        .edit().putString("background_color", option.first).remove("background_photo").apply()
+                                }.padding(vertical = 5.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(15.dp))
+                                    .background(Brush.linearGradient(listOf(colors.top, colors.primary, colors.secondary, colors.bottom)))
+                                    .border(
+                                        if (backgroundColor == option.first) 2.dp else 1.dp,
+                                        if (backgroundColor == option.first) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                        RoundedCornerShape(15.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(Modifier.align(Alignment.TopEnd).padding(6.dp).size(9.dp).background(colors.secondary, CircleShape))
+                                if (backgroundColor == option.first) {
+                                    Icon(Icons.Default.Check, contentDescription = "Selezionato", tint = Color.White, modifier = Modifier.size(19.dp))
+                                }
+                            }
+                            Text(option.second, maxLines = 1, overflow = TextOverflow.Ellipsis, color = if (backgroundColor == option.first) primaryText else secondaryText, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
                 Text("Palette e colore d’accento", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 val backgroundOptions = listOf(
                     "default" to "Predefinito", "blue" to "Blu", "lavender" to "Lavanda",
@@ -1868,7 +1951,7 @@ private fun DiaryScreen(
                         val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext, expanded) {
                             // Decode only after opening a card; eagerly decoding every visible photo
                             // causes avoidable IO, allocations and frame drops while scrolling.
-                            value = entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 2400) }
+                            value = entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 1600) }
                         }
                         Card(
                             modifier = Modifier.fillMaxWidth()
