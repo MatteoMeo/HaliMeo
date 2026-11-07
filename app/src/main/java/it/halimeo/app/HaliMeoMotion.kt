@@ -70,16 +70,23 @@ internal object HaliMeoMotion {
      * Fully opaque spatial navigation. No alpha/scale interpolation: it avoids the
      * previous screen bleeding through the incoming page and keeps the frame workload low.
      */
+    // Enter and exit share the same spring and travel distance. Popping a detail
+    // reverses the exact horizontal path used to open it.
+    private val detailSpring = spring<Int>(
+        dampingRatio = 0.90f,
+        stiffness = 680f
+    )
+
     fun detailEnter(forward: Boolean): EnterTransition =
         androidx.compose.animation.slideInHorizontally(
-            animationSpec = spring(dampingRatio = 0.88f, stiffness = 680f),
+            animationSpec = detailSpring,
             initialOffsetX = { width -> if (forward) width / 8 else -width / 8 }
         )
 
     fun detailExit(forward: Boolean): ExitTransition =
         androidx.compose.animation.slideOutHorizontally(
-            animationSpec = spring(dampingRatio = 0.92f, stiffness = 720f),
-            targetOffsetX = { width -> if (forward) -width / 12 else width / 12 }
+            animationSpec = detailSpring,
+            targetOffsetX = { width -> if (forward) -width / 8 else width / 8 }
         )
 
     /** Shared Z-axis transition for screens that move deeper into the navigation stack. */
