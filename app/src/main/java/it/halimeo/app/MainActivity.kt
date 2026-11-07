@@ -652,9 +652,9 @@ class MainActivity:ComponentActivity() {
             composable(
                 route = "memory/{entryId}",
                 enterTransition = { if (reduceAnimationsState.value) androidx.compose.animation.EnterTransition.None else HaliMeoMotion.detailEnter(forward = true) },
-                exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.detailExit(forward = true) },
+                exitTransition = { if (reduceAnimationsState.value) androidx.compose.animation.ExitTransition.None else HaliMeoMotion.detailExit(forward = true) },
                 popEnterTransition = { if (reduceAnimationsState.value) androidx.compose.animation.EnterTransition.None else HaliMeoMotion.detailEnter(forward = false) },
-                popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.detailExit(forward = false) }
+                popExitTransition = { if (reduceAnimationsState.value) androidx.compose.animation.ExitTransition.None else HaliMeoMotion.detailExit(forward = false) }
             ) { backStack ->
                 CompositionLocalProvider(LocalHaliMeoAnimatedVisibilityScope provides this) {
                 val entryId = backStack.arguments?.getString("entryId")
@@ -677,10 +677,10 @@ class MainActivity:ComponentActivity() {
             }
             composable(
                 route = "tripMonaco",
-                enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(90)) else HaliMeoMotion.detailEnter(forward = true) },
-                exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.detailExit(forward = true) },
-                popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(80)) else HaliMeoMotion.detailEnter(forward = false) },
-                popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.detailExit(forward = false) }
+                enterTransition = { if (reduceAnimationsState.value) androidx.compose.animation.EnterTransition.None else HaliMeoMotion.detailEnter(forward = true) },
+                exitTransition = { if (reduceAnimationsState.value) androidx.compose.animation.ExitTransition.None else HaliMeoMotion.detailExit(forward = true) },
+                popEnterTransition = { if (reduceAnimationsState.value) androidx.compose.animation.EnterTransition.None else HaliMeoMotion.detailEnter(forward = false) },
+                popExitTransition = { if (reduceAnimationsState.value) androidx.compose.animation.ExitTransition.None else HaliMeoMotion.detailExit(forward = false) }
             ) { MissionScreen() }
         }
             }
