@@ -385,6 +385,7 @@ class MainActivity:ComponentActivity() {
         // Leave refresh-rate selection to Android by default. Samsung can then
         // switch dynamically between 120/96/90/60Hz based on content and power.
         lastSyncAtState.value = getSharedPreferences("halimeo_preferences", MODE_PRIVATE).getLong("last_sync_at", 0L)
+        lifecycleScope.launch { checkForUpdatesOnLaunch(applicationContext) }
         setContent { HaliMeoTheme { HaliMeoRoot() } }
 
         if (BuildConfig.DEBUG) {

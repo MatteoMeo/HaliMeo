@@ -39,42 +39,53 @@ jobs:
           distribution: temurin
           java-version: '25'
 
-      # La cache da sola non bastava: il file non veniva creato prima della
-      # fine del job. Ora ripristiniamo la chiave e la generiamo solo se manca.
-      - name: Ripristina la chiave di firma persistente
+      # La chiave Alpha 350 è l'unica identità di firma ammessa.
+      # La cache è solo un acceleratore: la chiave originale deve essere fornita
+      # tramite secret permanente, perché le cache GitHub possono scadere.
+      - name: Ripristina la chiave di firma Alpha 350
         id: signing-cache
         uses: actions/cache/restore@v4
         with:
           path: ~/.android/debug.keystore
           key: halimeo-debug-signing-key-v2
 
-      - name: Verifica o crea la chiave di firma Alpha
+      - name: Verifica la chiave originale Alpha 350
+        env:
+          HALIMEO_SIGNING_KEYSTORE_BASE64: ${{ secrets.HALIMEO_SIGNING_KEYSTORE_BASE64 }}
+          HALIMEO_SIGNING_STORE_PASSWORD: ${{ secrets.HALIMEO_SIGNING_STORE_PASSWORD }}
+          HALIMEO_SIGNING_KEY_PASSWORD: ${{ secrets.HALIMEO_SIGNING_KEY_PASSWORD }}
         shell: bash
         run: |
           set -euo pipefail
           KEYSTORE="$HOME/.android/debug.keystore"
           mkdir -p "$HOME/.android"
 
-          if [ ! -f "$KEYSTORE" ]; then
-            echo "Cache della firma vuota: creo la chiave Alpha iniziale."
-            keytool -genkeypair -v \
-              -keystore "$KEYSTORE" \
-              -storepass android \
-              -alias androiddebugkey \
-              -keypass android \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
+          # Il secret è la fonte permanente. Sovrascrive qualsiasi cache obsoleta.
+          if [ -n "${HALIMEO_SIGNING_KEYSTORE_BASE64:-}" ]; then
+            printf '%s' "$HALIMEO_SIGNING_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
           fi
 
-          # Fallisce subito se il file è corrotto o non usa l'alias previsto.
-          keytool -list -keystore "$KEYSTORE" -storepass android -alias androiddebugkey >/dev/null
-          FINGERPRINT="$(keytool -exportcert -alias androiddebugkey -keystore "$KEYSTORE" -storepass android | sha256sum | awk '{print $1}')"
-          echo "Impronta SHA-256 del certificato Alpha: $FINGERPRINT"
-          echo "HALIMEO_SIGNING_CERT_SHA256=$FINGERPRINT" >> "$GITHUB_ENV"
+          if [ ! -s "$KEYSTORE" ]; then
+            echo "::error::Chiave Alpha 350 non disponibile. Non genero una nuova firma: aggiungi il keystore originale come secret HALIMEO_SIGNING_KEYSTORE_BASE64."
+            exit 1
+          fi
 
-      # Salva la chiave subito, prima della compilazione: anche se Gradle fallisce,
-      # la chiave non viene rigenerata alla build successiva.
-      - name: Salva la chiave di firma persistente
+          STORE_PASSWORD="${HALIMEO_SIGNING_STORE_PASSWORD:-android}"
+          KEY_PASSWORD="${HALIMEO_SIGNING_KEY_PASSWORD:-android}"
+          keytool -list -keystore "$KEYSTORE" -storepass "$STORE_PASSWORD" -alias androiddebugkey >/dev/null
+          FINGERPRINT="$(keytool -exportcert -alias androiddebugkey -keystore "$KEYSTORE" -storepass "$STORE_PASSWORD" | sha256sum | awk '{print $1}')"
+          EXPECTED="7b9f40b22e05a07232fbb787a4ab27efb5ba264d5a660af7df999fd2f3aa94c8"
+          echo "Impronta SHA-256 chiave Alpha: $FINGERPRINT"
+          if [ "$FINGERPRINT" != "$EXPECTED" ]; then
+            echo "::error::Firma incompatibile: serve esattamente il certificato Alpha 350 ($EXPECTED)."
+            exit 1
+          fi
+          echo "HALIMEO_SIGNING_CERT_SHA256=$FINGERPRINT" >> "$GITHUB_ENV"
+          echo "HALIMEO_SIGNING_STORE_PASSWORD=$STORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "HALIMEO_SIGNING_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+
+      # Se il secret permanente è presente, salva anche una cache di riserva.
+      - name: Salva la chiave Alpha 350 in cache
         if: steps.signing-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
@@ -122,7 +133,7 @@ jobs:
           SIGNED_APK="${APK%.apk}-alpha-signed.apk"
           "$APKSIGNER" sign --ks "$HOME/.android/debug.keystore" \
             --ks-key-alias androiddebugkey \
-            --ks-pass pass:android --key-pass pass:android \
+            --ks-pass pass:$HALIMEO_SIGNING_STORE_PASSWORD --key-pass pass:$HALIMEO_SIGNING_KEY_PASSWORD \
             --out "$SIGNED_APK" "$APK"
           "$APKSIGNER" verify --verbose "$SIGNED_APK"
           APK_CERT_INFO="$("$APKSIGNER" verify --print-certs "$SIGNED_APK" 2>&1)"

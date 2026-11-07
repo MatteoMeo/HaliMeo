@@ -1,9 +1,12 @@
 package it.halimeo.app
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -34,19 +37,43 @@ import java.net.URL
 import java.security.MessageDigest
 
 private const val UPDATE_REPOSITORY = "MatteoMeo/HaliMeo"
-private data class HaliMeoRelease(val name: String, val versionCode: Long, val versionName: String, val changelog: String, val apkUrl: String, val apkName: String, val sha256: String?)
+internal data class HaliMeoRelease(val name: String, val versionCode: Long, val versionName: String, val changelog: String, val apkUrl: String, val apkName: String, val sha256: String?)
 
 @Composable
 internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("halimeo_preferences", Context.MODE_PRIVATE) }
     var channel by remember { mutableStateOf(prefs.getString("update_channel", "alpha") ?: "alpha") }
-    var release by remember { mutableStateOf<HaliMeoRelease?>(null) }
-    var status by remember { mutableStateOf("Controlla manualmente se è disponibile una nuova versione.") }
+    var release by remember { mutableStateOf(HaliMeoUpdateState.release) }
+    var status by remember { mutableStateOf(if (HaliMeoUpdateState.checkedAt > 0L) "Controllo automatico completato." else "Controllo gli aggiornamenti all'avvio.") }
+    var autoCheck by remember { mutableStateOf(prefs.getBoolean("auto_check_updates", true)) }
     var busy by remember { mutableStateOf(false) }
     var downloading by remember { mutableStateOf(false) }
     var progress by remember { mutableFloatStateOf(0f) }
+    var pendingInstallFile by remember { mutableStateOf<File?>(null) }
     val scope = rememberCoroutineScope()
+    val installLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val installedFile = pendingInstallFile
+        if (result.resultCode == Activity.RESULT_OK) {
+            installedFile?.delete()
+            installedFile?.parentFile?.listFiles()?.filter { it.name.endsWith(".part", true) }?.forEach { it.delete() }
+            status = "Aggiornamento installato. Il file APK temporaneo è stato eliminato."
+        } else {
+            status = "Installazione non completata: APK conservato, puoi riprovare senza scaricarlo di nuovo."
+        }
+        pendingInstallFile = null
+    }
+    LaunchedEffect(HaliMeoUpdateState.checkedAt) {
+        if (HaliMeoUpdateState.checkedAt > 0L) {
+            release = HaliMeoUpdateState.release
+            status = when {
+                release == null && channel == "stable" -> "Non è ancora stata pubblicata una versione stabile."
+                release == null -> "Nessuna release Alpha disponibile."
+                release!!.versionCode <= BuildConfig.VERSION_CODE.toLong() -> "Hai già installato l'ultima versione di questo canale."
+                else -> "È disponibile un aggiornamento."
+            }
+        }
+    }
 
     fun checkUpdates() {
         if (busy) return
@@ -55,6 +82,8 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
             try {
                 val result = withContext(Dispatchers.IO) { fetchLatestRelease(channel) }
                 release = result
+                HaliMeoUpdateState.release = result
+                HaliMeoUpdateState.checkedAt = System.currentTimeMillis()
                 status = when {
                     result == null && channel == "stable" -> "Non è ancora stata pubblicata una versione stabile."
                     result == null -> "Nessuna release Alpha disponibile."
@@ -72,29 +101,54 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
         scope.launch {
             try {
                 val apk = withContext(Dispatchers.IO) {
-                    val target = File(context.cacheDir, "updates/${item.apkName}")
-                    target.parentFile?.mkdirs()
-                    val connection = (URL(item.apkUrl).openConnection() as HttpURLConnection).apply {
-                        connectTimeout = 20_000; readTimeout = 60_000; instanceFollowRedirects = true
+                    val directory = File(context.cacheDir, "updates").apply { mkdirs() }
+                    val target = File(directory, item.apkName)
+                    val partial = File(directory, "${item.apkName}.part")
+                    directory.listFiles()?.filter { it.isFile && it != target && (it.name.endsWith(".apk", true) || it.name.endsWith(".part", true)) }?.forEach { it.delete() }
+
+                    fun matchesExpectedDigest(file: File): Boolean {
+                        if (!file.isFile || file.length() <= 0L) return false
+                        val expected = item.sha256?.takeIf { it.isNotBlank() } ?: return true
+                        val actual = MessageDigest.getInstance("SHA-256").digest(file.readBytes()).joinToString("") { "%02x".format(it) }
+                        return actual.equals(expected, ignoreCase = true)
                     }
-                    try {
-                        connection.connect()
-                        if (connection.responseCode !in 200..299) error("Download GitHub non riuscito (${connection.responseCode})")
-                        val total = connection.contentLengthLong
-                        connection.inputStream.use { input ->
-                            target.outputStream().use { output ->
-                                val buffer = ByteArray(64 * 1024); var copied = 0L
-                                while (true) {
-                                    val count = input.read(buffer); if (count < 0) break
-                                    output.write(buffer, 0, count); copied += count
-                                    if (total > 0) progress = (copied.toFloat() / total).coerceIn(0f, 1f)
+
+                    // Reuse the complete APK after an installation cancellation/failure.
+                    if (!matchesExpectedDigest(target)) {
+                        target.delete()
+                        partial.delete()
+                        val connection = (URL(item.apkUrl).openConnection() as HttpURLConnection).apply {
+                            connectTimeout = 20_000; readTimeout = 60_000; instanceFollowRedirects = true
+                        }
+                        try {
+                            connection.connect()
+                            if (connection.responseCode !in 200..299) error("Download GitHub non riuscito (${connection.responseCode})")
+                            val total = connection.contentLengthLong
+                            connection.inputStream.use { input ->
+                                partial.outputStream().use { output ->
+                                    val buffer = ByteArray(64 * 1024); var copied = 0L
+                                    while (true) {
+                                        val count = input.read(buffer); if (count < 0) break
+                                        output.write(buffer, 0, count); copied += count
+                                        if (total > 0) progress = (copied.toFloat() / total).coerceIn(0f, 1f)
+                                    }
+                                    output.flush()
+                                    if (total > 0 && copied != total) error("Download incompleto: riprova.")
                                 }
                             }
+                        } catch (error: Exception) {
+                            partial.delete()
+                            throw error
+                        } finally { connection.disconnect() }
+
+                        if (!matchesExpectedDigest(partial)) {
+                            partial.delete()
+                            error("Verifica di sicurezza non superata: file diverso dalla release.")
                         }
-                    } finally { connection.disconnect() }
-                    if (!item.sha256.isNullOrBlank()) {
-                        val actual = MessageDigest.getInstance("SHA-256").digest(target.readBytes()).joinToString("") { "%02x".format(it) }
-                        if (actual != item.sha256) { target.delete(); error("Verifica di sicurezza non superata: file diverso dalla release.") }
+                        if (!partial.renameTo(target)) {
+                            partial.copyTo(target, overwrite = true)
+                            partial.delete()
+                        }
                     }
                     target
                 }
@@ -102,11 +156,13 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
                 val uri = FileProvider.getUriForFile(context, "${BuildConfig.APPLICATION_ID}.fileprovider", apk)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
                     activity.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${BuildConfig.APPLICATION_ID}")))
-                    status = "Consenti a HaliMeo di installare aggiornamenti e poi premi di nuovo Installa."
+                    status = "Consenti a HaliMeo di installare aggiornamenti e poi premi di nuovo Installa. Il file è già pronto."
                 } else {
-                    activity.startActivity(Intent(Intent.ACTION_VIEW).apply {
-                        setDataAndType(uri, "application/vnd.android.package-archive")
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    pendingInstallFile = apk
+                    installLauncher.launch(Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+                        data = uri
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        putExtra(Intent.EXTRA_RETURN_RESULT, true)
                     })
                     status = "Installazione avviata: conferma nella finestra di Android."
                 }
@@ -131,6 +187,19 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
                 Text("AGGIORNAMENTI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                 Text("Canale di rilascio e nuove versioni", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Controllo automatico all'avvio", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                Text("Verifica le nuove versioni ogni volta che apri HaliMeo", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Switch(
+                checked = autoCheck,
+                onCheckedChange = {
+                    autoCheck = it
+                    prefs.edit().putBoolean("auto_check_updates", it).apply()
+                }
+            )
         }
         SingleChoiceSegmentedButtonRow(
             modifier = Modifier.fillMaxWidth()
@@ -221,7 +290,7 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
             if (busy && !downloading) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp) else Icon(Icons.Default.Refresh, contentDescription = null)
             Text("Controlla aggiornamenti", Modifier.padding(start = 8.dp))
         }
-        Text("Il controllo è manuale. L'installazione richiede sempre la conferma di Android.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Puoi controllare anche manualmente. Android chiederà sempre conferma prima di installare; i download completati restano disponibili in caso di errore e vengono eliminati dopo l'installazione riuscita.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
