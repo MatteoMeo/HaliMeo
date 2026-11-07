@@ -609,7 +609,7 @@ class MainActivity:ComponentActivity() {
         NavHost(
             navController = nav,
             startDestination = "main",
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.padding(padding).fillMaxSize(),
             enterTransition = { androidx.compose.animation.EnterTransition.None },
             exitTransition = { androidx.compose.animation.ExitTransition.None },
             popEnterTransition = { androidx.compose.animation.EnterTransition.None },
@@ -704,9 +704,8 @@ class MainActivity:ComponentActivity() {
     // Read the continuously changing pager offset in the graphics layer, not the root composition.
     if (currentRoute != "edit" && currentRoute != "tripMonaco") Surface(
         modifier = Modifier.align(Alignment.BottomCenter)
-            // Center the navigation independently of the floating + action.
-            .padding(horizontal = 72.dp)
-            .fillMaxWidth()
+            // Give the bar an explicit centered width; keep the + button separate.
+            .fillMaxWidth(0.72f)
             .navigationBarsPadding()
             // A little taller and raised: its visual center now lines up with the + button.
             .padding(vertical = 8.dp)
@@ -867,7 +866,7 @@ class MainActivity:ComponentActivity() {
 
     AnimatedVisibility(
         visible = currentRoute == "main" && pagerState.currentPage == 0,
-        modifier = Modifier.align(Alignment.BottomEnd).padding(end = 12.dp).navigationBarsPadding().padding(bottom = 15.dp),
+        modifier = Modifier.align(Alignment.BottomEnd).padding(end = 18.dp).navigationBarsPadding().padding(bottom = 80.dp),
         enter = if (reduceAnimationsState.value) fadeIn(tween(0)) else fadeIn(tween(150, easing = OneUiMotionEasing)) + scaleIn(initialScale = 0.82f, animationSpec = spring(dampingRatio = 0.78f, stiffness = 620f)),
         exit = if (reduceAnimationsState.value) fadeOut(tween(0)) else fadeOut(tween(100, easing = OneUiMotionEasing)) + scaleOut(targetScale = 0.88f, animationSpec = spring(dampingRatio = 0.9f, stiffness = 700f))
     ) {
@@ -875,6 +874,8 @@ class MainActivity:ComponentActivity() {
         Surface(
             modifier = Modifier.size(46.dp)
                 .haliMeoPressScale(fabInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.96f, label = "newMemoryFabPress")
+                // Clip before Haze so its captured layer cannot expand into a pill.
+                .clip(RoundedCornerShape(18.dp))
                 .hazeBlur(
                     input = HazeInput.Backdrop(navigationHaze),
                     style = navigationGlassStyle,
