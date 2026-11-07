@@ -867,8 +867,8 @@ class MainActivity:ComponentActivity() {
     }
 
     AnimatedVisibility(
-        visible = currentRoute == "main" && pagerState.currentPage == 0,
-        modifier = Modifier.align(Alignment.BottomEnd).zIndex(2f).padding(end = 18.dp).navigationBarsPadding().padding(bottom = 78.dp),
+        visible = pagerState.currentPage == 0 && currentRoute != "edit" && currentRoute != "tripMonaco",
+        modifier = Modifier.align(Alignment.BottomEnd).zIndex(3f).padding(end = 18.dp).navigationBarsPadding().padding(bottom = 78.dp),
         enter = if (reduceAnimationsState.value) fadeIn(tween(0)) else fadeIn(tween(150, easing = OneUiMotionEasing)) + scaleIn(initialScale = 0.82f, animationSpec = spring(dampingRatio = 0.78f, stiffness = 620f)),
         exit = if (reduceAnimationsState.value) fadeOut(tween(0)) else fadeOut(tween(100, easing = OneUiMotionEasing)) + scaleOut(targetScale = 0.88f, animationSpec = spring(dampingRatio = 0.9f, stiffness = 700f))
     ) {
@@ -888,7 +888,7 @@ class MainActivity:ComponentActivity() {
                 .clip(RoundedCornerShape(18.dp))
                 .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.52f), RoundedCornerShape(18.dp)),
             shape = RoundedCornerShape(18.dp),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.32f),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
             shadowElevation = 0.dp,
             tonalElevation = 0.dp
         ) {
