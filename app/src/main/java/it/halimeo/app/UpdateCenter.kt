@@ -39,6 +39,29 @@ import java.security.MessageDigest
 private const val UPDATE_REPOSITORY = "MatteoMeo/HaliMeo"
 internal data class HaliMeoRelease(val name: String, val versionCode: Long, val versionName: String, val changelog: String, val apkUrl: String, val apkName: String, val sha256: String?)
 
+internal object HaliMeoUpdateState {
+    var release by mutableStateOf<HaliMeoRelease?>(null)
+    var checkedAt by mutableLongStateOf(0L)
+}
+
+/**
+ * Performs the optional release check after launch. Network failures are deliberately
+ * non-fatal: the local diary must remain usable when GitHub or the server is offline.
+ */
+internal suspend fun checkForUpdatesOnLaunch(context: Context) {
+    val prefs = context.getSharedPreferences("halimeo_preferences", Context.MODE_PRIVATE)
+    if (!prefs.getBoolean("auto_check_updates", true)) return
+
+    val channel = prefs.getString("update_channel", "alpha") ?: "alpha"
+    try {
+        val latest = fetchLatestRelease(channel)
+        HaliMeoUpdateState.release = latest
+        HaliMeoUpdateState.checkedAt = System.currentTimeMillis()
+    } catch (_: Exception) {
+        // An unavailable network must never block app startup or offline diary access.
+    }
+}
+
 @Composable
 internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
     val context = LocalContext.current
