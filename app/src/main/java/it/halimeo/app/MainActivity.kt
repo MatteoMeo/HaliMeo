@@ -589,9 +589,9 @@ class MainActivity:ComponentActivity() {
         HazeBlurStyle {
             // Denser glass: retain visible backdrop detail while preventing the
             // tab bar from washing out against bright diary photos and light themes.
-            backgroundColor(navigationGlassBackground.copy(alpha = 0.94f))
-            colorEffects(listOf(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.48f))))
-            fallbackColorEffect(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.58f)))
+            backgroundColor(navigationGlassBackground.copy(alpha = 0.97f))
+            colorEffects(listOf(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.54f))))
+            fallbackColorEffect(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.66f)))
         }
     }
     val navigationScope = rememberCoroutineScope()
@@ -3081,11 +3081,14 @@ private fun SocialMemoryPost(
             .animateContentSize(animationSpec = HaliMeoMotion.contentSizeSpring)
             .shadow(14.dp, cardShape, clip = false)
             .clip(cardShape)
-            .hazeBlur(
-                input = HazeInput.Backdrop(hazeState),
-                style = glassStyle,
-                performanceMode = HazePerformanceMode.Performance,
-                expandLayerBounds = false
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        frostedSurfaceStrongColor().copy(alpha = 0.96f),
+                        frostedSurfaceColor().copy(alpha = 0.94f),
+                        frostedSurfaceStrongColor().copy(alpha = 0.98f)
+                    )
+                )
             )
             .border(1.dp, frostedEdgeColor(), cardShape)
     ) {
