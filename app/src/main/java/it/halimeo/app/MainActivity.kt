@@ -770,21 +770,20 @@ class MainActivity:ComponentActivity() {
             // A little taller and raised: its visual center now lines up with the + button.
             .padding(vertical = 8.dp)
             .height(56.dp)
-            .clip(RoundedCornerShape(50))
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        frostedSurfaceStrongColor().copy(alpha = if (isHaliMeoDark()) 0.96f else 0.92f),
-                        frostedSurfaceColor().copy(alpha = if (isHaliMeoDark()) 0.92f else 0.90f),
-                        frostedSurfaceStrongColor().copy(alpha = if (isHaliMeoDark()) 0.98f else 0.94f)
-                    )
-                )
-            ),
+            .clip(RoundedCornerShape(50)),
         shape = RoundedCornerShape(50),
         color = Color.Transparent,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)),
         tonalElevation = 0.dp
     ) {
+        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(50))) {
+            // Blur is drawn as a child of the clipped Surface, not on the Surface's
+            // modifier: Haze's rectangular offscreen buffer cannot leak outside.
+            Box(
+                Modifier.fillMaxSize()
+                    .hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)
+                    .background(navigationGlassTint.copy(alpha = 0.12f))
+            )
         BoxWithConstraints(
             Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp)
         ) {
@@ -924,6 +923,7 @@ class MainActivity:ComponentActivity() {
                     selectPrimaryTab(2)
                 }
             }
+        }
         }
     }
     }
@@ -3065,22 +3065,21 @@ private fun SocialMemoryPost(
         label = "postLikeScale"
     )
     val cardShape = RoundedCornerShape(32.dp)
-    Column(
+    Box(
         modifier.fillMaxWidth()
             .animateContentSize(animationSpec = HaliMeoMotion.contentSizeSpring)
-            .shadow(14.dp, cardShape, clip = true)
+            .shadow(14.dp, cardShape, clip = false)
             .clip(cardShape)
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        frostedSurfaceStrongColor().copy(alpha = 0.96f),
-                        frostedSurfaceColor().copy(alpha = 0.94f),
-                        frostedSurfaceStrongColor().copy(alpha = 0.98f)
-                    )
-                )
-            )
             .border(1.dp, frostedEdgeColor(), cardShape)
     ) {
+        // Keep the Haze buffer inside a parent clipped to the card shape.
+        // Never attach hazeBlur to the outer animated/shadowed card layer.
+        Box(
+            Modifier.matchParentSize()
+                .hazeBlur(HazeInput.Sources(hazeState), glassStyle)
+                .background(frostedSurfaceColor().copy(alpha = 0.12f))
+        )
+    Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier.size(44.dp).clip(CircleShape)
@@ -3243,6 +3242,7 @@ private fun SocialMemoryPost(
                 }
             }
         }
+    }
     }
 }
 
