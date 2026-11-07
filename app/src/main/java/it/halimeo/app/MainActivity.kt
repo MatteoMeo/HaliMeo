@@ -499,9 +499,9 @@ class MainActivity:ComponentActivity() {
     val navigationGlassBackground = if (isHaliMeoDark()) Color(0xFF101419) else Color(0xFFF3F6FA)
     val navigationGlassStyle = remember(navigationGlassTint, navigationGlassBackground) {
         HazeBlurStyle {
-            backgroundColor(navigationGlassBackground)
-            colorEffects(listOf(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.55f))))
-            fallbackColorEffect(HazeColorEffect.tint(navigationGlassTint))
+            backgroundColor(navigationGlassBackground.copy(alpha = 0.78f))
+            colorEffects(listOf(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.32f))))
+            fallbackColorEffect(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.42f)))
         }
     }
     val navigationScope = rememberCoroutineScope()
@@ -556,13 +556,19 @@ class MainActivity:ComponentActivity() {
         modifier=Modifier.heightIn(min=56.dp),
         colors=TopAppBarDefaults.topAppBarColors(containerColor=Color.Transparent, scrolledContainerColor=Color.Transparent, titleContentColor=MaterialTheme.colorScheme.onSurface,actionIconContentColor=MaterialTheme.colorScheme.onSurface),
         actions={
-            IconButton(
-                onClick = { activity.lifecycleScope.launch { session.clear(); signed = false } },
-                modifier = Modifier.padding(horizontal = 8.dp).size(36.dp)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape)
+            Box(
+                Modifier.padding(horizontal = 8.dp).size(36.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Esci", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
+                IconButton(
+                    onClick = { activity.lifecycleScope.launch { session.clear(); signed = false } },
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Esci",
+                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
+                }
             }
         }
     )},bottomBar={}, floatingActionButton = {}, content = { padding ->
@@ -606,19 +612,19 @@ class MainActivity:ComponentActivity() {
                 route = "edit",
                 enterTransition = {
                     if (reduceAnimationsState.value) fadeIn(tween(90))
-                    else HaliMeoMotion.sharedAxisZEnter(forward = true)
+                    else HaliMeoMotion.detailEnter(forward = true)
                 },
                 exitTransition = {
                     if (reduceAnimationsState.value) fadeOut(tween(80))
-                    else HaliMeoMotion.sharedAxisZExit(forward = true)
+                    else HaliMeoMotion.detailExit(forward = true)
                 },
                 popEnterTransition = {
                     if (reduceAnimationsState.value) fadeIn(tween(80))
-                    else HaliMeoMotion.sharedAxisZEnter(forward = false)
+                    else HaliMeoMotion.detailEnter(forward = false)
                 },
                 popExitTransition = {
                     if (reduceAnimationsState.value) fadeOut(tween(80))
-                    else HaliMeoMotion.sharedAxisZExit(forward = false)
+                    else HaliMeoMotion.detailExit(forward = false)
                 }
             ) { EditScreen(editing, repo, { t, b, c, d, photo ->
                 activity.lifecycleScope.launch {
@@ -630,10 +636,10 @@ class MainActivity:ComponentActivity() {
             }, { editing = null; nav.popBackStack() }) }
             composable(
                 route = "memory/{entryId}",
-                enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(90)) else HaliMeoMotion.sharedAxisZEnter(forward = true) },
-                exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.sharedAxisZExit(forward = true) },
-                popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(80)) else HaliMeoMotion.sharedAxisZEnter(forward = false) },
-                popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.sharedAxisZExit(forward = false) }
+                enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(90)) else HaliMeoMotion.detailEnter(forward = true) },
+                exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.detailExit(forward = true) },
+                popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(80)) else HaliMeoMotion.detailEnter(forward = false) },
+                popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.detailExit(forward = false) }
             ) { backStack ->
                 val entryId = backStack.arguments?.getString("entryId")
                 val memory = entries.firstOrNull { it.id == entryId }
@@ -647,10 +653,10 @@ class MainActivity:ComponentActivity() {
             }
             composable(
                 route = "tripMonaco",
-                enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(90)) else HaliMeoMotion.sharedAxisZEnter(forward = true) },
-                exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.sharedAxisZExit(forward = true) },
-                popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(80)) else HaliMeoMotion.sharedAxisZEnter(forward = false) },
-                popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.sharedAxisZExit(forward = false) }
+                enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(90)) else HaliMeoMotion.detailEnter(forward = true) },
+                exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.detailExit(forward = true) },
+                popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(80)) else HaliMeoMotion.detailEnter(forward = false) },
+                popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.detailExit(forward = false) }
             ) { MissionScreen() }
         }
     })
@@ -1125,9 +1131,9 @@ private fun SettingsScreen(
     val settingsGlassStyleBackground = MaterialTheme.colorScheme.surface
     val settingsGlassStyle = remember(settingsGlassTint) {
         HazeBlurStyle {
-            backgroundColor(settingsGlassStyleBackground.copy(alpha = 0.82f))
-            colorEffects(listOf(HazeColorEffect.tint(settingsGlassTint.copy(alpha = 0.48f))))
-            fallbackColorEffect(HazeColorEffect.tint(settingsGlassTint))
+            backgroundColor(settingsGlassStyleBackground.copy(alpha = 0.72f))
+            colorEffects(listOf(HazeColorEffect.tint(settingsGlassTint.copy(alpha = 0.30f))))
+            fallbackColorEffect(HazeColorEffect.tint(settingsGlassTint.copy(alpha = 0.42f)))
         }
     }
     val settingsScrollState = rememberScrollState()
@@ -1190,9 +1196,9 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(profileCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsProfilePress")
-                .shadow(6.dp, RoundedCornerShape(24.dp))
-                .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp))
-                .clickable(interactionSource = profileCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("profile" in expandedSettingsSections) expandedSettingsSections - "profile" else expandedSettingsSections + "profile" },
+                .clip(RoundedCornerShape(24.dp))
+                .clickable(interactionSource = profileCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("profile" in expandedSettingsSections) expandedSettingsSections - "profile" else expandedSettingsSections + "profile" }
+                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
@@ -2048,9 +2054,9 @@ private fun SettingsScreen(
     val authGlassStyleBackground = MaterialTheme.colorScheme.surface
     val authGlassStyle = remember(authGlassTint) {
         HazeBlurStyle {
-            backgroundColor(authGlassStyleBackground.copy(alpha = 0.82f))
-            colorEffects(listOf(HazeColorEffect.tint(authGlassTint.copy(alpha = 0.48f))))
-            fallbackColorEffect(HazeColorEffect.tint(authGlassTint))
+            backgroundColor(authGlassStyleBackground.copy(alpha = 0.72f))
+            colorEffects(listOf(HazeColorEffect.tint(authGlassTint.copy(alpha = 0.30f))))
+            fallbackColorEffect(HazeColorEffect.tint(authGlassTint.copy(alpha = 0.42f)))
         }
     }
     var redeem by remember{mutableStateOf(false)};var code by remember{mutableStateOf("")};var name by remember{mutableStateOf("")};var email by remember{mutableStateOf("")};var pass by remember{mutableStateOf("")};var error by remember{mutableStateOf("")};var busy by remember{mutableStateOf(false)}
@@ -2191,9 +2197,9 @@ private fun DiaryScreen(
     val diaryGlassStyleBackground = MaterialTheme.colorScheme.surface
     val diaryGlassStyle = remember(diaryGlassTint) {
         HazeBlurStyle {
-            backgroundColor(diaryGlassStyleBackground.copy(alpha = 0.82f))
-            colorEffects(listOf(HazeColorEffect.tint(diaryGlassTint.copy(alpha = 0.48f))))
-            fallbackColorEffect(HazeColorEffect.tint(diaryGlassTint))
+            backgroundColor(diaryGlassStyleBackground.copy(alpha = 0.72f))
+            colorEffects(listOf(HazeColorEffect.tint(diaryGlassTint.copy(alpha = 0.30f))))
+            fallbackColorEffect(HazeColorEffect.tint(diaryGlassTint.copy(alpha = 0.42f)))
         }
     }
     val diaryContext = LocalContext.current
@@ -3008,44 +3014,141 @@ private fun MemoryDetailScreen(
     onBack: () -> Unit,
     onEdit: () -> Unit
 ) {
+    val context = LocalContext.current
+    val bitmap by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri) {
+        value = decodeDiaryPhoto(context, entry.id, entry.photoUri, maxDimension = 1800, repo = repo)
+    }
+    val shape = RoundedCornerShape(28.dp)
+
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        Modifier.fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 18.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape)
-            ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) }
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text("Il vostro ricordo", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text("Un momento della vostra storia", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+            Text(
+                "IL VOSTRO DIARIO",
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.2.sp,
+                modifier = Modifier.weight(1f)
+            )
+            Box(
+                Modifier.size(36.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                IconButton(onClick = onBack, modifier = Modifier.fillMaxSize()) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro",
+                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                }
             }
-            IconButton(
-                onClick = onEdit,
-                modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape)
-            ) { Icon(Icons.Default.Edit, contentDescription = "Modifica ricordo", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp)) }
+            Spacer(Modifier.width(9.dp))
+            Box(
+                Modifier.size(36.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                IconButton(onClick = onEdit, modifier = Modifier.fillMaxSize()) {
+                    Icon(Icons.Default.Edit, contentDescription = "Modifica ricordo",
+                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
+                }
+            }
         }
-        val context = LocalContext.current
-        val bitmap by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri) {
-            value = decodeDiaryPhoto(context, entry.id, entry.photoUri, maxDimension = 1600, repo = repo)
+
+        Box(
+            Modifier.fillMaxWidth()
+                .height(340.dp)
+                .clip(shape)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
+        ) {
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap!!.asImageBitmap(),
+                    contentDescription = "Foto del ricordo",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                Box(
+                    Modifier.align(Alignment.BottomStart).fillMaxWidth().height(150.dp)
+                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.68f))))
+                )
+            } else {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Icon(Icons.Default.Photo, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+                            modifier = Modifier.size(42.dp))
+                        Text("Nessuna foto per questo ricordo",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+            if (bitmap != null) {
+                Column(
+                    Modifier.align(Alignment.BottomStart).padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Text("UN MOMENTO DA RICORDARE",
+                        color = Color.White.copy(alpha = 0.82f),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.1.sp)
+                    Text(displayHaliMeoDate(entry.memoryDate),
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold)
+                }
+            }
         }
-        SocialMemoryPost(
-            entry = entry,
-            authorName = "Il vostro diario",
-            photo = bitmap,
-            expanded = true,
-            onOpen = {},
-            onToggleCaption = {},
-            onEdit = onEdit,
-            onDelete = {},
-            showManagement = false
-        )
-        Spacer(Modifier.height(100.dp))
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                entry.title.ifBlank { "Senza titolo" },
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                Icon(Icons.Default.CalendarMonth, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
+                Text(displayHaliMeoDate(entry.memoryDate),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+
+        if (entry.body.isNotBlank()) {
+            Card(
+                modifier = Modifier.fillMaxWidth().border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
+            ) {
+                Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("IL RICORDO", color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.1.sp)
+                    Text(entry.body, color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyLarge, lineHeight = 26.sp)
+                }
+            }
+        }
+
+        OutlinedButton(
+            onClick = onEdit,
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape = RoundedCornerShape(18.dp)
+        ) {
+            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Modifica ricordo")
+        }
+        Spacer(Modifier.height(24.dp))
     }
 }
 
@@ -3071,9 +3174,9 @@ private fun EditScreen(
     val editGlassStyleBackground = MaterialTheme.colorScheme.surface
     val editGlassStyle = remember(editGlassTint) {
         HazeBlurStyle {
-            backgroundColor(editGlassStyleBackground.copy(alpha = 0.82f))
-            colorEffects(listOf(HazeColorEffect.tint(editGlassTint.copy(alpha = 0.48f))))
-            fallbackColorEffect(HazeColorEffect.tint(editGlassTint))
+            backgroundColor(editGlassStyleBackground.copy(alpha = 0.72f))
+            colorEffects(listOf(HazeColorEffect.tint(editGlassTint.copy(alpha = 0.30f))))
+            fallbackColorEffect(HazeColorEffect.tint(editGlassTint.copy(alpha = 0.42f)))
         }
     }
     val scrollState = rememberScrollState()
@@ -3378,9 +3481,9 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
     val tripsGlassStyleBackground = MaterialTheme.colorScheme.surface
     val tripsGlassStyle = remember(tripsGlassTint) {
         HazeBlurStyle {
-            backgroundColor(tripsGlassStyleBackground.copy(alpha = 0.82f))
-            colorEffects(listOf(HazeColorEffect.tint(tripsGlassTint.copy(alpha = 0.48f))))
-            fallbackColorEffect(HazeColorEffect.tint(tripsGlassTint))
+            backgroundColor(tripsGlassStyleBackground.copy(alpha = 0.72f))
+            colorEffects(listOf(HazeColorEffect.tint(tripsGlassTint.copy(alpha = 0.30f))))
+            fallbackColorEffect(HazeColorEffect.tint(tripsGlassTint.copy(alpha = 0.42f)))
         }
     }
     val tripsScrollState = rememberScrollState()
