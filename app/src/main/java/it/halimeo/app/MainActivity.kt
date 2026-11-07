@@ -921,6 +921,7 @@ class MainActivity:ComponentActivity() {
             )
         }
     }
+    }
 }
 /**
  * Subtle Monet-tinted ambient light behind translucent surfaces.
@@ -1294,9 +1295,9 @@ private fun SettingsScreen(
                     }
                 }
                 if (isProfileEditing) {
-                    OutlinedTextField(value = profileNickname, onValueChange = { profileNickname = it }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), shape = RoundedCornerShape(22.dp), label = { Text("Nome o soprannome") }, singleLine = true,
+                    OutlinedTextField(value = profileNickname, onValueChange = { profileNickname = it }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), label = { Text("Nome o soprannome") }, singleLine = true,
                         colors = haliMeoTextFieldColors())
-                    OutlinedTextField(value = profileAbout, onValueChange = { profileAbout = it }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), shape = RoundedCornerShape(22.dp), label = { Text("Una piccola descrizione") }, placeholder = { Text("Es. collezionisti di ricordi dal 2024") }, minLines = 2, maxLines = 3,
+                    OutlinedTextField(value = profileAbout, onValueChange = { profileAbout = it }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), label = { Text("Una piccola descrizione") }, placeholder = { Text("Es. collezionisti di ricordi dal 2024") }, minLines = 2, maxLines = 3,
                         colors = haliMeoTextFieldColors())
                     Button(onClick = {
                         profilePrefs.edit()
@@ -1843,7 +1844,7 @@ private fun SettingsScreen(
                 AnimatedVisibility(visible = "date" in expandedSettingsSections, enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Tenete a portata di mano una data importante", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                OutlinedTextField(value = specialDateLabel, onValueChange = { specialDateLabel = it }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), shape = RoundedCornerShape(22.dp), singleLine = true, label = { Text("Nome (es. compleanno)") },
+                OutlinedTextField(value = specialDateLabel, onValueChange = { specialDateLabel = it }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), singleLine = true, label = { Text("Nome (es. compleanno)") },
                         colors = haliMeoTextFieldColors())
                 OutlinedTextField(value = specialDate, onValueChange = { specialDate = it.take(10) }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), singleLine = true, shape = RoundedCornerShape(22.dp), label = { Text("Data (gg/mm/aa)") }, placeholder = { Text("26/12/26") },
                         colors = haliMeoTextFieldColors())
