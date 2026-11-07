@@ -51,16 +51,20 @@ internal object HaliMeoMotion {
     private val sharedAxisFadeOut =
         fadeOut(tween(SHARED_AXIS_FADE_OUT, easing = FastOutLinearInEasing))
 
-    /** Fast, nearly critically damped settling for tab changes and navigation taps. */
+    /** Responsive page movement with a restrained rebound instead of a rigid stop. */
     val pageSpring: SpringSpec<Float> =
-        spring(dampingRatio = 0.96f, stiffness = 1800f)
+        spring(dampingRatio = 0.78f, stiffness = 520f)
+
+    /** The pill has a slightly softer landing so it feels attached to the finger. */
+    val navigationPillSpring: SpringSpec<Float> =
+        spring(dampingRatio = 0.72f, stiffness = 560f)
 
     val contentSizeSpring: SpringSpec<IntSize> =
-        spring(dampingRatio = 0.88f, stiffness = 520f)
+        spring(dampingRatio = 0.80f, stiffness = 480f)
 
-    /** Morphe-style list settling: a quick, lightly bouncy placement spring. */
-    fun <T> listSpring(dampingRatio: Float = 0.8f): SpringSpec<T> =
-        spring(stiffness = 400f, dampingRatio = dampingRatio)
+    /** Morphe-style list placement, tuned for a more visible but controlled settle. */
+    fun <T> listSpring(dampingRatio: Float = 0.76f): SpringSpec<T> =
+        spring(stiffness = 460f, dampingRatio = dampingRatio)
 
     /** Shared Z-axis transition for screens that move deeper into the navigation stack. */
     fun sharedAxisZEnter(forward: Boolean): EnterTransition =
