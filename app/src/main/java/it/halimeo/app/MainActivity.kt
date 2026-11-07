@@ -875,7 +875,7 @@ class MainActivity:ComponentActivity() {
         if (available != null) {
             AlertDialog(
                 shape = RoundedCornerShape(30.dp),
-                colors = AlertDialogDefaults.colors(containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 onDismissRequest = { showUpdatePrompt = false },
                 icon = { Icon(Icons.Default.SystemUpdate, contentDescription = null) },
                 title = { Text("Nuova versione disponibile") },
@@ -2048,7 +2048,7 @@ private fun SettingsScreen(
         if (showDeveloperPinDialog) {
             AlertDialog(
                 shape = RoundedCornerShape(30.dp),
-                colors = AlertDialogDefaults.colors(containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 onDismissRequest = { showDeveloperPinDialog = false; developerPin = "" },
                 title = { Text("Opzioni sviluppatore") },
                 text = {
@@ -2657,7 +2657,7 @@ private fun DiaryScreen(
     if (albumEntry != null) {
         AlertDialog(
             shape = RoundedCornerShape(30.dp),
-            colors = AlertDialogDefaults.colors(containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+            containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { albumEntry = null },
             title = { Text("Aggiungi a un album") },
             text = {
@@ -2708,7 +2708,7 @@ private fun DiaryScreen(
     if (albumsBrowserOpen) {
         AlertDialog(
             shape = RoundedCornerShape(30.dp),
-            colors = AlertDialogDefaults.colors(containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+            containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { albumsBrowserOpen = false },
             title = { Text("I vostri album") },
             text = {
@@ -2766,7 +2766,7 @@ private fun DiaryScreen(
     if (selectedAlbum != null) {
         AlertDialog(
             shape = RoundedCornerShape(30.dp),
-            colors = AlertDialogDefaults.colors(containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+            containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { selectedAlbum = null; albumDetail = null },
             title = { Text(albumDetail?.title ?: selectedAlbum?.title ?: "Album") },
             text = {
@@ -2808,7 +2808,7 @@ private fun DiaryScreen(
     if (commentsEntry != null) {
         AlertDialog(
             shape = RoundedCornerShape(30.dp),
-            colors = AlertDialogDefaults.colors(containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+            containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { commentsEntry = null },
             title = { Text("Commenti") },
             text = {
@@ -3250,7 +3250,7 @@ private fun MemoryDetailScreen(
     if (showDeleteConfirmation) {
         AlertDialog(
             shape = RoundedCornerShape(30.dp),
-            colors = AlertDialogDefaults.colors(containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+            containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { showDeleteConfirmation = false },
             title = { Text("Eliminare questo ricordo?") },
             text = { Text("Il ricordo verrà rimosso dal diario su questo dispositivo e la cancellazione verrà sincronizzata con l'altro telefono appena possibile.") },
