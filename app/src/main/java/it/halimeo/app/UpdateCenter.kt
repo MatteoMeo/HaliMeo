@@ -243,10 +243,10 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
         }
         SingleChoiceSegmentedButtonRow(
             modifier = Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.52f), RoundedCornerShape(18.dp))
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f), RoundedCornerShape(18.dp))
-                .padding(3.dp),
+                .clip(RoundedCornerShape(22.dp))
+                .background(frostedSurfaceColor(), RoundedCornerShape(22.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f), RoundedCornerShape(22.dp))
+                .padding(4.dp),
             space = 3.dp
         ) {
             listOf("alpha" to "Alpha", "stable" to "Stabile").forEachIndexed { index, option ->
@@ -256,11 +256,11 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
                         channel = option.first; prefs.edit().putString("update_channel", channel).apply()
                         release = null; status = if (channel == "stable") "Canale Stabile selezionato." else "Canale Alpha selezionato."
                     },
-                    shape = SegmentedButtonDefaults.itemShape(index, 2, RoundedCornerShape(15.dp)),
+                    shape = SegmentedButtonDefaults.itemShape(index, 2, RoundedCornerShape(18.dp)),
                     colors = SegmentedButtonDefaults.colors(
-                        activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = if (isSystemInDarkTheme()) 0.34f else 0.18f),
+                        activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
                         activeContentColor = MaterialTheme.colorScheme.onSurface,
-                        activeBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
+                        activeBorderColor = Color.Transparent,
                         inactiveContainerColor = Color.Transparent,
                         inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         inactiveBorderColor = Color.Transparent

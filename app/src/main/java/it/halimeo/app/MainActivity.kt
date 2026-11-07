@@ -282,6 +282,7 @@ private val TextPrimary = Color(0xFFF5F7FA)
 @OptIn(ExperimentalSharedTransitionApi::class)
 private val LocalHaliMeoSharedTransitionScope = staticCompositionLocalOf<SharedTransitionScope?> { null }
 private val LocalHaliMeoAnimatedVisibilityScope = staticCompositionLocalOf<AnimatedVisibilityScope?> { null }
+private val LocalHaliMeoPopupHazeModifier = staticCompositionLocalOf<Modifier> { Modifier }
 
 
 
@@ -581,7 +582,10 @@ class MainActivity:ComponentActivity() {
         }
     )},bottomBar={}, floatingActionButton = {}, content = { padding ->
         SharedTransitionLayout(modifier = Modifier.padding(padding)) {
-            CompositionLocalProvider(LocalHaliMeoSharedTransitionScope provides this) {
+            CompositionLocalProvider(
+                LocalHaliMeoSharedTransitionScope provides this,
+                LocalHaliMeoPopupHazeModifier provides if (reduceStaticEffectsState.value) Modifier else Modifier.hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)
+            ) {
         NavHost(
             navController = nav,
             startDestination = "main",
@@ -874,6 +878,7 @@ class MainActivity:ComponentActivity() {
         val available = HaliMeoUpdateState.release
         if (available != null) {
             AlertDialog(
+                modifier = LocalHaliMeoPopupHazeModifier.current,
                 shape = RoundedCornerShape(30.dp),
                 containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 onDismissRequest = { showUpdatePrompt = false },
@@ -1441,10 +1446,10 @@ private fun SettingsScreen(
                 var selectedThemeMode by remember { mutableStateOf(appThemeModeState.value) }
                 SingleChoiceSegmentedButtonRow(
                     modifier = Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.52f), RoundedCornerShape(18.dp))
-                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.42f), RoundedCornerShape(18.dp))
-                        .padding(3.dp),
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(frostedSurfaceColor(), RoundedCornerShape(22.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f), RoundedCornerShape(22.dp))
+                        .padding(4.dp),
                     space = 3.dp
                 ) {
                     listOf("dark" to "Scuro", "light" to "Chiaro", "system" to "Sistema").forEachIndexed { index, item ->
@@ -1456,9 +1461,9 @@ private fun SettingsScreen(
                                 ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
                                     .edit().putString("app_theme_mode", item.first).apply()
                             },
-                            shape = SegmentedButtonDefaults.itemShape(index, 3, RoundedCornerShape(14.dp)),
+                            shape = SegmentedButtonDefaults.itemShape(index, 3, RoundedCornerShape(18.dp)),
                             colors = SegmentedButtonDefaults.colors(
-                                activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.34f else 0.18f),
+                                activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
                                 activeContentColor = MaterialTheme.colorScheme.onSurface,
                                 activeBorderColor = Color.Transparent,
                                 inactiveContainerColor = Color.Transparent,
@@ -1469,24 +1474,6 @@ private fun SettingsScreen(
                     }
                 }
                 Text("Il tema chiaro mantiene gli stessi accenti, sfondi e personalizzazioni del tema scuro.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
-                Text("Anteprima in tempo reale", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Surface(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(22.dp)),
-                    shape = RoundedCornerShape(22.dp), color = frostedSurfaceStrongColor()
-                ) {
-                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)) { Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp)) }
-                            Column(Modifier.weight(1f)) {
-                                Text("Un ricordo importante", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Text("29/10/26 · Ricordo", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                            }
-                            Icon(Icons.Default.FavoriteBorder, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Text("Questa è la leggibilità prevista per testi, icone e schede con le impostazioni correnti.", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
-                        Text("Accento e gradienti seguono lo sfondo selezionato.", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                    }
-                }
                 Text("Atmosfere One UI 9", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Text("Scegli una profondità di colore completa: sfondo sfumato, luce ambientale e accenti coordinati.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 val atmosphereOptions = listOf(
@@ -2047,6 +2034,7 @@ private fun SettingsScreen(
 
         if (showDeveloperPinDialog) {
             AlertDialog(
+                modifier = LocalHaliMeoPopupHazeModifier.current,
                 shape = RoundedCornerShape(30.dp),
                 containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 onDismissRequest = { showDeveloperPinDialog = false; developerPin = "" },
@@ -2296,6 +2284,7 @@ private fun DiaryScreen(
 
     if (showCalendar) {
         DatePickerDialog(
+            modifier = LocalHaliMeoPopupHazeModifier.current,
             onDismissRequest = { showCalendar = false },
             confirmButton = { TextButton(onClick = { selectedDate = calendarState.selectedDateMillis?.let { java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneOffset.UTC).toLocalDate().toString() }; showCalendar = false }) { Text("Filtra") } },
             dismissButton = { TextButton(onClick = { showCalendar = false }) { Text("Annulla") } },
@@ -2656,6 +2645,7 @@ private fun DiaryScreen(
     }
     if (albumEntry != null) {
         AlertDialog(
+            modifier = LocalHaliMeoPopupHazeModifier.current,
             shape = RoundedCornerShape(30.dp),
             containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { albumEntry = null },
@@ -2707,6 +2697,7 @@ private fun DiaryScreen(
     }
     if (albumsBrowserOpen) {
         AlertDialog(
+            modifier = LocalHaliMeoPopupHazeModifier.current,
             shape = RoundedCornerShape(30.dp),
             containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { albumsBrowserOpen = false },
@@ -2765,6 +2756,7 @@ private fun DiaryScreen(
     }
     if (selectedAlbum != null) {
         AlertDialog(
+            modifier = LocalHaliMeoPopupHazeModifier.current,
             shape = RoundedCornerShape(30.dp),
             containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { selectedAlbum = null; albumDetail = null },
@@ -2807,6 +2799,7 @@ private fun DiaryScreen(
     }
     if (commentsEntry != null) {
         AlertDialog(
+            modifier = LocalHaliMeoPopupHazeModifier.current,
             shape = RoundedCornerShape(30.dp),
             containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { commentsEntry = null },
@@ -3092,7 +3085,7 @@ private fun MemoryDetailScreen(
 
     Column(
         Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.19f).compositeOver(MaterialTheme.colorScheme.background), MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.secondary.copy(alpha = 0.13f).compositeOver(MaterialTheme.colorScheme.background))))
+            .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f), Color.Transparent, MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f))))
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
@@ -3249,6 +3242,7 @@ private fun MemoryDetailScreen(
     }
     if (showDeleteConfirmation) {
         AlertDialog(
+            modifier = LocalHaliMeoPopupHazeModifier.current,
             shape = RoundedCornerShape(30.dp),
             containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { showDeleteConfirmation = false },
@@ -3338,7 +3332,7 @@ private fun EditScreen(
 
     Column(
         Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.19f).compositeOver(MaterialTheme.colorScheme.background), MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.secondary.copy(alpha = 0.13f).compositeOver(MaterialTheme.colorScheme.background))))
+            .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f), Color.Transparent, MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f))))
             .hazeSource(editHaze)
             .verticalScroll(scrollState)
             .imePadding()
