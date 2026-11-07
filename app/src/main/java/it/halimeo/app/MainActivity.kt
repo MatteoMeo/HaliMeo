@@ -922,6 +922,7 @@ class MainActivity:ComponentActivity() {
         }
     }
     }
+    }
 }
 /**
  * Subtle Monet-tinted ambient light behind translucent surfaces.
