@@ -770,7 +770,9 @@ class MainActivity:ComponentActivity() {
             .height(56.dp)
             .then(
                 if (reduceStaticEffectsState.value) Modifier.background(navigationGlassTint, RoundedCornerShape(50))
-                else Modifier.hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle).clip(RoundedCornerShape(50))
+                else Modifier.hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)
+                    .graphicsLayer { shape = RoundedCornerShape(50); clip = true }
+                    .clip(RoundedCornerShape(50))
             ),
         shape = RoundedCornerShape(50),
         color = Color.Transparent,
@@ -1982,10 +1984,14 @@ private fun SettingsScreen(
             }
         }
 
+        val appInfoInteraction = remember { MutableInteractionSource() }
         Card(
             modifier = Modifier.fillMaxWidth()
+                .haliMeoPressScale(appInfoInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsAppInfoPress")
+                .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clip(RoundedCornerShape(32.dp))
-                .clickable { expandedSettingsSections = if ("appInfo" in expandedSettingsSections) expandedSettingsSections - "appInfo" else expandedSettingsSections + "appInfo" },
+                .clickable(interactionSource = appInfoInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("appInfo" in expandedSettingsSections) expandedSettingsSections - "appInfo" else expandedSettingsSections + "appInfo" }
+                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
@@ -2550,7 +2556,10 @@ private fun DiaryScreen(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(22.dp)),
+                modifier = Modifier.fillMaxWidth()
+                    .hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle)
+                    .graphicsLayer { shape = RoundedCornerShape(22.dp); clip = true }
+                    .clip(RoundedCornerShape(22.dp)),
                 singleLine = true,
                 shape = RoundedCornerShape(22.dp),
                 placeholder = { Text("Cerca un ricordo…") },
@@ -3037,6 +3046,7 @@ private fun SocialMemoryPost(
             .animateContentSize(animationSpec = HaliMeoMotion.contentSizeSpring)
             .shadow(12.dp, cardShape, clip = false)
             .hazeBlur(HazeInput.Sources(hazeState), glassStyle)
+            .graphicsLayer { shape = cardShape; clip = true }
             .clip(cardShape)
             .background(Brush.linearGradient(listOf(frostedSurfaceStrongColor(), frostedSurfaceColor(), frostedSurfaceStrongColor())))
             .border(1.dp, frostedEdgeColor(), cardShape)

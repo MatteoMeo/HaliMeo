@@ -95,14 +95,18 @@ internal object HaliMeoMotion {
             targetScale = if (forward) SHARED_AXIS_Z_ABOVE else SHARED_AXIS_Z_BELOW
         ) + sharedAxisFadeOut
 
+    // Settings panels should feel immediate: a short, critically damped size transition
+    // avoids the slow accordion-like sweep that made large sections feel heavy.
+    private val sectionSpring = spring<IntSize>(dampingRatio = 0.96f, stiffness = 1250f)
+
     fun sectionEnter(reduceMotion: Boolean): EnterTransition =
         if (reduceMotion) {
             EnterTransition.None
         } else {
             expandVertically(
-                animationSpec = tween(durationMillis = 210, easing = easing),
+                animationSpec = sectionSpring,
                 expandFrom = Alignment.Top
-            ) + fadeIn(animationSpec = tween(durationMillis = 145, easing = easing))
+            ) + fadeIn(animationSpec = tween(durationMillis = 85, easing = LinearOutSlowInEasing))
         }
 
     fun sectionExit(reduceMotion: Boolean): ExitTransition =
@@ -110,9 +114,9 @@ internal object HaliMeoMotion {
             ExitTransition.None
         } else {
             shrinkVertically(
-                animationSpec = tween(durationMillis = 170, easing = easing),
+                animationSpec = sectionSpring,
                 shrinkTowards = Alignment.Top
-            ) + fadeOut(animationSpec = tween(durationMillis = 115, easing = easing))
+            ) + fadeOut(animationSpec = tween(durationMillis = 65, easing = FastOutLinearInEasing))
         }
 }
 
