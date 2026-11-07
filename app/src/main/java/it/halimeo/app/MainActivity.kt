@@ -150,7 +150,7 @@ private suspend fun decodeDiaryPhoto(
 ): android.graphics.Bitmap? {
     if (uri.isNullOrBlank()) return null
     return if (uri.startsWith(REMOTE_PHOTO_PREFIX)) {
-        decodeRemoteScaledBitmap(uri, maxDimension) { repo.loadRemotePhotoBytes(entryId) }
+        decodeRemoteScaledBitmap(uri, maxDimension) { repo.loadRemotePhotoBytes(entryId, maxDimension) }
     } else {
         decodeMemoryPhoto(context, uri, maxDimension)
     }
