@@ -139,7 +139,7 @@ jobs:
         run: |
           set -euo pipefail
           RUNS="$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/android-debug-apk.yml/runs?branch=${CURRENT_BRANCH}&status=success&per_page=100")"
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/android-debug-apk.yml/runs?branch=${CURRENT_BRANCH}&status=completed&per_page=100")"
           PREVIOUS_SHA="$(printf '%s' "$RUNS" | jq -r --arg id "$CURRENT_RUN_ID" \
             '[.workflow_runs[] | select((.id | tostring) != $id and .conclusion == "success" and .head_branch == env.CURRENT_BRANCH)] | sort_by(.run_number) | last | .head_sha // empty')"
           if [ -n "$PREVIOUS_SHA" ] && git cat-file -e "${PREVIOUS_SHA}^{commit}" 2>/dev/null; then

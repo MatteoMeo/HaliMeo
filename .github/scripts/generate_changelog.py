@@ -51,6 +51,7 @@ def main():
             seen.add(text.casefold())
 
     translations = [
+        (r"^refresh diary social ui and fix release changelog behavior$", "Rinnovata la schermata Diario in stile social privato: azioni social sopra il titolo, gestione dei ricordi spostata nel dettaglio, anteprima commenti, foto più rapide e interfaccia One UI più pulita."),
         (r"^restore stable diary feed.*", "Ripristinata la visualizzazione stabile del Diario dopo i problemi del precedente aggiornamento."),
         (r"^fix (.*)", r"Corretto: \1."),
         (r"^add (.*)", r"Aggiunto: \1."),
