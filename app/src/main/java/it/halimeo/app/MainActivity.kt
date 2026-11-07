@@ -866,34 +866,37 @@ class MainActivity:ComponentActivity() {
         }
     }
 
-    AnimatedVisibility(
-        visible = pagerState.currentPage == 0 && currentRoute != "edit" && currentRoute != "tripMonaco",
-        modifier = Modifier.align(Alignment.BottomEnd).zIndex(3f).padding(end = 18.dp).navigationBarsPadding().padding(bottom = 78.dp),
-        enter = if (reduceAnimationsState.value) fadeIn(tween(0)) else fadeIn(tween(150, easing = OneUiMotionEasing)) + scaleIn(initialScale = 0.82f, animationSpec = spring(dampingRatio = 0.78f, stiffness = 620f)),
-        exit = if (reduceAnimationsState.value) fadeOut(tween(0)) else fadeOut(tween(100, easing = OneUiMotionEasing)) + scaleOut(targetScale = 0.88f, animationSpec = spring(dampingRatio = 0.9f, stiffness = 700f))
-    ) {
+    if (pagerState.currentPage == 0 && currentRoute == "main") {
         val fabInteraction = remember { MutableInteractionSource() }
         Surface(
-            modifier = Modifier.size(46.dp)
-                .haliMeoPressScale(fabInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.96f, label = "newMemoryFabPress")
-                // Clip before Haze so its captured layer cannot expand into a pill.
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .zIndex(10f)
+                .padding(end = 18.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 82.dp)
+                .size(56.dp)
+                .haliMeoPressScale(fabInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.94f, label = "newMemoryFabPress")
                 .clip(RoundedCornerShape(18.dp))
-                .hazeBlur(
-                    input = HazeInput.Backdrop(navigationHaze),
-                    style = navigationGlassStyle,
-                    performanceMode = HazePerformanceMode.Performance,
-                    expandLayerBounds = false
-                )
-                .graphicsLayer { shape = RoundedCornerShape(18.dp); clip = true }
-                .clip(RoundedCornerShape(18.dp))
-                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.52f), RoundedCornerShape(18.dp)),
+                .clickable(
+                    interactionSource = fabInteraction,
+                    indication = LocalIndication.current,
+                    role = androidx.compose.ui.semantics.Role.Button,
+                    onClickLabel = "Nuovo ricordo"
+                ) {
+                    navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                    editing = null
+                    nav.navigate("edit")
+                },
             shape = RoundedCornerShape(18.dp),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
-            shadowElevation = 0.dp,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.94f),
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.18f)),
+            shadowElevation = 8.dp,
             tonalElevation = 0.dp
         ) {
-            Box(Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp)).clickable(interactionSource = fabInteraction, indication = LocalIndication.current, role = androidx.compose.ui.semantics.Role.Button, onClickLabel = "Nuovo ricordo") { navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); editing = null; nav.navigate("edit") }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(21.dp), tint = MaterialTheme.colorScheme.onPrimary)
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(27.dp))
             }
         }
     }
@@ -1129,6 +1132,8 @@ private fun SettingsScreen(
     var expandedSettingsSections by remember { mutableStateOf(emptySet<String>()) }
     val profilePrefs = remember { ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE) }
     var profilePhotoUri by remember { mutableStateOf(profilePrefs.getString("profile_photo_uri", null)) }
+    var profilePhotoUploadedUri by remember { mutableStateOf(profilePrefs.getString("profile_photo_uploaded_uri", null)) }
+    var profileUploadBusy by remember { mutableStateOf(false) }
     var profileNickname by remember { mutableStateOf(profilePrefs.getString("profile_nickname", displayName) ?: displayName) }
     var profileAbout by remember { mutableStateOf(profilePrefs.getString("profile_about", "") ?: "") }
     var isProfileEditing by remember {
@@ -1303,20 +1308,41 @@ private fun SettingsScreen(
                         colors = haliMeoTextFieldColors())
                     OutlinedTextField(value = profileAbout, onValueChange = { profileAbout = it }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), label = { Text("Una piccola descrizione") }, placeholder = { Text("Es. collezionisti di ricordi dal 2024") }, minLines = 2, maxLines = 3,
                         colors = haliMeoTextFieldColors())
-                    Button(onClick = {
-                        profilePrefs.edit()
-                            .putString("profile_nickname", profileNickname.trim())
-                            .putString("profile_about", profileAbout.trim())
-                            .putBoolean("profile_saved", true)
-                            .apply()
-                        isProfileEditing = false
-                        Toast.makeText(ctx, "Profilo salvato su questo dispositivo", Toast.LENGTH_SHORT).show()
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.Check, contentDescription = null)
+                    Button(
+                        enabled = !profileUploadBusy,
+                        onClick = {
+                            profileUploadBusy = true
+                            activity.lifecycleScope.launch {
+                                val result = runCatching {
+                                    profilePrefs.edit()
+                                        .putString("profile_nickname", profileNickname.trim())
+                                        .putString("profile_about", profileAbout.trim())
+                                        .putBoolean("profile_saved", true)
+                                        .apply()
+                                    val selectedPhoto = profilePhotoUri
+                                    if (!selectedPhoto.isNullOrBlank() && selectedPhoto != profilePhotoUploadedUri) {
+                                        repo.uploadProfilePhoto(selectedPhoto)
+                                        profilePhotoUploadedUri = selectedPhoto
+                                        profilePrefs.edit().putString("profile_photo_uploaded_uri", selectedPhoto).apply()
+                                    }
+                                }
+                                result.onSuccess {
+                                    isProfileEditing = false
+                                    Toast.makeText(ctx, "Profilo e foto sincronizzati", Toast.LENGTH_SHORT).show()
+                                }.onFailure { error ->
+                                    Toast.makeText(ctx, "Impossibile sincronizzare la foto profilo: ${error.localizedMessage ?: "errore"}", Toast.LENGTH_LONG).show()
+                                }
+                                profileUploadBusy = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (profileUploadBusy) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                        else Icon(Icons.Default.Check, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Salva profilo")
+                        Text(if (profileUploadBusy) "Sincronizzazione…" else "Salva profilo")
                     }
-                    Text("Foto e dettagli sono salvati su questo dispositivo; non modificano ancora il profilo online.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                    Text("La foto profilo viene sincronizzata e mostrata accanto ai ricordi pubblicati da questo account.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 } else {
                     if (profileAbout.isNotBlank()) {
                         Text(profileAbout, color = secondaryText, style = MaterialTheme.typography.bodyMedium)
@@ -2596,6 +2622,16 @@ private fun DiaryScreen(
                             value = decodeDiaryPhoto(photoContext, entry.id, entry.photoUri, maxDimension = 1280, repo = repo)
                         }
                         val social = socialEntries[entry.id]
+                        val authorId = social?.authorId?.takeIf { it.isNotBlank() } ?: currentUserId
+                        val authorAvatar by produceState<android.graphics.Bitmap?>(
+                            initialValue = null, authorId, repo
+                        ) {
+                            value = if (authorId.isBlank()) null else runCatching {
+                                repo.loadProfilePhotoBytes(authorId)?.let { bytes ->
+                                    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                                }
+                            }.getOrNull()
+                        }
                         SocialMemoryPost(
                             modifier = Modifier.animateItem(
                                 fadeInSpec = tween(150, easing = OneUiMotionEasing),
@@ -2606,6 +2642,7 @@ private fun DiaryScreen(
                             glassStyle = diaryGlassStyle,
                             entry = entry,
                             authorName = social?.authorName ?: "Diario condiviso",
+                            authorAvatar = authorAvatar,
                             photo = entryPhoto,
                             expanded = expanded,
                             likeCount = social?.likeCount ?: 0,
@@ -2895,7 +2932,7 @@ private fun DiaryScreen(
 
 @Composable
 private fun SocialMemoryPost(
-    entry: DiaryEntry, authorName: String, photo: android.graphics.Bitmap?, expanded: Boolean,
+    entry: DiaryEntry, authorName: String, authorAvatar: android.graphics.Bitmap? = null, photo: android.graphics.Bitmap?, expanded: Boolean,
     likeCount: Int = 0, likedByMe: Boolean = false, commentCount: Int = 0, socialEnabled: Boolean = true,
     onToggleLike: () -> Unit = {}, onComments: () -> Unit = {}, onAddToAlbum: () -> Unit = {}, onOpen: () -> Unit, onToggleCaption: () -> Unit,
     modifier: Modifier = Modifier,
@@ -2939,7 +2976,16 @@ private fun SocialMemoryPost(
                     .border(1.dp, accent.copy(alpha = 0.32f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text(initials, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                if (authorAvatar != null) {
+                    Image(
+                        bitmap = authorAvatar.asImageBitmap(),
+                        contentDescription = "Foto profilo di $authorName",
+                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(initials, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                }
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
