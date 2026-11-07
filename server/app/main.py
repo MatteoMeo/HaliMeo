@@ -17,7 +17,10 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATA_DIR / "halimeo.sqlite3"
 PHOTO_DIR = DATA_DIR / "photos"
 PHOTO_DIR.mkdir(parents=True, exist_ok=True)
+PROFILE_PHOTO_DIR = DATA_DIR / "profile_photos"
+PROFILE_PHOTO_DIR.mkdir(parents=True, exist_ok=True)
 MAX_PHOTO_BYTES = 15 * 1024 * 1024
+MAX_PROFILE_PHOTO_BYTES = 5 * 1024 * 1024
 PHOTO_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 JWT_SECRET = os.getenv("HALIMEO_JWT_SECRET", "")
 OWNER_ID = os.getenv("HALIMEO_OWNER_USER_ID", "")
@@ -151,6 +154,51 @@ def login(data: LoginIn):
 @app.get("/v1/auth/me")
 def me(user=Depends(current_user)):
     return {"userId": user["id"], "displayName": user["display_name"], "isOwner": bool(OWNER_ID and user["id"] == OWNER_ID)}
+
+@app.post("/v1/profile/photo")
+async def upload_profile_photo(photo: UploadFile = File(...), user=Depends(current_user)):
+    content_type = (photo.content_type or "").lower().split(";")[0].strip()
+    if content_type not in PHOTO_TYPES:
+        raise HTTPException(415, "Formato foto non supportato: usa JPG, PNG o WebP")
+    payload = await photo.read(MAX_PROFILE_PHOTO_BYTES + 1)
+    if not payload or len(payload) > MAX_PROFILE_PHOTO_BYTES:
+        raise HTTPException(413, "La foto profilo deve pesare al massimo 5 MB")
+    try:
+        with Image.open(BytesIO(payload)) as source:
+            image = ImageOps.exif_transpose(source).convert("RGB")
+            image.thumbnail((512, 512), Image.Resampling.LANCZOS)
+            output = BytesIO()
+            image.save(output, format="WEBP", quality=84, method=4)
+            normalized = output.getvalue()
+    except Exception:
+        raise HTTPException(400, "Immagine profilo non valida o non supportata")
+
+    # A deterministic, hashed filename keeps profile media out of SQLite and avoids
+    # schema migrations while remaining private to authenticated API requests.
+    filename = hashlib.sha256(user["id"].encode("utf-8")).hexdigest() + ".webp"
+    target = PROFILE_PHOTO_DIR / filename
+    temporary = PROFILE_PHOTO_DIR / (filename + ".tmp")
+    temporary.write_bytes(normalized)
+    temporary.replace(target)
+    return {"uploaded": True, "contentType": "image/webp", "size": len(normalized)}
+
+
+@app.get("/v1/users/{user_id}/profile-photo")
+def download_profile_photo(user_id: str, user=Depends(current_user)):
+    with db() as c:
+        exists = c.execute("SELECT 1 FROM users WHERE id=? AND disabled=0", (user_id,)).fetchone()
+    if not exists:
+        raise HTTPException(404, "Account non disponibile")
+    filename = hashlib.sha256(user_id.encode("utf-8")).hexdigest() + ".webp"
+    path = PROFILE_PHOTO_DIR / filename
+    if not path.is_file():
+        raise HTTPException(404, "Foto profilo non disponibile")
+    return FileResponse(
+        path,
+        media_type="image/webp",
+        headers={"Cache-Control": "private, max-age=300"}
+    )
+
 
 
 @app.post("/v1/auth/redeem-invite")
