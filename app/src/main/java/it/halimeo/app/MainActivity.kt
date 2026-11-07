@@ -48,8 +48,10 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.clickable
@@ -86,6 +88,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -111,6 +114,8 @@ import it.halimeo.app.sync.SyncScheduler
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.delay
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.roundToInt
 
 private suspend fun decodeMemoryPhoto(context: android.content.Context, uri: String, maxDimension: Int): android.graphics.Bitmap? {
@@ -625,24 +630,30 @@ class MainActivity:ComponentActivity() {
         border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor()),
         tonalElevation = 0.dp
     ) {
+        val navigationFlingVelocity = with(LocalDensity.current) { 400.dp.toPx() }
+        val navigationDragState = rememberDraggableState { delta ->
+            // Match Morphe's segmented navigation: the pill tracks the finger directly,
+            // while the pager remains responsible for settling onto a page.
+            pagerState.dispatchRawDelta(-delta)
+        }
         BoxWithConstraints(
             Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp)
-                .pointerInput(pagerState, navigationScope) {
-                    detectHorizontalDragGestures(
-                        onDragEnd = {
-                            navigationScope.launch {
-                                val destination = pagerState.targetPage.coerceIn(0, 2)
-                                if (reduceAnimationsState.value) pagerState.scrollToPage(destination)
-                                else pagerState.animateScrollToPage(destination)
-                            }
-                        },
-                        onHorizontalDrag = { change, dragAmount ->
-                            change.consume()
-                            val pageWidth = pagerState.layoutInfo.pageSize.coerceAtLeast(size.width)
-                            pagerState.dispatchRawDelta(-dragAmount * pageWidth.toFloat() / size.width.coerceAtLeast(1).toFloat())
+                .draggable(
+                    state = navigationDragState,
+                    orientation = Orientation.Horizontal,
+                    onDragStopped = { velocity ->
+                        navigationScope.launch {
+                            val position = pagerState.currentPage + pagerState.currentPageOffsetFraction
+                            val destination = when {
+                                velocity < -navigationFlingVelocity -> floor(position).toInt() + 1
+                                velocity > navigationFlingVelocity -> ceil(position).toInt() - 1
+                                else -> position.roundToInt()
+                            }.coerceIn(0, 2)
+                            if (reduceAnimationsState.value) pagerState.scrollToPage(destination)
+                            else pagerState.turnToPage(destination)
                         }
-                    )
-                }
+                    }
+                )
         ) {
             val tabWidth = (maxWidth - 6.dp) / 3
             // The indicator is purely visual; only each tab handles taps, so it cannot steal or
