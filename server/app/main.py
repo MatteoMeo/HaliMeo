@@ -1,9 +1,11 @@
 import os, sqlite3, secrets, hashlib, time, uuid, mimetypes
 from pathlib import Path
+from io import BytesIO
 from dotenv import load_dotenv
 from typing import Optional, List
-from fastapi import FastAPI, HTTPException, Depends, Header, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Depends, Header, UploadFile, File, Query
+from fastapi.responses import FileResponse, StreamingResponse
+from PIL import Image, ImageOps
 from pydantic import BaseModel, EmailStr, Field
 from passlib.context import CryptContext
 from jose import jwt
@@ -383,7 +385,11 @@ async def upload_entry_photo(entry_id: str, photoUpdatedAt: int, photo: UploadFi
     return {"photoUpdatedAt": stamp, "size": len(payload), "contentType": content_type}
 
 @app.get("/v1/entries/{entry_id}/photo")
-def download_entry_photo(entry_id: str, user=Depends(current_user)):
+def download_entry_photo(
+    entry_id: str,
+    maxDimension: int = Query(default=1280, ge=256, le=2048),
+    user=Depends(current_user)
+):
     with db() as c:
         row = c.execute("SELECT photo_filename,photo_updated_at FROM entries WHERE id=?", (entry_id,)).fetchone()
     if not row or not row["photo_filename"]:
@@ -391,7 +397,34 @@ def download_entry_photo(entry_id: str, user=Depends(current_user)):
     path = PHOTO_DIR / row["photo_filename"]
     if not path.is_file():
         raise HTTPException(404, "File foto non trovato sul server")
-    return FileResponse(path, media_type=mimetypes.guess_type(path.name)[0] or "application/octet-stream")
+
+    # Send a display-sized WebP instead of the original phone photo. The resized
+    # bytes are streamed from memory and are never persisted as a second server file.
+    try:
+        with Image.open(path) as source:
+            image = ImageOps.exif_transpose(source)
+            if max(image.size) <= maxDimension:
+                return FileResponse(
+                    path,
+                    media_type=mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+                )
+            image.thumbnail((maxDimension, maxDimension), Image.Resampling.LANCZOS)
+            has_alpha = "A" in image.getbands()
+            prepared = image.convert("RGBA" if has_alpha else "RGB")
+            output = BytesIO()
+            prepared.save(output, format="WEBP", quality=82, method=4)
+            output.seek(0)
+            return StreamingResponse(
+                output,
+                media_type="image/webp",
+                headers={"Cache-Control": "private, max-age=300"}
+            )
+    except Exception:
+        # A malformed/unsupported source should still be retrievable in its original format.
+        return FileResponse(
+            path,
+            media_type=mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+        )
 
 @app.delete("/v1/entries/{entry_id}/photo")
 def delete_entry_photo(entry_id: str, photoUpdatedAt: int, user=Depends(current_user)):
