@@ -1275,6 +1275,7 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(profileCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsProfilePress")
                 .clip(RoundedCornerShape(32.dp))
+                .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clickable(interactionSource = profileCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("profile" in expandedSettingsSections) expandedSettingsSections - "profile" else expandedSettingsSections + "profile" }
                 .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
@@ -1356,6 +1357,7 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(invitesCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsInvitesPress")
                 .clip(RoundedCornerShape(32.dp))
+                .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clickable(interactionSource = invitesCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("invites" in expandedSettingsSections) expandedSettingsSections - "invites" else expandedSettingsSections + "invites" }
                 .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
@@ -1414,7 +1416,7 @@ private fun SettingsScreen(
 
                         if (inviteCode.isNotBlank()) {
                             Card(
-                                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(20.dp)),
+                                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle).border(1.dp, frostedEdgeColor(), RoundedCornerShape(20.dp)),
                                 shape = RoundedCornerShape(20.dp),
                                 colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
                             ) {
@@ -1472,7 +1474,9 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(appearanceCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsAppearancePress")
-                .clip(RoundedCornerShape(32.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp))
+                .clip(RoundedCornerShape(32.dp))
+                .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
+                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp))
                 .clickable(interactionSource = appearanceCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("appearance" in expandedSettingsSections) expandedSettingsSections - "appearance" else expandedSettingsSections + "appearance" },
             shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
@@ -1827,6 +1831,7 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(dateCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsDatePress")
                 .clip(RoundedCornerShape(32.dp))
+                .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clickable(interactionSource = dateCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("date" in expandedSettingsSections) expandedSettingsSections - "date" else expandedSettingsSections + "date" }
                 .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
@@ -1879,6 +1884,7 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(syncCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsSyncPress")
                 .clip(RoundedCornerShape(32.dp))
+                .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clickable(interactionSource = syncCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("sync" in expandedSettingsSections) expandedSettingsSections - "sync" else expandedSettingsSections + "sync" }
                 .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
