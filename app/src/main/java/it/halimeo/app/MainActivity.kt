@@ -565,6 +565,10 @@ class MainActivity:ComponentActivity() {
                     state = pagerState,
                     modifier = Modifier.fillMaxSize().hazeSource(navigationHaze),
                     beyondViewportPageCount = 1,
+                    flingBehavior = androidx.compose.foundation.pager.PagerDefaults.flingBehavior(
+                        state = pagerState,
+                        snapAnimationSpec = HaliMeoMotion.pageSpring
+                    ),
                     key = { it }
                 ) { page ->
                     when (page) {
@@ -660,31 +664,75 @@ class MainActivity:ComponentActivity() {
             val tabWidth = (maxWidth - 6.dp) / 3
             val navigationSlotWidthPx = with(LocalDensity.current) { (tabWidth + 3.dp).toPx().coerceAtLeast(1f) }
             var isNavigationDragging by remember { mutableStateOf(false) }
+            var isNavigationSettling by remember { mutableStateOf(false) }
             var navigationPillPosition by remember { mutableFloatStateOf(pagerState.currentPage.toFloat()) }
+            val navigationPillAnimatable = remember(pagerState) {
+                androidx.compose.animation.core.Animatable(pagerState.currentPage.toFloat())
+            }
             Box(
                 Modifier.fillMaxSize()
                     .pointerInput(pagerState, navigationSlotWidthPx) {
                         detectDragGestures(
                             onDragStart = {
-                                navigationPillPosition = (
-                                    pagerState.currentPage + pagerState.currentPageOffsetFraction
-                                ).coerceIn(0f, 2f)
+                                navigationPillPosition = if (isNavigationSettling) {
+                                    navigationPillAnimatable.value
+                                } else {
+                                    (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 2f)
+                                }
                                 isNavigationDragging = true
+                                isNavigationSettling = false
+                                navigationScope.launch { navigationPillAnimatable.stop() }
                             },
                             onDragEnd = {
-                                val destination = navigationPillPosition.roundToInt().coerceIn(0, 2)
-                                isNavigationDragging = false
-                                navigationScope.launch {
-                                    if (reduceAnimationsState.value) pagerState.scrollToPage(destination)
-                                    else pagerState.turnToPage(destination)
+                                val releasedAt = navigationPillPosition
+                                val destination = releasedAt.roundToInt().coerceIn(0, 2)
+                                if (reduceAnimationsState.value) {
+                                    isNavigationDragging = false
+                                    isNavigationSettling = false
+                                    navigationScope.launch { pagerState.scrollToPage(destination) }
+                                } else {
+                                    isNavigationSettling = true
+                                    navigationScope.launch {
+                                        // Keep the pill at the exact release point until its spring
+                                        // and the pager animation can start together. This avoids
+                                        // the old snap-back to the pager's stale currentPage.
+                                        navigationPillAnimatable.snapTo(releasedAt)
+                                        isNavigationDragging = false
+                                        kotlinx.coroutines.coroutineScope {
+                                            launch {
+                                                navigationPillAnimatable.animateTo(
+                                                    destination.toFloat(),
+                                                    animationSpec = HaliMeoMotion.navigationPillSpring
+                                                )
+                                            }
+                                            launch {
+                                                pagerState.animateScrollToPage(
+                                                    destination,
+                                                    animationSpec = HaliMeoMotion.pageSpring
+                                                )
+                                            }
+                                        }
+                                        isNavigationSettling = false
+                                    }
                                 }
                             },
                             onDragCancel = {
-                                isNavigationDragging = false
-                                navigationScope.launch {
-                                    val destination = pagerState.currentPage
-                                    if (reduceAnimationsState.value) pagerState.scrollToPage(destination)
-                                    else pagerState.turnToPage(destination)
+                                val releasedAt = navigationPillPosition
+                                val destination = pagerState.currentPage
+                                if (reduceAnimationsState.value) {
+                                    isNavigationDragging = false
+                                    navigationScope.launch { pagerState.scrollToPage(destination) }
+                                } else {
+                                    isNavigationSettling = true
+                                    navigationScope.launch {
+                                        navigationPillAnimatable.snapTo(releasedAt)
+                                        isNavigationDragging = false
+                                        navigationPillAnimatable.animateTo(
+                                            destination.toFloat(),
+                                            animationSpec = HaliMeoMotion.navigationPillSpring
+                                        )
+                                        isNavigationSettling = false
+                                    }
                                 }
                             },
                             onDrag = { change, dragAmount ->
@@ -699,16 +747,15 @@ class MainActivity:ComponentActivity() {
                         )
                     }
             ) {
-            // While dragging, the pill is driven directly by the finger. Once released,
-            // it returns to the pager's position and settles on the nearest tab.
+            // During the gesture the pill is attached to the finger. On release, its own spring
+            // and the page spring run concurrently from their respective current positions.
             Box(
                 Modifier.graphicsLayer {
-                    val pagePosition = if (isNavigationDragging) {
-                        navigationPillPosition
-                    } else if (reduceAnimationsState.value) {
-                        pagerState.currentPage.toFloat()
-                    } else {
-                        (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 2f)
+                    val pagePosition = when {
+                        isNavigationDragging -> navigationPillPosition
+                        isNavigationSettling -> navigationPillAnimatable.value
+                        reduceAnimationsState.value -> pagerState.currentPage.toFloat()
+                        else -> (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 2f)
                     }
                     translationX = (tabWidth + 3.dp).toPx() * pagePosition
                 }
