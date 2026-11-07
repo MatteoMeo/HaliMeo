@@ -41,6 +41,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
@@ -704,6 +705,7 @@ class MainActivity:ComponentActivity() {
     // Read the continuously changing pager offset in the graphics layer, not the root composition.
     if (currentRoute != "edit" && currentRoute != "tripMonaco") Surface(
         modifier = Modifier.align(Alignment.BottomCenter)
+            .zIndex(1f)
             // Give the bar an explicit centered width; keep the + button separate.
             .fillMaxWidth(0.72f)
             .navigationBarsPadding()
@@ -866,7 +868,7 @@ class MainActivity:ComponentActivity() {
 
     AnimatedVisibility(
         visible = currentRoute == "main" && pagerState.currentPage == 0,
-        modifier = Modifier.align(Alignment.BottomEnd).padding(end = 18.dp).navigationBarsPadding().padding(bottom = 80.dp),
+        modifier = Modifier.align(Alignment.BottomEnd).zIndex(2f).padding(end = 18.dp).navigationBarsPadding().padding(bottom = 78.dp),
         enter = if (reduceAnimationsState.value) fadeIn(tween(0)) else fadeIn(tween(150, easing = OneUiMotionEasing)) + scaleIn(initialScale = 0.82f, animationSpec = spring(dampingRatio = 0.78f, stiffness = 620f)),
         exit = if (reduceAnimationsState.value) fadeOut(tween(0)) else fadeOut(tween(100, easing = OneUiMotionEasing)) + scaleOut(targetScale = 0.88f, animationSpec = spring(dampingRatio = 0.9f, stiffness = 700f))
     ) {
