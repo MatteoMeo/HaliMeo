@@ -49,6 +49,10 @@ internal object HaliMeoUpdateState {
  * non-fatal: the local diary must remain usable when GitHub or the server is offline.
  */
 internal suspend fun checkForUpdatesOnLaunch(context: Context) {
+    // Clear stale process state first, so an old release cannot trigger a false prompt
+    // while the fresh request is still running.
+    HaliMeoUpdateState.release = null
+    HaliMeoUpdateState.checkedAt = 0L
     val prefs = context.getSharedPreferences("halimeo_preferences", Context.MODE_PRIVATE)
     if (!prefs.getBoolean("auto_check_updates", true)) return
 
@@ -322,10 +326,10 @@ private suspend fun fetchLatestRelease(channel: String): HaliMeoRelease? {
     val json = withContext(Dispatchers.IO) {
         var response: String? = null
         var lastError: Exception? = null
-        for (attempt in 1..3) {
+        for (attempt in 1..2) {
             val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 30_000
-                readTimeout = 30_000
+                connectTimeout = 12_000
+                readTimeout = 18_000
                 instanceFollowRedirects = true
                 setRequestProperty("Accept", "application/vnd.github+json")
                 setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
@@ -340,7 +344,7 @@ private suspend fun fetchLatestRelease(channel: String): HaliMeoRelease? {
                 break
             } catch (error: Exception) {
                 lastError = error
-                if (attempt < 3) Thread.sleep(800L * attempt)
+                if (attempt < 2) Thread.sleep(600L)
             } finally {
                 connection.disconnect()
             }
