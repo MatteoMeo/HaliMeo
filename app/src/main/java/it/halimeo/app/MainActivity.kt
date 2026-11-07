@@ -96,9 +96,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import android.view.HapticFeedbackConstants
+import android.view.WindowManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -234,6 +236,39 @@ private val OneUiMotionEasing = CubicBezierEasing(0.22f, 0.25f, 0f, 1f)
 @Composable private fun frostedGlassBrush(): Brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.065f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.075f)))
 @Composable private fun isHaliMeoDark(): Boolean = when (appThemeModeState.value) { "light" -> false; "system" -> isSystemInDarkTheme(); else -> true }
 @Composable private fun frostedEdgeColor(): Color = Color.Transparent
+@Composable
+private fun haliMeoTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
+    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f),
+    focusedContainerColor = frostedSurfaceStrongColor(),
+    unfocusedContainerColor = frostedSurfaceColor(),
+    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+    focusedLabelColor = MaterialTheme.colorScheme.primary,
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    cursorColor = MaterialTheme.colorScheme.primary
+)
+
+@Composable
+private fun HaliMeoPopupBackdropBlur() {
+    val view = LocalView.current
+    val density = LocalDensity.current.density
+    val window = (view.parent as? DialogWindowProvider)?.window
+    DisposableEffect(window, density) {
+        if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            window.setBackgroundBlurRadius((26f * density).roundToInt())
+            window.setDimAmount(0.22f)
+        }
+        onDispose {
+            if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                window.setBackgroundBlurRadius(0)
+                window.clearFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            }
+        }
+    }
+}
+
 @Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.08f else 0.14f).compositeOver(Color(0xD9101419)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.055f).compositeOver(Color(0xF2FFFFFF))
 @Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.10f else 0.18f).compositeOver(Color(0xE60C0F12)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.09f).compositeOver(Color(0xFAFFFFFF))
 private val customBackgroundColorState = mutableStateOf("default")
@@ -282,7 +317,6 @@ private val TextPrimary = Color(0xFFF5F7FA)
 @OptIn(ExperimentalSharedTransitionApi::class)
 private val LocalHaliMeoSharedTransitionScope = staticCompositionLocalOf<SharedTransitionScope?> { null }
 private val LocalHaliMeoAnimatedVisibilityScope = staticCompositionLocalOf<AnimatedVisibilityScope?> { null }
-private val LocalHaliMeoPopupHazeModifier = staticCompositionLocalOf<Modifier> { Modifier }
 
 
 
@@ -582,10 +616,7 @@ class MainActivity:ComponentActivity() {
         }
     )},bottomBar={}, floatingActionButton = {}, content = { padding ->
         SharedTransitionLayout(modifier = Modifier.padding(padding)) {
-            CompositionLocalProvider(
-                LocalHaliMeoSharedTransitionScope provides this,
-                LocalHaliMeoPopupHazeModifier provides if (reduceStaticEffectsState.value) Modifier else Modifier.hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)
-            ) {
+            CompositionLocalProvider(LocalHaliMeoSharedTransitionScope provides this) {
         NavHost(
             navController = nav,
             startDestination = "main",
@@ -878,12 +909,11 @@ class MainActivity:ComponentActivity() {
         val available = HaliMeoUpdateState.release
         if (available != null) {
             AlertDialog(
-                modifier = if (reduceStaticEffectsState.value) Modifier else Modifier.hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle),
-                shape = RoundedCornerShape(30.dp),
-                containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                shape = RoundedCornerShape(30.dp),
+                containerColor = frostedSurfaceStrongColor().copy(alpha = 0.86f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 onDismissRequest = { showUpdatePrompt = false },
                 icon = { Icon(Icons.Default.SystemUpdate, contentDescription = null) },
-                title = { Text("Nuova versione disponibile") },
+                title = { HaliMeoPopupBackdropBlur(); Text("Nuova versione disponibile") },
                 text = {
                     Text("È disponibile HaliMeo ${available.versionName}. Vuoi aprire l'updater per installare l'aggiornamento?")
                 },
@@ -1273,8 +1303,10 @@ private fun SettingsScreen(
                     }
                 }
                 if (isProfileEditing) {
-                    OutlinedTextField(value = profileNickname, onValueChange = { profileNickname = it }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), shape = RoundedCornerShape(18.dp), label = { Text("Nome o soprannome") }, singleLine = true)
-                    OutlinedTextField(value = profileAbout, onValueChange = { profileAbout = it }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), shape = RoundedCornerShape(18.dp), label = { Text("Una piccola descrizione") }, placeholder = { Text("Es. collezionisti di ricordi dal 2024") }, minLines = 2, maxLines = 3)
+                    OutlinedTextField(value = profileNickname, onValueChange = { profileNickname = it }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), shape = RoundedCornerShape(22.dp), label = { Text("Nome o soprannome") }, singleLine = true,
+                        colors = haliMeoTextFieldColors())
+                    OutlinedTextField(value = profileAbout, onValueChange = { profileAbout = it }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), shape = RoundedCornerShape(22.dp), label = { Text("Una piccola descrizione") }, placeholder = { Text("Es. collezionisti di ricordi dal 2024") }, minLines = 2, maxLines = 3,
+                        colors = haliMeoTextFieldColors())
                     Button(onClick = {
                         profilePrefs.edit()
                             .putString("profile_nickname", profileNickname.trim())
@@ -1758,8 +1790,10 @@ private fun SettingsScreen(
                 AnimatedVisibility(visible = "date" in expandedSettingsSections, enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Tenete a portata di mano una data importante", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                OutlinedTextField(value = specialDateLabel, onValueChange = { specialDateLabel = it }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), shape = RoundedCornerShape(18.dp), singleLine = true, label = { Text("Nome (es. compleanno)") })
-                OutlinedTextField(value = specialDate, onValueChange = { specialDate = it.take(10) }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), singleLine = true, shape = RoundedCornerShape(18.dp), label = { Text("Data (gg/mm/aa)") }, placeholder = { Text("26/12/26") })
+                OutlinedTextField(value = specialDateLabel, onValueChange = { specialDateLabel = it }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), shape = RoundedCornerShape(22.dp), singleLine = true, label = { Text("Nome (es. compleanno)") },
+                        colors = haliMeoTextFieldColors())
+                OutlinedTextField(value = specialDate, onValueChange = { specialDate = it.take(10) }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)), singleLine = true, shape = RoundedCornerShape(22.dp), label = { Text("Data (gg/mm/aa)") }, placeholder = { Text("26/12/26") },
+                        colors = haliMeoTextFieldColors())
                 Button(onClick = {
                     val parsed = parseHaliMeoDate(specialDate)
                     if (specialDateLabel.isNotBlank() && parsed != null) {
@@ -1939,7 +1973,7 @@ private fun SettingsScreen(
                             value = serverDraft,
                             onValueChange = { serverDraft = it },
                             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)),
-                            shape = RoundedCornerShape(18.dp),
+                            shape = RoundedCornerShape(22.dp),
                             label = { Text("URL base del server") },
                             placeholder = { Text("https://server.example/") },
                             singleLine = true,
@@ -2034,11 +2068,10 @@ private fun SettingsScreen(
 
         if (showDeveloperPinDialog) {
             AlertDialog(
-                modifier = LocalHaliMeoPopupHazeModifier.current,
-                shape = RoundedCornerShape(30.dp),
-                containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                shape = RoundedCornerShape(30.dp),
+                containerColor = frostedSurfaceStrongColor().copy(alpha = 0.86f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 onDismissRequest = { showDeveloperPinDialog = false; developerPin = "" },
-                title = { Text("Opzioni sviluppatore") },
+                title = { HaliMeoPopupBackdropBlur(); Text("Opzioni sviluppatore") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Inserisci il PIN per sbloccare gli strumenti avanzati.")
@@ -2051,8 +2084,9 @@ private fun SettingsScreen(
                             visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword),
                             isError = developerPinError,
-                            shape = RoundedCornerShape(16.dp)
-                        )
+                            shape = RoundedCornerShape(22.dp)
+                        ,
+                        colors = haliMeoTextFieldColors())
                         if (developerPinError) Text("PIN non corretto.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
                 },
@@ -2114,7 +2148,9 @@ private fun SettingsScreen(
                     Box(Modifier.size(10.dp).background(dotColor, RoundedCornerShape(50)))
                     Text(serverMessage, color=dotColor, style=MaterialTheme.typography.labelLarge)
                 }
-                OutlinedTextField(serverUrl, { serverUrl=it; urlError="" }, label={Text("Indirizzo del server")}, placeholder={Text("http://192.168.1.50:8000")}, singleLine=true, modifier=Modifier.fillMaxWidth())
+                OutlinedTextField(serverUrl, { serverUrl=it; urlError="" }, label={Text("Indirizzo del server")}, placeholder={Text("http://192.168.1.50:8000")}, singleLine=true, modifier=Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = haliMeoTextFieldColors())
                 if (urlError.isNotBlank()) Text(urlError, color=MaterialTheme.colorScheme.error, style=MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick={
@@ -2138,8 +2174,16 @@ private fun SettingsScreen(
             }
         }
         Spacer(Modifier.height(16.dp))
-        if(redeem){OutlinedTextField(code,{code=it},label={Text("Codice invito")},modifier=Modifier.fillMaxWidth());OutlinedTextField(name,{name=it},label={Text("Nome")},modifier=Modifier.fillMaxWidth())}
-        OutlinedTextField(email,{email=it},label={Text("Email")},modifier=Modifier.fillMaxWidth());OutlinedTextField(pass,{pass=it},label={Text("Password")},modifier=Modifier.fillMaxWidth())
+        if(redeem){OutlinedTextField(code,{code=it},label={Text("Codice invito")},modifier=Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = haliMeoTextFieldColors());OutlinedTextField(name,{name=it},label={Text("Nome")},modifier=Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = haliMeoTextFieldColors())}
+        OutlinedTextField(email,{email=it},label={Text("Email")},modifier=Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = haliMeoTextFieldColors());OutlinedTextField(pass,{pass=it},label={Text("Password")},modifier=Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = haliMeoTextFieldColors())
         if(error.isNotBlank())Text(error,color=MaterialTheme.colorScheme.error);Spacer(Modifier.height(12.dp))
         Button(enabled=!busy,onClick={busy=true;val fail:(String)->Unit={error=it;busy=false};if(redeem)onRedeem(code,name,email,pass,fail)else onLogin(email,pass,fail)},modifier=Modifier.fillMaxWidth()){Text(if(redeem)"ACCETTA INVITO" else "ACCEDI")}
         TextButton(onClick={redeem=!redeem;error=""}){Text(if(redeem)"Ho già un account" else "Ho un codice invito")}
@@ -2284,12 +2328,12 @@ private fun DiaryScreen(
 
     if (showCalendar) {
         DatePickerDialog(
-            modifier = LocalHaliMeoPopupHazeModifier.current,
-            onDismissRequest = { showCalendar = false },
+                        onDismissRequest = { showCalendar = false },
             confirmButton = { TextButton(onClick = { selectedDate = calendarState.selectedDateMillis?.let { java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneOffset.UTC).toLocalDate().toString() }; showCalendar = false }) { Text("Filtra") } },
             dismissButton = { TextButton(onClick = { showCalendar = false }) { Text("Annulla") } },
-            colors = DatePickerDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+            colors = DatePickerDefaults.colors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f))
         ) {
+            HaliMeoPopupBackdropBlur()
             DatePicker(
                 state = calendarState,
                 colors = DatePickerDefaults.colors(
@@ -2425,7 +2469,7 @@ private fun DiaryScreen(
                 onValueChange = { query = it },
                 modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(20.dp)),
                 singleLine = true,
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(22.dp),
                 placeholder = { Text("Cerca un ricordo…") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Cerca") },
                 trailingIcon = {
@@ -2645,11 +2689,10 @@ private fun DiaryScreen(
     }
     if (albumEntry != null) {
         AlertDialog(
-            modifier = LocalHaliMeoPopupHazeModifier.current,
-            shape = RoundedCornerShape(30.dp),
-            containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        shape = RoundedCornerShape(30.dp),
+            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.86f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { albumEntry = null },
-            title = { Text("Aggiungi a un album") },
+            title = { HaliMeoPopupBackdropBlur(); Text("Aggiungi a un album") },
             text = {
                 Column(Modifier.fillMaxWidth().heightIn(max = 380.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (albumBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
@@ -2677,7 +2720,9 @@ private fun DiaryScreen(
                     }
                     HorizontalDivider()
                     OutlinedTextField(value = albumTitle, onValueChange = { albumTitle = it.take(100) },
-                        modifier = Modifier.fillMaxWidth(), label = { Text("Nome del nuovo album") }, singleLine = true)
+                        modifier = Modifier.fillMaxWidth(), label = { Text("Nome del nuovo album") }, singleLine = true,
+                        shape = RoundedCornerShape(22.dp),
+                        colors = haliMeoTextFieldColors())
                 }
             },
             confirmButton = {
@@ -2697,11 +2742,10 @@ private fun DiaryScreen(
     }
     if (albumsBrowserOpen) {
         AlertDialog(
-            modifier = LocalHaliMeoPopupHazeModifier.current,
-            shape = RoundedCornerShape(30.dp),
-            containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        shape = RoundedCornerShape(30.dp),
+            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.86f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { albumsBrowserOpen = false },
-            title = { Text("I vostri album") },
+            title = { HaliMeoPopupBackdropBlur(); Text("I vostri album") },
             text = {
                 Column(Modifier.fillMaxWidth().heightIn(max = 430.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
@@ -2710,7 +2754,9 @@ private fun DiaryScreen(
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("Crea un album") },
                         singleLine = true
-                    )
+                    ,
+                        shape = RoundedCornerShape(22.dp),
+                        colors = haliMeoTextFieldColors())
                     if (albumBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
                     else if (albums.isEmpty()) Text("Ancora nessun album. Create il primo per raccogliere i vostri momenti.")
                     else Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -2756,11 +2802,10 @@ private fun DiaryScreen(
     }
     if (selectedAlbum != null) {
         AlertDialog(
-            modifier = LocalHaliMeoPopupHazeModifier.current,
-            shape = RoundedCornerShape(30.dp),
-            containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        shape = RoundedCornerShape(30.dp),
+            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.86f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { selectedAlbum = null; albumDetail = null },
-            title = { Text(albumDetail?.title ?: selectedAlbum?.title ?: "Album") },
+            title = { HaliMeoPopupBackdropBlur(); Text(albumDetail?.title ?: selectedAlbum?.title ?: "Album") },
             text = {
                 Column(Modifier.fillMaxWidth().heightIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     if (albumDetailBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
@@ -2799,11 +2844,10 @@ private fun DiaryScreen(
     }
     if (commentsEntry != null) {
         AlertDialog(
-            modifier = LocalHaliMeoPopupHazeModifier.current,
-            shape = RoundedCornerShape(30.dp),
-            containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        shape = RoundedCornerShape(30.dp),
+            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.86f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { commentsEntry = null },
-            title = { Text("Commenti") },
+            title = { HaliMeoPopupBackdropBlur(); Text("Commenti") },
             text = {
                 Column(Modifier.fillMaxWidth().heightIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (commentsBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
@@ -2835,7 +2879,9 @@ private fun DiaryScreen(
                         }
                     }
                     OutlinedTextField(value = commentDraft, onValueChange = { commentDraft = it.take(4000) },
-                        modifier = Modifier.fillMaxWidth(), label = { Text("Scrivi un commento") }, maxLines = 3)
+                        modifier = Modifier.fillMaxWidth(), label = { Text("Scrivi un commento") }, maxLines = 3,
+                        shape = RoundedCornerShape(22.dp),
+                        colors = haliMeoTextFieldColors())
                 }
             },
             confirmButton = {
@@ -3083,9 +3129,10 @@ private fun MemoryDetailScreen(
         }
     } else Modifier
 
+    Box(Modifier.fillMaxSize()) {
+    HaliMeoAmbientBackdrop(Modifier.fillMaxSize())
     Column(
         Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f), Color.Transparent, MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f))))
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
@@ -3240,13 +3287,13 @@ private fun MemoryDetailScreen(
         }
         Spacer(Modifier.height(24.dp))
     }
+    }
     if (showDeleteConfirmation) {
         AlertDialog(
-            modifier = LocalHaliMeoPopupHazeModifier.current,
-            shape = RoundedCornerShape(30.dp),
-            containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        shape = RoundedCornerShape(30.dp),
+            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.86f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { showDeleteConfirmation = false },
-            title = { Text("Eliminare questo ricordo?") },
+            title = { HaliMeoPopupBackdropBlur(); Text("Eliminare questo ricordo?") },
             text = { Text("Il ricordo verrà rimosso dal diario su questo dispositivo e la cancellazione verrà sincronizzata con l'altro telefono appena possibile.") },
             confirmButton = {
                 TextButton(onClick = { showDeleteConfirmation = false; onDelete() }) {
@@ -3317,22 +3364,12 @@ private fun EditScreen(
     val photoBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, photoUri, context) {
         value = decodeDiaryPhoto(context, existing?.id.orEmpty(), photoUri, maxDimension = 1400, repo = repo)
     }
-    val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = MaterialTheme.colorScheme.primary,
-        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.38f),
-        focusedContainerColor = frostedSurfaceStrongColor(),
-        unfocusedContainerColor = frostedSurfaceColor(),
-        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-        focusedLabelColor = MaterialTheme.colorScheme.primary,
-        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        cursorColor = MaterialTheme.colorScheme.primary
-    )
     val cardShape = RoundedCornerShape(32.dp)
 
+    Box(Modifier.fillMaxSize()) {
+    HaliMeoAmbientBackdrop(Modifier.fillMaxSize())
     Column(
         Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f), Color.Transparent, MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f))))
             .hazeSource(editHaze)
             .verticalScroll(scrollState)
             .imePadding()
@@ -3473,9 +3510,9 @@ private fun EditScreen(
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("Dategli un titolo") },
                         placeholder = { Text("Es. Quel weekend a Monaco") },
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(22.dp),
                         singleLine = true,
-                        colors = fieldColors
+                        colors = haliMeoTextFieldColors()
                     )
                     OutlinedTextField(
                         value = body,
@@ -3483,9 +3520,9 @@ private fun EditScreen(
                         modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp),
                         label = { Text("Cosa è successo?") },
                         placeholder = { Text("Scrivete qui quello che volete ricordare…") },
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(22.dp),
                         minLines = 5,
-                        colors = fieldColors
+                        colors = haliMeoTextFieldColors()
                     )
                 }
             }
@@ -3512,9 +3549,9 @@ private fun EditScreen(
                                 Text("Oggi")
                             }
                         },
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(22.dp),
                         singleLine = true,
-                        colors = fieldColors
+                        colors = haliMeoTextFieldColors()
                     )
                     Text("La data apparirà sul ricordo nel vostro diario.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 }
@@ -3545,6 +3582,7 @@ private fun EditScreen(
                 Text("Annulla")
             }
         }
+    }
     }
 }
 @Composable
