@@ -279,6 +279,7 @@ private val appThemeModeState = mutableStateOf("dark")
 @Composable private fun haliMeoAuthBackdrop(): Brush = if (isHaliMeoDark()) Brush.verticalGradient(listOf(Color(0xFF0A1426), Color(0xFF0B1220), Color(0xFF080D16))) else Brush.verticalGradient(listOf(Color(0xFFF4F8FC), Color(0xFFE7F0F8), Color(0xFFF5F0FA)))
 private val TextPrimary = Color(0xFFF5F7FA)
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 private val LocalHaliMeoSharedTransitionScope = staticCompositionLocalOf<SharedTransitionScope?> { null }
 private val LocalHaliMeoAnimatedVisibilityScope = staticCompositionLocalOf<AnimatedVisibilityScope?> { null }
 
