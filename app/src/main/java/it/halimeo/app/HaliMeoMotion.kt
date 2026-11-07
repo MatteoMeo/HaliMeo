@@ -66,24 +66,21 @@ internal object HaliMeoMotion {
     fun <T> listSpring(dampingRatio: Float = 0.76f): SpringSpec<T> =
         spring(stiffness = 460f, dampingRatio = dampingRatio)
 
-    /** More visible shared-axis transition for full-screen diary destinations. */
+    /**
+     * Fully opaque spatial navigation. No alpha/scale interpolation: it avoids the
+     * previous screen bleeding through the incoming page and keeps the frame workload low.
+     */
     fun detailEnter(forward: Boolean): EnterTransition =
         androidx.compose.animation.slideInHorizontally(
-            animationSpec = spring(dampingRatio = 0.86f, stiffness = 520f),
-            initialOffsetX = { width -> if (forward) width / 7 else -width / 7 }
-        ) + scaleIn(
-            animationSpec = spring(dampingRatio = 0.9f, stiffness = 560f),
-            initialScale = 0.965f
-        ) + fadeIn(tween(durationMillis = 160, easing = LinearOutSlowInEasing))
+            animationSpec = spring(dampingRatio = 0.88f, stiffness = 680f),
+            initialOffsetX = { width -> if (forward) width / 8 else -width / 8 }
+        )
 
     fun detailExit(forward: Boolean): ExitTransition =
         androidx.compose.animation.slideOutHorizontally(
-            animationSpec = spring(dampingRatio = 0.9f, stiffness = 600f),
-            targetOffsetX = { width -> if (forward) -width / 10 else width / 10 }
-        ) + scaleOut(
-            animationSpec = spring(dampingRatio = 0.9f, stiffness = 560f),
-            targetScale = 0.985f
-        ) + fadeOut(tween(durationMillis = 125, easing = FastOutLinearInEasing))
+            animationSpec = spring(dampingRatio = 0.92f, stiffness = 720f),
+            targetOffsetX = { width -> if (forward) -width / 12 else width / 12 }
+        )
 
     /** Shared Z-axis transition for screens that move deeper into the navigation stack. */
     fun sharedAxisZEnter(forward: Boolean): EnterTransition =
