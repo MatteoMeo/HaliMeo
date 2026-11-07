@@ -2879,6 +2879,7 @@ private fun DiaryScreen(
 }
 
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun SocialMemoryPost(
     entry: DiaryEntry, authorName: String, photo: android.graphics.Bitmap?, expanded: Boolean,
@@ -3051,6 +3052,7 @@ private fun SocialMemoryPost(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun MemoryDetailScreen(
     entry: DiaryEntry,
