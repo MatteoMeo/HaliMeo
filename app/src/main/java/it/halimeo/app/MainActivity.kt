@@ -2032,65 +2032,7 @@ private fun SettingsScreen(
                 AnimatedVisibility(visible = developerUnlocked, enter = HaliMeoMotion.sectionEnter(reduceAnimationsState.value), exit = HaliMeoMotion.sectionExit(reduceAnimationsState.value)) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("SERVER API", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                        OutlinedTextField(
-                            value = serverDraft,
-                            onValueChange = { serverDraft = it },
-                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(frostedSurfaceColor(), RoundedCornerShape(18.dp)),
-                            shape = RoundedCornerShape(22.dp),
-                            label = { Text("URL base del server") },
-                            placeholder = { Text("https://server.example/") },
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = frostedSurfaceStrongColor(),
-                                unfocusedContainerColor = frostedSurfaceColor(),
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
-                            )
-                        )
-                        Text("Il cambio server non esegue il logout e non cancella i dati locali. Il server di destinazione deve però riconoscere il token di sessione attuale.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(
-                                enabled = !serverBusy && serverDraft.isNotBlank(),
-                                onClick = {
-                                    runCatching { ApiClient.setBaseUrl(serverDraft) }
-                                        .onSuccess {
-                                            serverDraft = ApiClient.baseUrl()
-                                            serverBusy = true
-                                            developerStatus = "Indirizzo salvato. Verifico la sessione…"
-                                            activity.lifecycleScope.launch {
-                                                val token = session.token()
-                                                if (token.isNullOrBlank()) {
-                                                    developerStatus = "Server salvato. Nessuna sessione attiva da verificare."
-                                                } else {
-                                                    runCatching { ApiClient.api.me("Bearer $token") }
-                                                        .onSuccess { developerStatus = "Connessione e sessione verificate." }
-                                                        .onFailure { developerStatus = "URL salvato, verifica non riuscita: ${it.message ?: "errore di rete"}" }
-                                                }
-                                                serverBusy = false
-                                            }
-                                        }
-                                        .onFailure { developerStatus = it.message ?: "URL non valido." }
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                if (serverBusy) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                                else Icon(Icons.Default.Save, contentDescription = null)
-                                Spacer(Modifier.width(6.dp))
-                                Text("Applica")
-                            }
-                            OutlinedButton(
-                                onClick = {
-                                    ApiClient.setBaseUrl(BuildConfig.API_BASE_URL)
-                                    serverDraft = ApiClient.baseUrl()
-                                    developerStatus = "Ripristinato il server predefinito."
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(16.dp)
-                            ) { Text("Predefinito") }
-                        }
-                        Text("Attivo: ${ApiClient.baseUrl()}", color = secondaryText, style = MaterialTheme.typography.labelSmall)
-                        if (developerStatus.isNotBlank()) Text(developerStatus, color = accentText, style = MaterialTheme.typography.bodySmall)
+                        Text("Server predefinito: ${ApiClient.baseUrl()}", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
                         Text("STRUMENTI", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                         OutlinedButton(
@@ -2182,13 +2124,9 @@ private fun SettingsScreen(
         }
     }
     var redeem by remember{mutableStateOf(false)};var code by remember{mutableStateOf("")};var name by remember{mutableStateOf("")};var email by remember{mutableStateOf("")};var pass by remember{mutableStateOf("")};var error by remember{mutableStateOf("")};var busy by remember{mutableStateOf(false)}
-    var serverUrl by remember { mutableStateOf(ApiClient.baseUrl().removeSuffix("/")) }
-    // Separato dal testo digitato: controlliamo l'URL salvato, non quello ancora in modifica.
-    var serverCheckUrl by remember { mutableStateOf(ApiClient.baseUrl().removeSuffix("/")) }
     var serverOnline by remember { mutableStateOf<Boolean?>(null) }
     var serverMessage by remember { mutableStateOf("Verifica connessione…") }
-    var urlError by remember { mutableStateOf("") }
-    LaunchedEffect(serverCheckUrl) {
+    LaunchedEffect(Unit) {
         while (true) {
             serverOnline = null
             serverMessage = "Verifica connessione…"
@@ -2211,29 +2149,7 @@ private fun SettingsScreen(
                     Box(Modifier.size(10.dp).background(dotColor, RoundedCornerShape(50)))
                     Text(serverMessage, color=dotColor, style=MaterialTheme.typography.labelLarge)
                 }
-                OutlinedTextField(serverUrl, { serverUrl=it; urlError="" }, label={Text("Indirizzo del server")}, placeholder={Text("http://192.168.1.50:8000")}, singleLine=true, modifier=Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(22.dp),
-                        colors = haliMeoTextFieldColors())
-                if (urlError.isNotBlank()) Text(urlError, color=MaterialTheme.colorScheme.error, style=MaterialTheme.typography.bodySmall)
-                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick={
-                        try {
-                            if (!serverUrl.trim().startsWith("http://") && !serverUrl.trim().startsWith("https://")) throw IllegalArgumentException("Inserisci un URL che inizi con http:// o https://")
-                            ApiClient.setBaseUrl(serverUrl.trim())
-                            serverUrl = ApiClient.baseUrl().removeSuffix("/")
-                            serverCheckUrl = serverUrl
-                            serverOnline = null
-                            serverMessage = "Verifica connessione…"
-                            urlError = ""
-                        } catch (e: Exception) { urlError=e.message ?: "Indirizzo non valido" }
-                    }, modifier=Modifier.weight(1f)) { Text("Salva server") }
-                    OutlinedButton(onClick={
-                        serverUrl = ApiClient.baseUrl().removeSuffix("/")
-                        serverCheckUrl = serverUrl
-                        serverOnline = null
-                        serverMessage = "Verifica connessione…"
-                    }, modifier=Modifier.weight(1f)) { Text("Ricarica") }
-                }
+                Text("Connessione automatica a HaliMeo", color=MaterialTheme.colorScheme.onSurfaceVariant, style=MaterialTheme.typography.bodySmall)
             }
         }
         Spacer(Modifier.height(16.dp))
