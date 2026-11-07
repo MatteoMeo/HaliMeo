@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.Flow
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.util.UUID
 
@@ -29,6 +30,7 @@ class DiaryRepository(context: Context) {
     private val dao = HaliMeoDatabase.get(appContext).diaryDao()
     private val session = SessionStore(appContext)
     private val photoDir = File(appContext.filesDir, "diary_photos").apply { mkdirs() }
+    private val profilePhotoCache = java.util.concurrent.ConcurrentHashMap<String, ByteArray>()
     val entries: Flow<List<DiaryEntry>> = dao.observeAll()
 
     private fun importPhoto(uri: String, id: String): String {
@@ -361,6 +363,41 @@ class DiaryRepository(context: Context) {
             dao.upsertSocialAction(PendingSocialAction(UUID.randomUUID().toString(), entryId, "DELETE_COMMENT", commentId, System.currentTimeMillis()))
             SyncScheduler.requestImmediate(appContext)
             mapOf("deleted" to true)
+        }
+    }
+
+    suspend fun uploadProfilePhoto(uri: String) {
+        val token = session.token() ?: throw IllegalStateException("Accedi per aggiornare la foto profilo.")
+        val parsed = Uri.parse(uri)
+        val mime = appContext.contentResolver.getType(parsed)?.substringBefore(";")?.lowercase()
+            ?.takeIf { it in setOf("image/jpeg", "image/png", "image/webp") }
+            ?: "image/jpeg"
+        val payload = appContext.contentResolver.openInputStream(parsed)?.use { it.readBytes() }
+            ?: throw IllegalArgumentException("Impossibile leggere la foto selezionata.")
+        require(payload.isNotEmpty() && payload.size <= 5 * 1024 * 1024) {
+            "La foto profilo deve pesare al massimo 5 MB."
+        }
+        val part = MultipartBody.Part.createFormData(
+            "photo", "profile-${System.currentTimeMillis()}.jpg",
+            payload.toRequestBody(mime.toMediaType())
+        )
+        ApiClient.api.uploadProfilePhoto("Bearer $token", part)
+        profilePhotoCache.remove(session.userId())
+    }
+
+    suspend fun loadProfilePhotoBytes(userId: String): ByteArray? {
+        profilePhotoCache[userId]?.let { return it }
+        return try {
+            val token = session.token() ?: return null
+            val bytes = ApiClient.api.downloadProfilePhoto("Bearer $token", userId).use { response ->
+                response.byteStream().use { it.readBytes() }
+            }
+            if (bytes.isNotEmpty()) profilePhotoCache[userId] = bytes
+            bytes
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
         }
     }
 
