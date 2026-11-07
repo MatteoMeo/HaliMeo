@@ -2492,8 +2492,11 @@ private fun DiaryScreen(
                             item(key = "memory_highlights") {
                                 Column(verticalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.padding(bottom = 4.dp)) {
                                     Text("Highlights", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                                        photoHighlights.forEach { highlight ->
+                                    androidx.compose.foundation.lazy.LazyRow(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                    ) {
+                                        items(photoHighlights, key = { it.id }) { highlight ->
                                             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
                                                 val storyBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, highlight.photoUri) {
                                                     value = decodeDiaryPhoto(diaryContext, highlight.id, highlight.photoUri, maxDimension = 480, repo = repo)
