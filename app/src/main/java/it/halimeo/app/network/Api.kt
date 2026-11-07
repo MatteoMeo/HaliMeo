@@ -64,7 +64,7 @@ interface HaliMeoApi {
     @POST("v1/albums/{albumId}/entries") suspend fun addAlbumEntry(@Header("Authorization") auth: String, @Path("albumId") albumId: String, @Body request: AlbumEntryRequest): Map<String, Boolean>
     @DELETE("v1/albums/{albumId}/entries/{entryId}") suspend fun removeAlbumEntry(@Header("Authorization") auth: String, @Path("albumId") albumId: String, @Path("entryId") entryId: String): Map<String, Boolean>
     @Multipart @POST("v1/entries/{entryId}/photo") suspend fun uploadPhoto(@Header("Authorization") auth: String, @Path("entryId") entryId: String, @Query("photoUpdatedAt") photoUpdatedAt: Long, @Part photo: MultipartBody.Part): Map<String, Any>
-    @Streaming @GET("v1/entries/{entryId}/photo") suspend fun downloadPhoto(@Header("Authorization") auth: String, @Path("entryId") entryId: String): ResponseBody
+    @Streaming @GET("v1/entries/{entryId}/photo") suspend fun downloadPhoto(@Header("Authorization") auth: String, @Path("entryId") entryId: String, @Query("maxDimension") maxDimension: Int = 1280): ResponseBody
     @DELETE("v1/entries/{entryId}/photo") suspend fun deletePhoto(@Header("Authorization") auth: String, @Path("entryId") entryId: String, @Query("photoUpdatedAt") photoUpdatedAt: Long): Map<String, Any>
     @GET("v1/health") suspend fun health(): Map<String, Any>
 }
