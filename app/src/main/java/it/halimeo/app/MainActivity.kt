@@ -631,13 +631,18 @@ class MainActivity:ComponentActivity() {
         tonalElevation = 0.dp
     ) {
         val navigationFlingVelocity = with(LocalDensity.current) { 400.dp.toPx() }
-        val navigationDragState = rememberDraggableState { delta ->
-            // Match Morphe's segmented navigation: the pill tracks the finger directly,
-            // while the pager remains responsible for settling onto a page.
-            pagerState.dispatchRawDelta(-delta)
-        }
         BoxWithConstraints(
             Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp)
+        ) {
+            val navigationWidthPx = with(LocalDensity.current) { maxWidth.toPx().coerceAtLeast(1f) }
+            val navigationDragState = rememberDraggableState { delta ->
+                // Scale the pill's drag distance to the full-width pager, keeping the indicator
+                // exactly under the finger despite the narrower navigation surface.
+                val pageWidth = pagerState.layoutInfo.pageSize.toFloat().coerceAtLeast(navigationWidthPx)
+                pagerState.dispatchRawDelta(-delta * pageWidth / navigationWidthPx)
+            }
+            Box(
+                Modifier.fillMaxSize()
                 .draggable(
                     state = navigationDragState,
                     orientation = Orientation.Horizontal,
@@ -654,7 +659,7 @@ class MainActivity:ComponentActivity() {
                         }
                     }
                 )
-        ) {
+            ) {
             val tabWidth = (maxWidth - 6.dp) / 3
             // The indicator is purely visual; only each tab handles taps, so it cannot steal or
             // reinterpret a click while moving between destinations.
