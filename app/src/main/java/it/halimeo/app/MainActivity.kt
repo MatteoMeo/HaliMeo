@@ -101,6 +101,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import android.view.HapticFeedbackConstants
 import android.view.WindowManager
+import android.graphics.drawable.ColorDrawable
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -235,7 +236,7 @@ private val FrostedSurfaceStrong = Color(0xD90D1420)
 private val OneUiMotionEasing = CubicBezierEasing(0.22f, 0.25f, 0f, 1f)
 @Composable private fun frostedGlassBrush(): Brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.065f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.075f)))
 @Composable private fun isHaliMeoDark(): Boolean = when (appThemeModeState.value) { "light" -> false; "system" -> isSystemInDarkTheme(); else -> true }
-@Composable private fun frostedEdgeColor(): Color = Color.Transparent
+@Composable private fun frostedEdgeColor(): Color = MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.22f else 0.16f)
 @Composable
 private fun haliMeoTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
@@ -246,7 +247,11 @@ private fun haliMeoTextFieldColors() = OutlinedTextFieldDefaults.colors(
     unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
     focusedLabelColor = MaterialTheme.colorScheme.primary,
     unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-    cursorColor = MaterialTheme.colorScheme.primary
+    cursorColor = MaterialTheme.colorScheme.primary,
+    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+    unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
 )
 
 @Composable
@@ -256,9 +261,10 @@ private fun HaliMeoPopupBackdropBlur() {
     val window = (view.parent as? DialogWindowProvider)?.window
     DisposableEffect(window, density) {
         if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-            window.setBackgroundBlurRadius((26f * density).roundToInt())
-            window.setDimAmount(0.22f)
+            window.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+            window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND or WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            window.setDimAmount(0.18f)
+            window.setBackgroundBlurRadius((48f * density).roundToInt())
         }
         onDispose {
             if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -269,8 +275,8 @@ private fun HaliMeoPopupBackdropBlur() {
     }
 }
 
-@Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.08f else 0.14f).compositeOver(Color(0xD9101419)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.055f).compositeOver(Color(0xF2FFFFFF))
-@Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.10f else 0.18f).compositeOver(Color(0xE60C0F12)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.09f).compositeOver(Color(0xFAFFFFFF))
+@Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.10f else 0.18f).compositeOver(Color(0xA9101419)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.075f).compositeOver(Color(0xE8FFFFFF))
+@Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.12f else 0.22f).compositeOver(Color(0xC20C0F12)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.11f).compositeOver(Color(0xF0FFFFFF))
 private val customBackgroundColorState = mutableStateOf("default")
 private val customBackgroundUriState = mutableStateOf<String?>(null)
 private val backgroundBlurState = mutableStateOf(0f)
@@ -544,7 +550,7 @@ class MainActivity:ComponentActivity() {
         HazeBlurStyle {
             backgroundColor(navigationGlassBackground.copy(alpha = 0.78f))
             colorEffects(listOf(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.32f))))
-            fallbackColorEffect(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.42f)))
+            fallbackColorEffect(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.28f)))
         }
     }
     val navigationScope = rememberCoroutineScope()
@@ -910,7 +916,7 @@ class MainActivity:ComponentActivity() {
         if (available != null) {
             AlertDialog(
                                 shape = RoundedCornerShape(30.dp),
-                containerColor = frostedSurfaceStrongColor().copy(alpha = 0.86f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                containerColor = frostedSurfaceStrongColor().copy(alpha = 0.74f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 onDismissRequest = { showUpdatePrompt = false },
                 icon = { Icon(Icons.Default.SystemUpdate, contentDescription = null) },
                 title = { HaliMeoPopupBackdropBlur(); Text("Nuova versione disponibile") },
@@ -1195,9 +1201,9 @@ private fun SettingsScreen(
     val settingsGlassStyleBackground = MaterialTheme.colorScheme.surface
     val settingsGlassStyle = remember(settingsGlassTint) {
         HazeBlurStyle {
-            backgroundColor(settingsGlassStyleBackground.copy(alpha = 0.72f))
-            colorEffects(listOf(HazeColorEffect.tint(settingsGlassTint.copy(alpha = 0.30f))))
-            fallbackColorEffect(HazeColorEffect.tint(settingsGlassTint.copy(alpha = 0.42f)))
+            backgroundColor(settingsGlassStyleBackground.copy(alpha = 0.42f))
+            colorEffects(listOf(HazeColorEffect.tint(settingsGlassTint.copy(alpha = 0.15f))))
+            fallbackColorEffect(HazeColorEffect.tint(settingsGlassTint.copy(alpha = 0.28f)))
         }
     }
     val settingsScrollState = rememberScrollState()
@@ -2069,7 +2075,7 @@ private fun SettingsScreen(
         if (showDeveloperPinDialog) {
             AlertDialog(
                                 shape = RoundedCornerShape(30.dp),
-                containerColor = frostedSurfaceStrongColor().copy(alpha = 0.86f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                containerColor = frostedSurfaceStrongColor().copy(alpha = 0.74f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 onDismissRequest = { showDeveloperPinDialog = false; developerPin = "" },
                 title = { HaliMeoPopupBackdropBlur(); Text("Opzioni sviluppatore") },
                 text = {
@@ -2113,9 +2119,9 @@ private fun SettingsScreen(
     val authGlassStyleBackground = MaterialTheme.colorScheme.surface
     val authGlassStyle = remember(authGlassTint) {
         HazeBlurStyle {
-            backgroundColor(authGlassStyleBackground.copy(alpha = 0.72f))
-            colorEffects(listOf(HazeColorEffect.tint(authGlassTint.copy(alpha = 0.30f))))
-            fallbackColorEffect(HazeColorEffect.tint(authGlassTint.copy(alpha = 0.42f)))
+            backgroundColor(authGlassStyleBackground.copy(alpha = 0.42f))
+            colorEffects(listOf(HazeColorEffect.tint(authGlassTint.copy(alpha = 0.15f))))
+            fallbackColorEffect(HazeColorEffect.tint(authGlassTint.copy(alpha = 0.28f)))
         }
     }
     var redeem by remember{mutableStateOf(false)};var code by remember{mutableStateOf("")};var name by remember{mutableStateOf("")};var email by remember{mutableStateOf("")};var pass by remember{mutableStateOf("")};var error by remember{mutableStateOf("")};var busy by remember{mutableStateOf(false)}
@@ -2263,9 +2269,9 @@ private fun DiaryScreen(
     val diaryGlassStyleBackground = MaterialTheme.colorScheme.surface
     val diaryGlassStyle = remember(diaryGlassTint) {
         HazeBlurStyle {
-            backgroundColor(diaryGlassStyleBackground.copy(alpha = 0.72f))
-            colorEffects(listOf(HazeColorEffect.tint(diaryGlassTint.copy(alpha = 0.30f))))
-            fallbackColorEffect(HazeColorEffect.tint(diaryGlassTint.copy(alpha = 0.42f)))
+            backgroundColor(diaryGlassStyleBackground.copy(alpha = 0.42f))
+            colorEffects(listOf(HazeColorEffect.tint(diaryGlassTint.copy(alpha = 0.15f))))
+            fallbackColorEffect(HazeColorEffect.tint(diaryGlassTint.copy(alpha = 0.28f)))
         }
     }
     val diaryContext = LocalContext.current
@@ -2331,7 +2337,7 @@ private fun DiaryScreen(
                         onDismissRequest = { showCalendar = false },
             confirmButton = { TextButton(onClick = { selectedDate = calendarState.selectedDateMillis?.let { java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneOffset.UTC).toLocalDate().toString() }; showCalendar = false }) { Text("Filtra") } },
             dismissButton = { TextButton(onClick = { showCalendar = false }) { Text("Annulla") } },
-            colors = DatePickerDefaults.colors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f))
+            colors = DatePickerDefaults.colors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.76f))
         ) {
             HaliMeoPopupBackdropBlur()
             DatePicker(
@@ -2467,7 +2473,7 @@ private fun DiaryScreen(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(20.dp)),
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle),
                 singleLine = true,
                 shape = RoundedCornerShape(22.dp),
                 placeholder = { Text("Cerca un ricordo…") },
@@ -2479,19 +2485,7 @@ private fun DiaryScreen(
                         }
                     }
                 },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.55f),
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    focusedContainerColor = frostedSurfaceStrongColor(),
-                    unfocusedContainerColor = frostedSurfaceColor(),
-                    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                    focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                colors = haliMeoTextFieldColors()
             )
         }
         Spacer(Modifier.height(12.dp))
@@ -2690,7 +2684,7 @@ private fun DiaryScreen(
     if (albumEntry != null) {
         AlertDialog(
                         shape = RoundedCornerShape(30.dp),
-            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.86f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.74f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { albumEntry = null },
             title = { HaliMeoPopupBackdropBlur(); Text("Aggiungi a un album") },
             text = {
@@ -2743,7 +2737,7 @@ private fun DiaryScreen(
     if (albumsBrowserOpen) {
         AlertDialog(
                         shape = RoundedCornerShape(30.dp),
-            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.86f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.74f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { albumsBrowserOpen = false },
             title = { HaliMeoPopupBackdropBlur(); Text("I vostri album") },
             text = {
@@ -2803,7 +2797,7 @@ private fun DiaryScreen(
     if (selectedAlbum != null) {
         AlertDialog(
                         shape = RoundedCornerShape(30.dp),
-            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.86f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.74f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { selectedAlbum = null; albumDetail = null },
             title = { HaliMeoPopupBackdropBlur(); Text(albumDetail?.title ?: selectedAlbum?.title ?: "Album") },
             text = {
@@ -2845,7 +2839,7 @@ private fun DiaryScreen(
     if (commentsEntry != null) {
         AlertDialog(
                         shape = RoundedCornerShape(30.dp),
-            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.86f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.74f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { commentsEntry = null },
             title = { HaliMeoPopupBackdropBlur(); Text("Commenti") },
             text = {
@@ -3291,7 +3285,7 @@ private fun MemoryDetailScreen(
     if (showDeleteConfirmation) {
         AlertDialog(
                         shape = RoundedCornerShape(30.dp),
-            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.86f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.74f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { showDeleteConfirmation = false },
             title = { HaliMeoPopupBackdropBlur(); Text("Eliminare questo ricordo?") },
             text = { Text("Il ricordo verrà rimosso dal diario su questo dispositivo e la cancellazione verrà sincronizzata con l'altro telefono appena possibile.") },
@@ -3327,9 +3321,9 @@ private fun EditScreen(
     val editGlassStyleBackground = MaterialTheme.colorScheme.surface
     val editGlassStyle = remember(editGlassTint) {
         HazeBlurStyle {
-            backgroundColor(editGlassStyleBackground.copy(alpha = 0.72f))
-            colorEffects(listOf(HazeColorEffect.tint(editGlassTint.copy(alpha = 0.30f))))
-            fallbackColorEffect(HazeColorEffect.tint(editGlassTint.copy(alpha = 0.42f)))
+            backgroundColor(editGlassStyleBackground.copy(alpha = 0.42f))
+            colorEffects(listOf(HazeColorEffect.tint(editGlassTint.copy(alpha = 0.15f))))
+            fallbackColorEffect(HazeColorEffect.tint(editGlassTint.copy(alpha = 0.28f)))
         }
     }
     val scrollState = rememberScrollState()
@@ -3625,9 +3619,9 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
     val tripsGlassStyleBackground = MaterialTheme.colorScheme.surface
     val tripsGlassStyle = remember(tripsGlassTint) {
         HazeBlurStyle {
-            backgroundColor(tripsGlassStyleBackground.copy(alpha = 0.72f))
-            colorEffects(listOf(HazeColorEffect.tint(tripsGlassTint.copy(alpha = 0.30f))))
-            fallbackColorEffect(HazeColorEffect.tint(tripsGlassTint.copy(alpha = 0.42f)))
+            backgroundColor(tripsGlassStyleBackground.copy(alpha = 0.42f))
+            colorEffects(listOf(HazeColorEffect.tint(tripsGlassTint.copy(alpha = 0.15f))))
+            fallbackColorEffect(HazeColorEffect.tint(tripsGlassTint.copy(alpha = 0.28f)))
         }
     }
     val tripsScrollState = rememberScrollState()
