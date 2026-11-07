@@ -312,6 +312,7 @@ private val customBackgroundColorState = mutableStateOf("default")
 private val customBackgroundUriState = mutableStateOf<String?>(null)
 private val backgroundBlurState = mutableStateOf(0f)
 private val backgroundOverlayState = mutableStateOf(0.48f)
+private val ambientLightState = mutableFloatStateOf(0.78f)
 private val backgroundBrightnessState = mutableStateOf(50f)
 private fun readBackgroundBrightness(prefs: android.content.SharedPreferences): Float {
     if (prefs.contains("background_brightness_percent")) {
@@ -383,6 +384,7 @@ private val LocalHaliMeoAnimatedVisibilityScope = staticCompositionLocalOf<Anima
         customBackgroundUriState.value = null
         backgroundBlurState.value = prefs.getFloat("background_blur", 0f)
         backgroundOverlayState.value = prefs.getFloat("background_overlay", 0.48f)
+        ambientLightState.floatValue = prefs.getFloat("ambient_light_intensity", 0.78f).coerceIn(0.2f, 1f)
         backgroundBrightnessState.value = readBackgroundBrightness(prefs)
         val appReduceMotion = prefs.getBoolean("reduce_animations", false)
         val systemReduceMotion = runCatching {
@@ -768,11 +770,15 @@ class MainActivity:ComponentActivity() {
             // A little taller and raised: its visual center now lines up with the + button.
             .padding(vertical = 8.dp)
             .height(56.dp)
-            .then(
-                if (reduceStaticEffectsState.value) Modifier.background(navigationGlassTint, RoundedCornerShape(50))
-                else Modifier.hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)
-                    .graphicsLayer { shape = RoundedCornerShape(50); clip = true }
-                    .clip(RoundedCornerShape(50))
+            .clip(RoundedCornerShape(50))
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        frostedSurfaceStrongColor().copy(alpha = if (isHaliMeoDark()) 0.96f else 0.92f),
+                        frostedSurfaceColor().copy(alpha = if (isHaliMeoDark()) 0.92f else 0.90f),
+                        frostedSurfaceStrongColor().copy(alpha = if (isHaliMeoDark()) 0.98f else 0.94f)
+                    )
+                )
             ),
         shape = RoundedCornerShape(50),
         color = Color.Transparent,
@@ -932,10 +938,9 @@ class MainActivity:ComponentActivity() {
         Surface(
             modifier = Modifier.size(46.dp)
                 .haliMeoPressScale(fabInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.96f, label = "newMemoryFabPress")
-                .then(if (reduceStaticEffectsState.value) Modifier else Modifier.hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle))
                 .clip(RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.96f else 0.62f),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
             shadowElevation = 7.dp
         ) {
             Box(Modifier.fillMaxSize().clip(RoundedCornerShape(32.dp)).clickable(interactionSource = fabInteraction, indication = LocalIndication.current, role = androidx.compose.ui.semantics.Role.Button, onClickLabel = "Nuovo ricordo") { navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); editing = null; nav.navigate("edit") }, contentAlignment = Alignment.Center) {
@@ -985,6 +990,7 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
     val photoBlur = backgroundBlurState.value
     val overlayStrength = backgroundOverlayState.value
     val brightnessAdjustment = backgroundBrightnessState.value
+    val ambientIntensity = ambientLightState.floatValue
     // Keep the backdrop static. A frame-by-frame animated layer underneath a live blur
     // continuously invalidates the captured surface and can look like navbar flicker.
     val driftX = 0f
@@ -1051,8 +1057,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             Modifier.align(Alignment.TopCenter).offset(x = driftX.dp, y = (-140).dp + driftY.dp).size(460.dp)
                 .background(
                     Brush.radialGradient(
-                        0.0f to palette.primary.copy(alpha = 0.36f),
-                        0.42f to palette.secondary.copy(alpha = 0.17f),
+                        0.0f to palette.primary.copy(alpha = 0.36f * ambientIntensity),
+                        0.42f to palette.secondary.copy(alpha = 0.17f * ambientIntensity),
                         1.0f to Color.Transparent
                     ), RoundedCornerShape(50)
                 )
@@ -1061,8 +1067,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             Modifier.align(Alignment.CenterStart).offset(x = (-210).dp - driftX.dp * 0.55f, y = 40.dp + driftY.dp).size(380.dp)
                 .background(
                     Brush.radialGradient(
-                        0.0f to palette.tertiary.copy(alpha = 0.20f),
-                        0.48f to palette.tertiary.copy(alpha = 0.085f),
+                        0.0f to palette.tertiary.copy(alpha = 0.20f * ambientIntensity),
+                        0.48f to palette.tertiary.copy(alpha = 0.085f * ambientIntensity),
                         1.0f to Color.Transparent
                     ), RoundedCornerShape(50)
                 )
@@ -1071,8 +1077,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             Modifier.align(Alignment.BottomEnd).offset(x = 190.dp - driftX.dp * 0.45f, y = 150.dp - driftY.dp).size(400.dp)
                 .background(
                     Brush.radialGradient(
-                        0.0f to palette.secondary.copy(alpha = 0.19f),
-                        0.45f to palette.primary.copy(alpha = 0.05f),
+                        0.0f to palette.secondary.copy(alpha = 0.19f * ambientIntensity),
+                        0.45f to palette.primary.copy(alpha = 0.05f * ambientIntensity),
                         1.0f to Color.Transparent
                     ), RoundedCornerShape(50)
                 )
@@ -1583,6 +1589,24 @@ private fun SettingsScreen(
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = if (isHaliMeoDark()) Color.White else MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                         }
                     }
+                }
+                Text("Luce ambientale", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text("Regola quanto risaltano i riflessi e le sfumature dello sfondo.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                var ambientIntensity by remember { mutableFloatStateOf(ambientLightState.floatValue) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Discreta", color = secondaryText, style = MaterialTheme.typography.labelSmall)
+                    Slider(
+                        value = ambientIntensity,
+                        onValueChange = {
+                            ambientIntensity = it
+                            ambientLightState.floatValue = it
+                            ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+                                .edit().putFloat("ambient_light_intensity", it).apply()
+                        },
+                        valueRange = 0.2f..1f,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text("Intensa", color = secondaryText, style = MaterialTheme.typography.labelSmall)
                 }
                 Text("Atmosfere One UI 9", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Text("Scegli una profondità di colore completa: sfondo sfumato, luce ambientale e accenti coordinati.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
@@ -3044,11 +3068,17 @@ private fun SocialMemoryPost(
     Column(
         modifier.fillMaxWidth()
             .animateContentSize(animationSpec = HaliMeoMotion.contentSizeSpring)
-            .shadow(12.dp, cardShape, clip = false)
-            .hazeBlur(HazeInput.Sources(hazeState), glassStyle)
-            .graphicsLayer { shape = cardShape; clip = true }
+            .shadow(14.dp, cardShape, clip = true)
             .clip(cardShape)
-            .background(Brush.linearGradient(listOf(frostedSurfaceStrongColor(), frostedSurfaceColor(), frostedSurfaceStrongColor())))
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        frostedSurfaceStrongColor().copy(alpha = 0.96f),
+                        frostedSurfaceColor().copy(alpha = 0.94f),
+                        frostedSurfaceStrongColor().copy(alpha = 0.98f)
+                    )
+                )
+            )
             .border(1.dp, frostedEdgeColor(), cardShape)
     ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
