@@ -654,42 +654,58 @@ class MainActivity:ComponentActivity() {
         border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor()),
         tonalElevation = 0.dp
     ) {
-        val navigationFlingVelocity = with(LocalDensity.current) { 400.dp.toPx() }
         BoxWithConstraints(
             Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp)
         ) {
-            val navigationWidthPx = with(LocalDensity.current) { maxWidth.toPx().coerceAtLeast(1f) }
-            val navigationDragState = rememberDraggableState { delta ->
-                // Scale the pill's drag distance to the full-width pager, keeping the indicator
-                // exactly under the finger despite the narrower navigation surface.
-                val pageWidth = pagerState.layoutInfo.pageSize.toFloat().coerceAtLeast(navigationWidthPx)
-                pagerState.dispatchRawDelta(-delta * pageWidth / navigationWidthPx)
-            }
             val tabWidth = (maxWidth - 6.dp) / 3
+            val navigationSlotWidthPx = with(LocalDensity.current) { (tabWidth + 3.dp).toPx().coerceAtLeast(1f) }
+            var isNavigationDragging by remember { mutableStateOf(false) }
+            var navigationPillPosition by remember { mutableFloatStateOf(pagerState.currentPage.toFloat()) }
             Box(
                 Modifier.fillMaxSize()
-                .draggable(
-                    state = navigationDragState,
-                    orientation = Orientation.Horizontal,
-                    onDragStopped = { velocity ->
-                        navigationScope.launch {
-                            val position = pagerState.currentPage + pagerState.currentPageOffsetFraction
-                            val destination = when {
-                                velocity < -navigationFlingVelocity -> floor(position).toInt() + 1
-                                velocity > navigationFlingVelocity -> ceil(position).toInt() - 1
-                                else -> position.roundToInt()
-                            }.coerceIn(0, 2)
-                            if (reduceAnimationsState.value) pagerState.scrollToPage(destination)
-                            else pagerState.turnToPage(destination)
-                        }
+                    .pointerInput(pagerState, navigationSlotWidthPx) {
+                        detectDragGestures(
+                            onDragStart = {
+                                navigationPillPosition = (
+                                    pagerState.currentPage + pagerState.currentPageOffsetFraction
+                                ).coerceIn(0f, 2f)
+                                isNavigationDragging = true
+                            },
+                            onDragEnd = {
+                                val destination = navigationPillPosition.roundToInt().coerceIn(0, 2)
+                                isNavigationDragging = false
+                                navigationScope.launch {
+                                    if (reduceAnimationsState.value) pagerState.scrollToPage(destination)
+                                    else pagerState.turnToPage(destination)
+                                }
+                            },
+                            onDragCancel = {
+                                isNavigationDragging = false
+                                navigationScope.launch {
+                                    val destination = pagerState.currentPage
+                                    if (reduceAnimationsState.value) pagerState.scrollToPage(destination)
+                                    else pagerState.turnToPage(destination)
+                                }
+                            },
+                            onDrag = { change, dragAmount ->
+                                // This is a local gesture: move only the pill with the finger.
+                                // Do not dispatch deltas to PagerState, or the page underneath
+                                // will scroll and the indicator will appear to move backwards.
+                                change.consume()
+                                navigationPillPosition = (
+                                    navigationPillPosition + dragAmount.x / navigationSlotWidthPx
+                                ).coerceIn(0f, 2f)
+                            }
+                        )
                     }
-                )
             ) {
-            // The indicator is purely visual; only each tab handles taps, so it cannot steal or
-            // reinterpret a click while moving between destinations.
+            // While dragging, the pill is driven directly by the finger. Once released,
+            // it returns to the pager's position and settles on the nearest tab.
             Box(
                 Modifier.graphicsLayer {
-                    val pagePosition = if (reduceAnimationsState.value) {
+                    val pagePosition = if (isNavigationDragging) {
+                        navigationPillPosition
+                    } else if (reduceAnimationsState.value) {
                         pagerState.currentPage.toFloat()
                     } else {
                         (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 2f)
