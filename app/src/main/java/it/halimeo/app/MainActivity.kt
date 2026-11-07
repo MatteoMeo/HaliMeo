@@ -64,6 +64,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -426,6 +428,12 @@ class MainActivity:ComponentActivity() {
     val ctx= LocalContext.current; val activity=ctx as ComponentActivity
     val session=remember{SessionStore(ctx)}; val repo=remember{DiaryRepository(ctx)}
     var signed by remember{mutableStateOf<Boolean?>(null)}; var displayName by remember{mutableStateOf("")}
+    var showUpdatePrompt by remember { mutableStateOf(false) }
+    var focusUpdater by remember { mutableStateOf(false) }
+    LaunchedEffect(HaliMeoUpdateState.checkedAt, HaliMeoUpdateState.release) {
+        val available = HaliMeoUpdateState.release
+        showUpdatePrompt = available != null && available.versionCode > BuildConfig.VERSION_CODE.toLong()
+    }
     LaunchedEffect(Unit){signed=!session.token().isNullOrBlank();displayName=session.name()}
     if(signed==null){Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA)),contentAlignment=Alignment.Center){LoadingIndicator(modifier=Modifier.size(64.dp), color=MaterialTheme.colorScheme.primary)};return}
     if(signed==false){AuthScreen(
@@ -555,7 +563,12 @@ class MainActivity:ComponentActivity() {
                             { entry -> nav.navigate("memory/${entry.id}") }
                         )
                         1 -> TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })
-                        else -> SettingsScreen(displayName = displayName, session = session, repo = repo, activity = activity, ctx = ctx)
+                        else -> SettingsScreen(
+                            displayName = displayName, session = session, repo = repo,
+                            activity = activity, ctx = ctx,
+                            focusUpdater = focusUpdater,
+                            onUpdaterFocused = { focusUpdater = false }
+                        )
                     }
                 }
             }
@@ -641,6 +654,7 @@ class MainActivity:ComponentActivity() {
                 val pageWidth = pagerState.layoutInfo.pageSize.toFloat().coerceAtLeast(navigationWidthPx)
                 pagerState.dispatchRawDelta(-delta * pageWidth / navigationWidthPx)
             }
+            val tabWidth = (maxWidth - 6.dp) / 3
             Box(
                 Modifier.fillMaxSize()
                 .draggable(
@@ -660,7 +674,6 @@ class MainActivity:ComponentActivity() {
                     }
                 )
             ) {
-            val tabWidth = (maxWidth - 6.dp) / 3
             // The indicator is purely visual; only each tab handles taps, so it cannot steal or
             // reinterpret a click while moving between destinations.
             Box(
@@ -712,6 +725,7 @@ class MainActivity:ComponentActivity() {
             }
         }
     }
+    }
 
     val fabInteraction = remember { MutableInteractionSource() }
     Surface(
@@ -732,6 +746,31 @@ class MainActivity:ComponentActivity() {
             Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(21.dp), tint = MaterialTheme.colorScheme.onPrimary)
         }
     }
+    }
+    if (showUpdatePrompt) {
+        val available = HaliMeoUpdateState.release
+        if (available != null) {
+            AlertDialog(
+                onDismissRequest = { showUpdatePrompt = false },
+                icon = { Icon(Icons.Default.SystemUpdate, contentDescription = null) },
+                title = { Text("Nuova versione disponibile") },
+                text = {
+                    Text("È disponibile HaliMeo ${available.versionName}. Vuoi aprire l'updater per installare l'aggiornamento?")
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showUpdatePrompt = false
+                            focusUpdater = true
+                            selectPrimaryTab(2)
+                        }
+                    ) { Text("Installa") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showUpdatePrompt = false }) { Text("Ignora") }
+                }
+            )
+        }
     }
 }
 /**
@@ -895,6 +934,8 @@ private fun SettingsScreen(
     repo: DiaryRepository,
     activity: ComponentActivity,
     ctx: android.content.Context,
+    focusUpdater: Boolean = false,
+    onUpdaterFocused: () -> Unit = {},
 ) {
     val diaryEntries by repo.entries.collectAsState(initial = emptyList())
     val settingsFeedbackView = LocalView.current
@@ -1000,6 +1041,14 @@ private fun SettingsScreen(
         }
     }
     val settingsScrollState = rememberScrollState()
+    val updateCenterRequester = remember { BringIntoViewRequester() }
+    LaunchedEffect(focusUpdater) {
+        if (focusUpdater) {
+            kotlinx.coroutines.delay(80)
+            updateCenterRequester.bringIntoView()
+            onUpdaterFocused()
+        }
+    }
     var settingsHeaderCollapsed by remember { mutableStateOf(false) }
     LaunchedEffect(settingsScrollState) {
         androidx.compose.runtime.snapshotFlow { settingsScrollState.value }.collect { scrollY ->
@@ -1736,7 +1785,9 @@ private fun SettingsScreen(
                 }
                 Text("Package: ${BuildConfig.APPLICATION_ID}", color = secondaryText, style = MaterialTheme.typography.labelSmall)
                 Text("Diario privato condiviso · Android API 37", color = secondaryText, style = MaterialTheme.typography.labelSmall)
-                UpdateCenterCard(activity)
+                Box(Modifier.fillMaxWidth().bringIntoViewRequester(updateCenterRequester)) {
+                    UpdateCenterCard(activity)
+                }
             }
         }
 
