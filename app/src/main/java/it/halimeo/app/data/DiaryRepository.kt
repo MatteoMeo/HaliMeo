@@ -11,6 +11,8 @@ import it.halimeo.app.network.SocialComment
 import it.halimeo.app.network.SocialFeedEntry
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import it.halimeo.app.network.SocialCommentRequest
 import it.halimeo.app.network.SocialCommentResponse
 import it.halimeo.app.network.SocialAlbum
@@ -31,6 +33,7 @@ class DiaryRepository(context: Context) {
     private val session = SessionStore(appContext)
     private val photoDir = File(appContext.filesDir, "diary_photos").apply { mkdirs() }
     private val profilePhotoCache = java.util.concurrent.ConcurrentHashMap<String, ByteArray>()
+    private val profilePhotoLoadMutex = Mutex()
     val entries: Flow<List<DiaryEntry>> = dao.observeAll()
 
     private fun importPhoto(uri: String, id: String): String {
@@ -406,21 +409,22 @@ class DiaryRepository(context: Context) {
         profilePhotoCache.remove(session.userId())
     }
 
-    suspend fun loadProfilePhotoBytes(userId: String): ByteArray? {
-        profilePhotoCache[userId]?.let { return it }
-        return try {
-            val token = session.token() ?: return null
-            val bytes = ApiClient.api.downloadProfilePhoto("Bearer $token", userId).use { response ->
-                response.byteStream().use { it.readBytes() }
+    suspend fun loadProfilePhotoBytes(userId: String): ByteArray? =
+        profilePhotoLoadMutex.withLock {
+            profilePhotoCache[userId]?.let { return@withLock it }
+            try {
+                val token = session.token() ?: return@withLock null
+                val bytes = ApiClient.api.downloadProfilePhoto("Bearer $token", userId).use { response ->
+                    response.byteStream().use { it.readBytes() }
+                }
+                if (bytes.isNotEmpty()) profilePhotoCache[userId] = bytes
+                bytes
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                null
             }
-            if (bytes.isNotEmpty()) profilePhotoCache[userId] = bytes
-            bytes
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (_: Exception) {
-            null
         }
-    }
 
     suspend fun currentUserId() = session.userId()
 
