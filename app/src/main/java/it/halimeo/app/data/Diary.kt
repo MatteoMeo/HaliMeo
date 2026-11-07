@@ -24,6 +24,11 @@ data class DiaryEntry(
     @ColumnInfo(defaultValue = "0") val isFavorite: Boolean = false
 )
 
+const val REMOTE_PHOTO_PREFIX = "remote://"
+
+fun remotePhotoUri(entryId: String, revision: Long): String =
+    "$REMOTE_PHOTO_PREFIX$entryId#$revision"
+
 data class DiaryEntryDto(
     val id: String, val title: String, val body: String, val category: String,
     val memoryDate: String, val createdAt: Long, val updatedAt: Long, val deletedAt: Long? = null,
@@ -56,6 +61,8 @@ interface DiaryDao {
     suspend fun markPhotoSynced(id: String, photoUpdatedAt: Long)
     @Query("UPDATE diary_entries SET photoUpdatedAt=:revision, photoDeletedAt=:deletedAt, photoSyncState='SYNCED' WHERE id=:id AND photoUpdatedAt=:expectedRevision")
     suspend fun confirmPhotoRevision(id: String, expectedRevision: Long, revision: Long, deletedAt: Long?)
+    @Query("UPDATE diary_entries SET photoUri=:remoteUri, photoUpdatedAt=:revision, photoDeletedAt=NULL, photoSyncState='SYNCED' WHERE id=:id AND photoUpdatedAt=:expectedRevision")
+    suspend fun markPhotoUploaded(id: String, expectedRevision: Long, revision: Long, remoteUri: String)
     @Insert(onConflict=OnConflictStrategy.REPLACE) suspend fun upsert(entry: DiaryEntry)
     @Insert(onConflict=OnConflictStrategy.REPLACE) suspend fun upsertAll(entries: List<DiaryEntry>)
     @Query("UPDATE diary_entries SET syncState='SYNCED' WHERE id=:id AND updatedAt=:updatedAt")
