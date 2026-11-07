@@ -702,7 +702,7 @@ class MainActivity:ComponentActivity() {
             ),
         shape = RoundedCornerShape(50),
         color = Color.Transparent,
-        border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor()),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)),
         tonalElevation = 0.dp
     ) {
         BoxWithConstraints(
@@ -3092,7 +3092,7 @@ private fun MemoryDetailScreen(
 
     Column(
         Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surface)))
+            .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.19f).compositeOver(MaterialTheme.colorScheme.background), MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.secondary.copy(alpha = 0.13f).compositeOver(MaterialTheme.colorScheme.background))))
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
@@ -3338,7 +3338,7 @@ private fun EditScreen(
 
     Column(
         Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surface)))
+            .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.19f).compositeOver(MaterialTheme.colorScheme.background), MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.secondary.copy(alpha = 0.13f).compositeOver(MaterialTheme.colorScheme.background))))
             .hazeSource(editHaze)
             .verticalScroll(scrollState)
             .imePadding()
