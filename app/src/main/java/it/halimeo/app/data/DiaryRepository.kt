@@ -369,17 +369,38 @@ class DiaryRepository(context: Context) {
     suspend fun uploadProfilePhoto(uri: String) {
         val token = session.token() ?: throw IllegalStateException("Accedi per aggiornare la foto profilo.")
         val parsed = Uri.parse(uri)
-        val mime = appContext.contentResolver.getType(parsed)?.substringBefore(";")?.lowercase()
-            ?.takeIf { it in setOf("image/jpeg", "image/png", "image/webp") }
-            ?: "image/jpeg"
-        val payload = appContext.contentResolver.openInputStream(parsed)?.use { it.readBytes() }
+        val sourceBytes = appContext.contentResolver.openInputStream(parsed)?.use { it.readBytes() }
             ?: throw IllegalArgumentException("Impossibile leggere la foto selezionata.")
-        require(payload.isNotEmpty() && payload.size <= 5 * 1024 * 1024) {
-            "La foto profilo deve pesare al massimo 5 MB."
+        require(sourceBytes.isNotEmpty() && sourceBytes.size <= 20 * 1024 * 1024) {
+            "La foto selezionata è troppo grande."
         }
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(sourceBytes, 0, sourceBytes.size, bounds)
+        require(bounds.outWidth > 0 && bounds.outHeight > 0) {
+            "Il formato della foto profilo non è supportato."
+        }
+        var sampleSize = 1
+        while (maxOf(bounds.outWidth / sampleSize, bounds.outHeight / sampleSize) > 1024) {
+            sampleSize *= 2
+        }
+        val bitmap = BitmapFactory.decodeByteArray(
+            sourceBytes, 0, sourceBytes.size,
+            BitmapFactory.Options().apply { inSampleSize = sampleSize; inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888 }
+        ) ?: throw IllegalArgumentException("Impossibile decodificare la foto profilo.")
+        val normalized = java.io.ByteArrayOutputStream().use { output ->
+            try {
+                check(bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 88, output)) {
+                    "Impossibile preparare la foto profilo."
+                }
+                output.toByteArray()
+            } finally {
+                bitmap.recycle()
+            }
+        }
+        require(normalized.size <= 5 * 1024 * 1024) { "La foto profilo preparata supera 5 MB." }
         val part = MultipartBody.Part.createFormData(
             "photo", "profile-${System.currentTimeMillis()}.jpg",
-            payload.toRequestBody(mime.toMediaType())
+            normalized.toRequestBody("image/jpeg".toMediaType())
         )
         ApiClient.api.uploadProfilePhoto("Bearer $token", part)
         profilePhotoCache.remove(session.userId())
