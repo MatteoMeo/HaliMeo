@@ -66,6 +66,25 @@ internal object HaliMeoMotion {
     fun <T> listSpring(dampingRatio: Float = 0.76f): SpringSpec<T> =
         spring(stiffness = 460f, dampingRatio = dampingRatio)
 
+    /** More visible shared-axis transition for full-screen diary destinations. */
+    fun detailEnter(forward: Boolean): EnterTransition =
+        androidx.compose.animation.slideInHorizontally(
+            animationSpec = spring(dampingRatio = 0.86f, stiffness = 520f),
+            initialOffsetX = { width -> if (forward) width / 7 else -width / 7 }
+        ) + scaleIn(
+            animationSpec = spring(dampingRatio = 0.9f, stiffness = 560f),
+            initialScale = 0.965f
+        ) + fadeIn(tween(durationMillis = 160, easing = LinearOutSlowInEasing))
+
+    fun detailExit(forward: Boolean): ExitTransition =
+        androidx.compose.animation.slideOutHorizontally(
+            animationSpec = spring(dampingRatio = 0.9f, stiffness = 600f),
+            targetOffsetX = { width -> if (forward) -width / 10 else width / 10 }
+        ) + scaleOut(
+            animationSpec = spring(dampingRatio = 0.9f, stiffness = 560f),
+            targetScale = 0.985f
+        ) + fadeOut(tween(durationMillis = 125, easing = FastOutLinearInEasing))
+
     /** Shared Z-axis transition for screens that move deeper into the navigation stack. */
     fun sharedAxisZEnter(forward: Boolean): EnterTransition =
         scaleIn(
