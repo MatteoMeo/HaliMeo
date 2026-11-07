@@ -134,15 +134,29 @@ class DiaryRepository(context: Context) {
             // Previously downloaded server photos are migrated to a lightweight remote
             // reference. Pending local uploads are deliberately kept on-device until sent.
             if (localTextIsNewer && !remotePhotoIsNewer && local != null) {
-                if (local.photoSyncState == "SYNCED" && local.photoUri != serverPhotoUri) {
+                val hasPendingLocalDeletion = local.photoUri == null && local.photoDeletedAt != null
+                val hasNoPendingLocalFile = local.photoUri.isNullOrBlank() ||
+                    local.photoUri.startsWith(REMOTE_PHOTO_PREFIX)
+                if (!hasPendingLocalDeletion &&
+                    (local.photoSyncState == "SYNCED" || hasNoPendingLocalFile) &&
+                    (local.photoUri != serverPhotoUri || local.photoSyncState != "SYNCED")
+                ) {
                     deleteManagedPhoto(local.photoUri)
-                    dao.upsert(local.copy(photoUri = serverPhotoUri))
+                    dao.upsert(local.copy(
+                        photoUri = serverPhotoUri,
+                        photoUpdatedAt = maxOf(dto.photoUpdatedAt, local.photoUpdatedAt),
+                        photoDeletedAt = dto.photoDeletedAt ?: local.photoDeletedAt,
+                        photoSyncState = "SYNCED"
+                    ))
                 }
                 continue
             }
 
             val keepPendingLocalPhoto = local != null &&
-                !remotePhotoIsNewer && local.photoSyncState != "SYNCED"
+                !remotePhotoIsNewer &&
+                local.photoSyncState != "SYNCED" &&
+                !local.photoUri.isNullOrBlank() &&
+                !local.photoUri.startsWith(REMOTE_PHOTO_PREFIX)
             val merged = if (localTextIsNewer && local != null) local.copy(
                 photoUri = if (keepPendingLocalPhoto) local.photoUri else serverPhotoUri,
                 photoUpdatedAt = maxOf(dto.photoUpdatedAt, local.photoUpdatedAt),
