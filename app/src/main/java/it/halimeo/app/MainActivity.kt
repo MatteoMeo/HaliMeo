@@ -258,13 +258,21 @@ private fun haliMeoTextFieldColors() = OutlinedTextFieldDefaults.colors(
 private fun HaliMeoPopupBackdropBlur() {
     val view = LocalView.current
     val density = LocalDensity.current.density
-    val window = (view.parent as? DialogWindowProvider)?.window
+    val window = remember(view) {
+        var parent: android.view.ViewParent? = view.parent
+        var dialogWindow: android.view.Window? = null
+        while (parent != null && dialogWindow == null) {
+            if (parent is DialogWindowProvider) dialogWindow = parent.window
+            parent = parent.parent
+        }
+        dialogWindow
+    }
     DisposableEffect(window, density) {
         if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             window.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
             window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND or WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-            window.setDimAmount(0.18f)
-            window.setBackgroundBlurRadius((48f * density).roundToInt())
+            window.attributes = window.attributes.apply { dimAmount = 0.18f }
+            window.setBackgroundBlurRadius((56f * density).roundToInt())
         }
         onDispose {
             if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -1512,6 +1520,41 @@ private fun SettingsScreen(
                     }
                 }
                 Text("Il tema chiaro mantiene gli stessi accenti, sfondi e personalizzazioni del tema scuro.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                val activeAtmosphere = haliMeoAtmosphere(backgroundColor)
+                Box(
+                    Modifier.fillMaxWidth().height(142.dp).clip(RoundedCornerShape(26.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    activeAtmosphere?.top ?: MaterialTheme.colorScheme.background,
+                                    activeAtmosphere?.primary?.copy(alpha = 0.52f) ?: MaterialTheme.colorScheme.primary.copy(alpha = 0.32f),
+                                    activeAtmosphere?.bottom ?: MaterialTheme.colorScheme.surface
+                                )
+                            )
+                        )
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), RoundedCornerShape(26.dp))
+                ) {
+                    Box(
+                        Modifier.align(Alignment.TopEnd).padding(top = 14.dp, end = 18.dp).size(92.dp)
+                            .background(Brush.radialGradient(listOf(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.42f), Color.Transparent)), CircleShape)
+                    )
+                    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("ANTEPRIMA DEL VOSTRO SPAZIO", color = Color.White.copy(alpha = 0.78f), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.1.sp, fontWeight = FontWeight.Bold)
+                        Row(
+                            Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(19.dp))
+                                .background(Color.White.copy(alpha = if (isHaliMeoDark()) 0.13f else 0.52f))
+                                .border(1.dp, Color.White.copy(alpha = 0.24f), RoundedCornerShape(19.dp))
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("HaliMeo", color = if (isHaliMeoDark()) Color.White else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                                Text("Un posto solo vostro.", color = if (isHaliMeoDark()) Color.White.copy(alpha = 0.72f) else MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = if (isHaliMeoDark()) Color.White else MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                        }
+                    }
+                }
                 Text("Atmosfere One UI 9", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Text("Scegli una profondità di colore completa: sfondo sfumato, luce ambientale e accenti coordinati.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 val atmosphereOptions = listOf(
@@ -1543,16 +1586,21 @@ private fun SettingsScreen(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Box(
-                                Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(15.dp))
+                                Modifier.fillMaxWidth().height(68.dp).clip(RoundedCornerShape(18.dp))
                                     .background(Brush.linearGradient(listOf(colors.top, colors.primary, colors.secondary, colors.bottom)))
                                     .border(
                                         if (backgroundColor == option.first) 2.dp else 1.dp,
-                                        if (backgroundColor == option.first) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                        RoundedCornerShape(15.dp)
+                                        if (backgroundColor == option.first) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.22f),
+                                        RoundedCornerShape(18.dp)
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Box(Modifier.align(Alignment.TopEnd).padding(6.dp).size(9.dp).background(colors.secondary, CircleShape))
+                                Box(Modifier.align(Alignment.TopEnd).padding(7.dp).size(42.dp).background(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.26f), Color.Transparent)), CircleShape))
+                                Box(
+                                    Modifier.align(Alignment.BottomCenter).fillMaxWidth(0.82f).padding(bottom = 7.dp).height(13.dp)
+                                        .clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.24f))
+                                        .border(1.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(50))
+                                )
                                 if (backgroundColor == option.first) {
                                     Icon(Icons.Default.Check, contentDescription = "Selezionato", tint = Color.White, modifier = Modifier.size(19.dp))
                                 }
