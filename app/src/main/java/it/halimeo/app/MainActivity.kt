@@ -879,6 +879,14 @@ class MainActivity:ComponentActivity() {
                 .size(56.dp)
                 .haliMeoPressScale(fabInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.94f, label = "newMemoryFabPress")
                 .clip(RoundedCornerShape(18.dp))
+                .hazeBlur(
+                    input = HazeInput.Backdrop(navigationHaze),
+                    style = navigationGlassStyle,
+                    performanceMode = HazePerformanceMode.Performance,
+                    expandLayerBounds = false
+                )
+                .graphicsLayer { shape = RoundedCornerShape(18.dp); clip = true }
+                .clip(RoundedCornerShape(18.dp))
                 .clickable(
                     interactionSource = fabInteraction,
                     indication = LocalIndication.current,
