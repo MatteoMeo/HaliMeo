@@ -634,7 +634,7 @@ class MainActivity:ComponentActivity() {
                     else HaliMeoMotion.detailEnter(forward = false)
                 },
                 popExitTransition = {
-                    if (reduceAnimationsState.value) fadeOut(tween(80))
+                    if (reduceAnimationsState.value) androidx.compose.animation.ExitTransition.None
                     else HaliMeoMotion.detailExit(forward = false)
                 }
             ) { backStack ->
@@ -651,9 +651,9 @@ class MainActivity:ComponentActivity() {
             }
             composable(
                 route = "memory/{entryId}",
-                enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(90)) else HaliMeoMotion.detailEnter(forward = true) },
+                enterTransition = { if (reduceAnimationsState.value) androidx.compose.animation.EnterTransition.None else HaliMeoMotion.detailEnter(forward = true) },
                 exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.detailExit(forward = true) },
-                popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(80)) else HaliMeoMotion.detailEnter(forward = false) },
+                popEnterTransition = { if (reduceAnimationsState.value) androidx.compose.animation.EnterTransition.None else HaliMeoMotion.detailEnter(forward = false) },
                 popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.detailExit(forward = false) }
             ) { backStack ->
                 CompositionLocalProvider(LocalHaliMeoAnimatedVisibilityScope provides this) {
@@ -2891,6 +2891,22 @@ private fun SocialMemoryPost(
     val initials = authorName.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
         .take(2).mapNotNull { it.firstOrNull()?.uppercaseChar() }.joinToString("").ifBlank { "H" }
     val dateLabel = displayHaliMeoDate(entry.memoryDate)
+    val sharedTransitionScope = LocalHaliMeoSharedTransitionScope.current
+    val animatedVisibilityScope = LocalHaliMeoAnimatedVisibilityScope.current
+    val photoAlpha by animateFloatAsState(
+        targetValue = if (photo != null) 1f else 0f,
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(220, easing = OneUiMotionEasing),
+        label = "diaryPhotoReveal"
+    )
+    val sharedPhotoModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+        with(sharedTransitionScope) {
+            Modifier.sharedElement(
+                rememberSharedContentState(key = "memory-photo-${entry.id}"),
+                animatedVisibilityScope,
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.88f, stiffness = 430f) }
+            )
+        }
+    } else Modifier
     val likeScale by animateFloatAsState(
         targetValue = if (likedByMe) 1.10f else 1f,
         animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.72f, stiffness = 680f),
@@ -2936,7 +2952,9 @@ private fun SocialMemoryPost(
                 Image(
                     bitmap = photo.asImageBitmap(),
                     contentDescription = "Foto del ricordo: ${entry.title}",
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp)
+                        .then(sharedPhotoModifier)
+                        .graphicsLayer { alpha = photoAlpha },
                     contentScale = ContentScale.FillWidth
                 )
                 if (likedByMe) {
@@ -3038,13 +3056,31 @@ private fun MemoryDetailScreen(
     entry: DiaryEntry,
     repo: DiaryRepository,
     onBack: () -> Unit,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
+    var showDeleteConfirmation by remember(entry.id) { mutableStateOf(false) }
     val context = LocalContext.current
     val bitmap by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri) {
         value = decodeDiaryPhoto(context, entry.id, entry.photoUri, maxDimension = 1800, repo = repo)
     }
     val shape = RoundedCornerShape(28.dp)
+    val sharedTransitionScope = LocalHaliMeoSharedTransitionScope.current
+    val animatedVisibilityScope = LocalHaliMeoAnimatedVisibilityScope.current
+    val photoAlpha by animateFloatAsState(
+        targetValue = if (bitmap != null) 1f else 0f,
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(240, easing = OneUiMotionEasing),
+        label = "detailPhotoReveal"
+    )
+    val sharedPhotoModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+        with(sharedTransitionScope) {
+            Modifier.sharedElement(
+                rememberSharedContentState(key = "memory-photo-${entry.id}"),
+                animatedVisibilityScope,
+                boundsTransform = { _, _ -> spring(dampingRatio = 0.88f, stiffness = 430f) }
+            )
+        }
+    } else Modifier
 
     Column(
         Modifier.fillMaxSize()
@@ -3085,6 +3121,18 @@ private fun MemoryDetailScreen(
                         tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
                 }
             }
+            Spacer(Modifier.width(9.dp))
+            Box(
+                Modifier.size(36.dp)
+                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.12f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.24f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                IconButton(onClick = { showDeleteConfirmation = true }, modifier = Modifier.fillMaxSize()) {
+                    Icon(Icons.Default.DeleteOutline, contentDescription = "Elimina ricordo",
+                        tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                }
+            }
         }
 
         Box(
@@ -3097,7 +3145,7 @@ private fun MemoryDetailScreen(
                 Image(
                     bitmap = bitmap!!.asImageBitmap(),
                     contentDescription = "Foto del ricordo",
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().then(sharedPhotoModifier).graphicsLayer { alpha = photoAlpha },
                     contentScale = ContentScale.Crop
                 )
                 Box(
@@ -3176,6 +3224,19 @@ private fun MemoryDetailScreen(
             Text("Modifica ricordo")
         }
         Spacer(Modifier.height(24.dp))
+    }
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text("Eliminare questo ricordo?") },
+            text = { Text("Il ricordo verrà rimosso dal diario su questo dispositivo e la cancellazione verrà sincronizzata con l'altro telefono appena possibile.") },
+            confirmButton = {
+                TextButton(onClick = { showDeleteConfirmation = false; onDelete() }) {
+                    Text("Elimina", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteConfirmation = false }) { Text("Annulla") } }
+        )
     }
 }
 
