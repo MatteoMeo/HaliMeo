@@ -244,7 +244,7 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
         SingleChoiceSegmentedButtonRow(
             modifier = Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(22.dp))
-                .background(frostedSurfaceColor(), RoundedCornerShape(22.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.72f), RoundedCornerShape(22.dp))
                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f), RoundedCornerShape(22.dp))
                 .padding(4.dp),
             space = 3.dp
