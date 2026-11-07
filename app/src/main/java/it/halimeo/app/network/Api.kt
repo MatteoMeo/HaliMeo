@@ -50,6 +50,8 @@ interface HaliMeoApi {
     @POST("v1/auth/login") suspend fun login(@Body request: LoginRequest): TokenResponse
     @POST("v1/auth/redeem-invite") suspend fun redeem(@Body request: RedeemInviteRequest): TokenResponse
     @GET("v1/auth/me") suspend fun me(@Header("Authorization") auth: String): AccountInfo
+    @Multipart @POST("v1/profile/photo") suspend fun uploadProfilePhoto(@Header("Authorization") auth: String, @Part photo: MultipartBody.Part): Map<String, Any>
+    @Streaming @GET("v1/users/{userId}/profile-photo") suspend fun downloadProfilePhoto(@Header("Authorization") auth: String, @Path("userId") userId: String): ResponseBody
     @POST("v1/admin/invites") suspend fun createInvite(@Header("Authorization") auth: String, @Body request: InviteRequest): InviteResponse
     @POST("v1/sync") suspend fun sync(@Header("Authorization") auth: String, @Body request: SyncRequest): SyncResponse
     @GET("v1/social/feed") suspend fun socialFeed(@Header("Authorization") auth: String): SocialFeedResponse
