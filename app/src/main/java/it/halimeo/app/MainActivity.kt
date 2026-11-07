@@ -106,12 +106,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import dev.chrisbanes.haze.HazeFeatureFlags
 import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.HazeColorEffect
+import dev.chrisbanes.haze.blur.HazePerformanceMode
 import dev.chrisbanes.haze.blur.hazeBlur
 import androidx.compose.ui.graphics.compositeOver
 import androidx.lifecycle.lifecycleScope
@@ -489,6 +491,10 @@ class MainActivity:ComponentActivity() {
 
     override fun onCreate(savedInstanceState:Bundle?) {
         super.onCreate(savedInstanceState)
+        // Android 17 can use Haze's native same-window backdrop path.
+        // Enable it before Compose attaches any hazeBlur nodes; older Android
+        // versions automatically retain the source-backed fallback.
+        HazeFeatureFlags.isPlatformBackdropEnabled = true
         ApiClient.initialize(applicationContext)
         SyncScheduler.schedule(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -581,9 +587,9 @@ class MainActivity:ComponentActivity() {
     val navigationGlassBackground = if (isHaliMeoDark()) Color(0xFF101419) else Color(0xFFF3F6FA)
     val navigationGlassStyle = remember(navigationGlassTint, navigationGlassBackground) {
         HazeBlurStyle {
-            backgroundColor(navigationGlassBackground.copy(alpha = 0.78f))
-            colorEffects(listOf(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.32f))))
-            fallbackColorEffect(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.28f)))
+            backgroundColor(navigationGlassBackground.copy(alpha = 0.88f))
+            colorEffects(listOf(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.38f))))
+            fallbackColorEffect(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.42f)))
         }
     }
     val navigationScope = rememberCoroutineScope()
@@ -770,20 +776,18 @@ class MainActivity:ComponentActivity() {
             // A little taller and raised: its visual center now lines up with the + button.
             .padding(vertical = 8.dp)
             .height(56.dp)
-            .clip(RoundedCornerShape(50)),
+            .clip(RoundedCornerShape(50))
+            .hazeBlur(
+                input = HazeInput.Backdrop(navigationHaze),
+                style = navigationGlassStyle,
+                performanceMode = HazePerformanceMode.Performance,
+                expandLayerBounds = false
+            ),
         shape = RoundedCornerShape(50),
         color = Color.Transparent,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)),
         tonalElevation = 0.dp
     ) {
-        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(50))) {
-            // Blur is drawn as a child of the clipped Surface, not on the Surface's
-            // modifier: Haze's rectangular offscreen buffer cannot leak outside.
-            Box(
-                Modifier.fillMaxSize()
-                    .hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)
-                    .background(navigationGlassTint.copy(alpha = 0.12f))
-            )
         BoxWithConstraints(
             Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp)
         ) {
@@ -923,7 +927,6 @@ class MainActivity:ComponentActivity() {
                     selectPrimaryTab(2)
                 }
             }
-        }
         }
     }
     }
@@ -2376,9 +2379,9 @@ private fun DiaryScreen(
     val diaryGlassStyleBackground = MaterialTheme.colorScheme.surface
     val diaryGlassStyle = remember(diaryGlassTint) {
         HazeBlurStyle {
-            backgroundColor(diaryGlassStyleBackground.copy(alpha = 0.42f))
-            colorEffects(listOf(HazeColorEffect.tint(diaryGlassTint.copy(alpha = 0.15f))))
-            fallbackColorEffect(HazeColorEffect.tint(diaryGlassTint.copy(alpha = 0.28f)))
+            backgroundColor(diaryGlassStyleBackground.copy(alpha = 0.68f))
+            colorEffects(listOf(HazeColorEffect.tint(diaryGlassTint.copy(alpha = 0.24f))))
+            fallbackColorEffect(HazeColorEffect.tint(diaryGlassTint.copy(alpha = 0.46f)))
         }
     }
     val diaryContext = LocalContext.current
@@ -2477,7 +2480,6 @@ private fun DiaryScreen(
         Modifier
             .fillMaxSize()
             .background(Color.Transparent)
-            .hazeSource(diaryHaze)
             .padding(horizontal = 16.dp)
     ) {
         Spacer(Modifier.height(if (headerCollapsed) 2.dp else 8.dp))
@@ -3065,21 +3067,19 @@ private fun SocialMemoryPost(
         label = "postLikeScale"
     )
     val cardShape = RoundedCornerShape(32.dp)
-    Box(
+    Column(
         modifier.fillMaxWidth()
             .animateContentSize(animationSpec = HaliMeoMotion.contentSizeSpring)
             .shadow(14.dp, cardShape, clip = false)
             .clip(cardShape)
+            .hazeBlur(
+                input = HazeInput.Backdrop(hazeState),
+                style = glassStyle,
+                performanceMode = HazePerformanceMode.Performance,
+                expandLayerBounds = false
+            )
             .border(1.dp, frostedEdgeColor(), cardShape)
     ) {
-        // Keep the Haze buffer inside a parent clipped to the card shape.
-        // Never attach hazeBlur to the outer animated/shadowed card layer.
-        Box(
-            Modifier.matchParentSize()
-                .hazeBlur(HazeInput.Sources(hazeState), glassStyle)
-                .background(frostedSurfaceColor().copy(alpha = 0.12f))
-        )
-    Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier.size(44.dp).clip(CircleShape)
@@ -3242,7 +3242,6 @@ private fun SocialMemoryPost(
                 }
             }
         }
-    }
     }
 }
 
