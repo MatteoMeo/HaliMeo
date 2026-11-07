@@ -242,8 +242,8 @@ class DiaryRepository(context: Context) {
      * Fetches a single image only when its diary item is actually displayed.
      * The response is consumed in memory and is never written to the photo directory.
      */
-    suspend fun loadRemotePhotoBytes(entryId: String): ByteArray? = runCatching {
-        ApiClient.api.downloadPhoto(authorizedHeader(), entryId).use { response ->
+    suspend fun loadRemotePhotoBytes(entryId: String, maxDimension: Int): ByteArray? = runCatching {
+        ApiClient.api.downloadPhoto(authorizedHeader(), entryId, maxDimension).use { response ->
             response.byteStream().use { input -> input.readBytes() }
         }
     }.getOrNull()
