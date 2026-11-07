@@ -1,37 +1,38 @@
 package it.halimeo.app
-import android.app.Activity
+
+import android.app.DownloadManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -41,6 +42,10 @@ import java.net.URL
 import java.security.MessageDigest
 
 private const val UPDATE_REPOSITORY = "MatteoMeo/HaliMeo"
+private const val UPDATE_NOTIFICATION_CHANNEL = "halimeo_updates"
+private const val UPDATE_NOTIFICATION_ID = 7301
+private const val PREF_DOWNLOAD_ID = "update_download_id"
+
 internal data class HaliMeoRelease(val name: String, val versionCode: Long, val versionName: String, val changelog: String, val apkUrl: String, val apkName: String, val sha256: String?)
 
 internal object HaliMeoUpdateState {
@@ -48,25 +53,73 @@ internal object HaliMeoUpdateState {
     var checkedAt by mutableLongStateOf(0L)
 }
 
-/**
- * Performs the optional release check after launch. Network failures are deliberately
- * non-fatal: the local diary must remain usable when GitHub or the server is offline.
- */
+private fun ensureUpdateNotificationChannel(context: Context) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        context.getSystemService(NotificationManager::class.java).createNotificationChannel(
+            NotificationChannel(UPDATE_NOTIFICATION_CHANNEL, "Aggiornamenti HaliMeo", NotificationManager.IMPORTANCE_DEFAULT)
+                .apply { description = "Nuove versioni di HaliMeo" }
+        )
+    }
+}
+
+private fun notificationsAllowed(context: Context): Boolean =
+    Build.VERSION.SDK_INT < 33 || context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+private fun notifyUpdateAvailable(context: Context, item: HaliMeoRelease?) {
+    if (item == null || item.versionCode <= BuildConfig.VERSION_CODE.toLong() || !notificationsAllowed(context)) return
+    ensureUpdateNotificationChannel(context)
+    val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
+    val pending = launch?.let { android.app.PendingIntent.getActivity(context, UPDATE_NOTIFICATION_ID, it, android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE) }
+    val notification = NotificationCompat.Builder(context, UPDATE_NOTIFICATION_CHANNEL)
+        .setSmallIcon(R.drawable.ic_launcher_foreground)
+        .setContentTitle("Aggiornamento HaliMeo disponibile")
+        .setContentText("È pronta la versione ${item.versionName}. Tocca per aprire l'updater.")
+        .setAutoCancel(true)
+        .setContentIntent(pending)
+        .build()
+    runCatching { NotificationManagerCompat.from(context).notify(UPDATE_NOTIFICATION_ID, notification) }
+}
+
 internal suspend fun checkForUpdatesOnLaunch(context: Context) {
-    // Clear stale process state first, so an old release cannot trigger a false prompt
-    // while the fresh request is still running.
     HaliMeoUpdateState.release = null
     HaliMeoUpdateState.checkedAt = 0L
     val prefs = context.getSharedPreferences("halimeo_preferences", Context.MODE_PRIVATE)
     if (!prefs.getBoolean("auto_check_updates", true)) return
-
     val channel = prefs.getString("update_channel", "alpha") ?: "alpha"
     try {
         val latest = fetchLatestRelease(channel)
         HaliMeoUpdateState.release = latest
         HaliMeoUpdateState.checkedAt = System.currentTimeMillis()
-    } catch (_: Exception) {
-        // An unavailable network must never block app startup or offline diary access.
+        notifyUpdateAvailable(context, latest)
+    } catch (_: Exception) { }
+}
+
+private fun updateApkFile(context: Context, name: String) =
+    File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir, name)
+
+private fun digestMatches(file: File, expected: String?): Boolean {
+    if (!file.isFile || file.length() <= 0L) return false
+    if (expected.isNullOrBlank()) return true
+    val digest = MessageDigest.getInstance("SHA-256")
+    file.inputStream().buffered().use { input ->
+        val buffer = ByteArray(64 * 1024)
+        while (true) { val count = input.read(buffer); if (count < 0) break; digest.update(buffer, 0, count) }
+    }
+    return digest.digest().joinToString("") { "%02x".format(it) }.equals(expected, true)
+}
+
+private data class DownloadSnapshot(val status: Int, val downloaded: Long, val total: Long, val reason: Int)
+
+private fun queryDownload(manager: DownloadManager, id: Long): DownloadSnapshot? {
+    val cursor = manager.query(DownloadManager.Query().setFilterById(id)) ?: return null
+    cursor.use {
+        if (!it.moveToFirst()) return null
+        return DownloadSnapshot(
+            it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS)),
+            it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)),
+            it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)),
+            it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
+        )
     }
 }
 
@@ -74,36 +127,28 @@ internal suspend fun checkForUpdatesOnLaunch(context: Context) {
 internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("halimeo_preferences", Context.MODE_PRIVATE) }
+    val manager = remember(context) { context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager }
     var channel by remember { mutableStateOf(prefs.getString("update_channel", "alpha") ?: "alpha") }
     var release by remember { mutableStateOf(HaliMeoUpdateState.release) }
-    var status by remember { mutableStateOf(if (HaliMeoUpdateState.checkedAt > 0L) "Controllo automatico completato." else "Controllo gli aggiornamenti all'avvio.") }
+    var status by remember { mutableStateOf("Controllo gli aggiornamenti all'avvio.") }
     var autoCheck by remember { mutableStateOf(prefs.getBoolean("auto_check_updates", true)) }
-    var busy by remember { mutableStateOf(false) }
+    var checking by remember { mutableStateOf(false) }
+    var downloadId by remember { mutableLongStateOf(prefs.getLong(PREF_DOWNLOAD_ID, -1L)) }
+    var downloadProgress by remember { mutableFloatStateOf(0f) }
     var downloading by remember { mutableStateOf(false) }
-    var progress by remember { mutableFloatStateOf(0f) }
-    var pendingInstallFile by remember { mutableStateOf<File?>(null) }
-    val changelogScrollState = rememberScrollState()
-    val changelogNestedScroll = remember(changelogScrollState) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val atTop = changelogScrollState.value == 0 && available.y > 0f
-                val atBottom = changelogScrollState.value >= changelogScrollState.maxValue && available.y < 0f
-                return if (atTop || atBottom) Offset(0f, available.y) else Offset.Zero
-            }
-        }
-    }
+    var downloadedFile by remember { mutableStateOf<File?>(null) }
+    var downloadFailed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val installLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val installedFile = pendingInstallFile
-        if (result.resultCode == Activity.RESULT_OK) {
-            installedFile?.delete()
-            installedFile?.parentFile?.listFiles()?.filter { it.name.endsWith(".part", true) }?.forEach { it.delete() }
-            status = "Aggiornamento installato. Il file APK temporaneo è stato eliminato."
-        } else {
-            status = "Installazione non completata: APK conservato, puoi riprovare senza scaricarlo di nuovo."
-        }
-        pendingInstallFile = null
+
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) notifyUpdateAvailable(context, release)
     }
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= 33 && !notificationsAllowed(context)) {
+            notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     LaunchedEffect(HaliMeoUpdateState.checkedAt) {
         if (HaliMeoUpdateState.checkedAt > 0L) {
             release = HaliMeoUpdateState.release
@@ -116,15 +161,66 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
         }
     }
 
+    LaunchedEffect(release?.apkName, downloadId) {
+        val item = release ?: return@LaunchedEffect
+        val localFile = updateApkFile(context, item.apkName)
+        if (withContext(Dispatchers.IO) { digestMatches(localFile, item.sha256) }) {
+            downloadedFile = localFile
+            downloading = false
+            downloadProgress = 1f
+            status = "APK già scaricato. Puoi installarlo."
+        } else if (downloadId >= 0L) {
+            while (true) {
+                val snapshot = withContext(Dispatchers.IO) { queryDownload(manager, downloadId) }
+                if (snapshot == null) { downloading = false; break }
+                when (snapshot.status) {
+                    DownloadManager.STATUS_PENDING, DownloadManager.STATUS_RUNNING, DownloadManager.STATUS_PAUSED -> {
+                        downloading = true
+                        downloadFailed = false
+                        if (snapshot.total > 0L) downloadProgress = (snapshot.downloaded.toFloat() / snapshot.total).coerceIn(0f, 1f)
+                        status = if (snapshot.status == DownloadManager.STATUS_PAUSED) "Download in pausa: attendo la connessione…" else "Download in background…"
+                    }
+                    DownloadManager.STATUS_SUCCESSFUL -> {
+                        downloading = false
+                        if (withContext(Dispatchers.IO) { digestMatches(localFile, item.sha256) }) {
+                            downloadedFile = localFile
+                            downloadProgress = 1f
+                            status = "APK scaricato e verificato. Premi Installa."
+                        } else {
+                            downloadFailed = true
+                            status = "Verifica SHA-256 non superata. Scarica di nuovo."
+                            manager.remove(downloadId)
+                            prefs.edit().remove(PREF_DOWNLOAD_ID).apply()
+                            downloadId = -1L
+                        }
+                        break
+                    }
+                    DownloadManager.STATUS_FAILED -> {
+                        downloading = false
+                        downloadFailed = true
+                        status = "Download non riuscito (codice ${snapshot.reason}). Puoi riprovare."
+                        prefs.edit().remove(PREF_DOWNLOAD_ID).apply()
+                        downloadId = -1L
+                        break
+                    }
+                }
+                delay(650)
+            }
+        }
+    }
+
     fun checkUpdates() {
-        if (busy) return
-        busy = true; release = null; status = "Controllo le release su GitHub…"
+        if (checking) return
+        checking = true
+        release = null
+        status = "Controllo le release su GitHub…"
         scope.launch {
             try {
                 val result = withContext(Dispatchers.IO) { fetchLatestRelease(channel) }
                 release = result
                 HaliMeoUpdateState.release = result
                 HaliMeoUpdateState.checkedAt = System.currentTimeMillis()
+                notifyUpdateAvailable(context, result)
                 status = when {
                     result == null && channel == "stable" -> "Non è ancora stata pubblicata una versione stabile."
                     result == null -> "Nessuna release Alpha disponibile."
@@ -132,96 +228,57 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
                     else -> "È disponibile un aggiornamento."
                 }
             } catch (error: Exception) { status = "Controllo non riuscito: ${error.message ?: "verifica la connessione"}" }
-            finally { busy = false }
+            finally { checking = false }
         }
     }
 
-    fun downloadAndInstall(item: HaliMeoRelease) {
-        if (busy) return
-        busy = true; downloading = true; progress = 0f; status = "Download in corso…"
+    fun installApk(file: File) {
+        try {
+            val uri = FileProvider.getUriForFile(context, "${BuildConfig.APPLICATION_ID}.fileprovider", file)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
+                activity.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${BuildConfig.APPLICATION_ID}")))
+                status = "Consenti a HaliMeo di installare APK e poi premi Installa. Il download è già pronto."
+            } else {
+                activity.startActivity(Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+                    data = uri
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    putExtra(Intent.EXTRA_RETURN_RESULT, true)
+                })
+                status = "Conferma l'installazione nella finestra di Android."
+            }
+        } catch (error: Exception) { status = "Impossibile avviare l'installazione: ${error.message ?: "errore imprevisto"}" }
+    }
+
+    fun startDownload(item: HaliMeoRelease) {
+        if (downloading) return
         scope.launch {
             try {
-                val apk = withContext(Dispatchers.IO) {
-                    val directory = File(context.cacheDir, "updates").apply { mkdirs() }
-                    val target = File(directory, item.apkName)
-                    val partial = File(directory, "${item.apkName}.part")
-                    directory.listFiles()?.filter { it.isFile && it != target && (it.name.endsWith(".apk", true) || it.name.endsWith(".part", true)) }?.forEach { it.delete() }
-
-                    fun matchesExpectedDigest(file: File): Boolean {
-                        if (!file.isFile || file.length() <= 0L) return false
-                        val expected = item.sha256?.takeIf { it.isNotBlank() } ?: return true
-                        val actual = MessageDigest.getInstance("SHA-256").digest(file.readBytes()).joinToString("") { "%02x".format(it) }
-                        return actual.equals(expected, ignoreCase = true)
-                    }
-
-                    // Reuse the complete APK after an installation cancellation/failure.
-                    if (!matchesExpectedDigest(target)) {
-                        target.delete()
-                        partial.delete()
-                        val connection = (URL(item.apkUrl).openConnection() as HttpURLConnection).apply {
-                            connectTimeout = 20_000; readTimeout = 60_000; instanceFollowRedirects = true
-                        }
-                        try {
-                            connection.connect()
-                            if (connection.responseCode !in 200..299) error("Download GitHub non riuscito (${connection.responseCode})")
-                            val total = connection.contentLengthLong
-                            connection.inputStream.use { input ->
-                                partial.outputStream().use { output ->
-                                    val buffer = ByteArray(64 * 1024); var copied = 0L
-                                    while (true) {
-                                        val count = input.read(buffer); if (count < 0) break
-                                        output.write(buffer, 0, count); copied += count
-                                        if (total > 0) progress = (copied.toFloat() / total).coerceIn(0f, 1f)
-                                    }
-                                    output.flush()
-                                    if (total > 0 && copied != total) error("Download incompleto: riprova.")
-                                }
-                            }
-                        } catch (error: Exception) {
-                            partial.delete()
-                            throw error
-                        } finally { connection.disconnect() }
-
-                        if (!matchesExpectedDigest(partial)) {
-                            partial.delete()
-                            error("Verifica di sicurezza non superata: file diverso dalla release.")
-                        }
-                        if (!partial.renameTo(target)) {
-                            partial.copyTo(target, overwrite = true)
-                            partial.delete()
-                        }
-                    }
-                    target
-                }
+                val request = DownloadManager.Request(Uri.parse(item.apkUrl))
+                    .setTitle("Aggiornamento HaliMeo ${item.versionName}")
+                    .setDescription("Download APK in background")
+                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    .setAllowedOverMetered(true)
+                    .setAllowedOverRoaming(false)
+                    .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, item.apkName)
+                val id = withContext(Dispatchers.IO) { manager.enqueue(request) }
+                prefs.edit().putLong(PREF_DOWNLOAD_ID, id).apply()
+                downloadId = id
+                downloadProgress = 0f
+                downloadedFile = null
+                downloadFailed = false
+                downloading = true
+                status = "Download avviato. Continuerà anche cambiando pagina o chiudendo l'updater."
+            } catch (error: Exception) {
                 downloading = false
-                val uri = FileProvider.getUriForFile(context, "${BuildConfig.APPLICATION_ID}.fileprovider", apk)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
-                    activity.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${BuildConfig.APPLICATION_ID}")))
-                    status = "Consenti a HaliMeo di installare aggiornamenti e poi premi di nuovo Installa. Il file è già pronto."
-                } else {
-                    pendingInstallFile = apk
-                    installLauncher.launch(Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
-                        data = uri
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        putExtra(Intent.EXTRA_RETURN_RESULT, true)
-                    })
-                    status = "Installazione avviata: conferma nella finestra di Android."
-                }
-            } catch (error: Exception) { downloading = false; status = "Aggiornamento non riuscito: ${error.message ?: "errore imprevisto"}" }
-            finally { busy = false }
+                status = "Impossibile avviare il download: ${error.message ?: "errore imprevisto"}"
+            }
         }
     }
 
-    Column(
-        Modifier.fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.62f))
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(11.dp)
-    ) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.62f)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.13f)) {
-                Icon(Icons.Default.Download, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(9.dp).size(19.dp))
+                Icon(Icons.Default.Download, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(9.dp).size(19.dp))
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text("AGGIORNAMENTI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
@@ -233,103 +290,51 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
                 Text("Controllo automatico all'avvio", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                 Text("Verifica le nuove versioni ogni volta che apri HaliMeo", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Switch(
-                checked = autoCheck,
-                onCheckedChange = {
-                    autoCheck = it
-                    prefs.edit().putBoolean("auto_check_updates", it).apply()
-                }
-            )
+            Switch(checked = autoCheck, onCheckedChange = { autoCheck = it; prefs.edit().putBoolean("auto_check_updates", it).apply() })
         }
-        SingleChoiceSegmentedButtonRow(
-            modifier = Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(22.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.72f), RoundedCornerShape(22.dp))
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f), RoundedCornerShape(22.dp))
-                .padding(4.dp),
-            space = 3.dp
-        ) {
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.72f), RoundedCornerShape(22.dp)).border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f), RoundedCornerShape(22.dp)).padding(4.dp), space = 3.dp) {
             listOf("alpha" to "Alpha", "stable" to "Stabile").forEachIndexed { index, option ->
                 SegmentedButton(
                     selected = channel == option.first,
-                    onClick = {
-                        channel = option.first; prefs.edit().putString("update_channel", channel).apply()
-                        release = null; status = if (channel == "stable") "Canale Stabile selezionato." else "Canale Alpha selezionato."
-                    },
+                    onClick = { channel = option.first; prefs.edit().putString("update_channel", channel).apply(); release = null; downloadedFile = null; status = if (channel == "stable") "Canale Stabile selezionato." else "Canale Alpha selezionato." },
                     shape = SegmentedButtonDefaults.itemShape(index, 2, RoundedCornerShape(18.dp)),
-                    colors = SegmentedButtonDefaults.colors(
-                        activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
-                        activeContentColor = MaterialTheme.colorScheme.onSurface,
-                        activeBorderColor = Color.Transparent,
-                        inactiveContainerColor = Color.Transparent,
-                        inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        inactiveBorderColor = Color.Transparent
-                    )
+                    colors = SegmentedButtonDefaults.colors(activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f), activeContentColor = MaterialTheme.colorScheme.onSurface, activeBorderColor = Color.Transparent, inactiveContainerColor = Color.Transparent, inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant, inactiveBorderColor = Color.Transparent)
                 ) { Text(option.second) }
             }
         }
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(13.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-        ) {
+        Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(13.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)) {
             Text(status, Modifier.padding(horizontal = 12.dp, vertical = 10.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         release?.let { item ->
             Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 if (item.versionCode > BuildConfig.VERSION_CODE.toLong()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                         Text("v${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Aggiornamento disponibile", modifier = Modifier.padding(horizontal = 12.dp).size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, "Aggiornamento disponibile", Modifier.padding(horizontal = 12.dp).size(20.dp), tint = MaterialTheme.colorScheme.primary)
                         Text("v${item.versionName}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                     }
-                }
-                if (item.changelog.isNotBlank()) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp).nestedScroll(changelogNestedScroll),
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.72f)
-                    ) {
-                        Column(Modifier.verticalScroll(changelogScrollState).padding(12.dp)) {
-                            Text(item.changelog.take(5000), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface)
+                    val ready = downloadedFile?.exists() == true
+                    Button(onClick = { if (ready) installApk(downloadedFile!!) else if (!downloading) startDownload(item) }, enabled = ready || !downloading, modifier = Modifier.fillMaxWidth()) {
+                        if (downloading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        else Icon(if (ready) Icons.Default.DownloadDone else Icons.Default.Download, null)
+                        Text(if (ready) "Installa" else if (downloading) "Download in corso…" else "Scarica e installa", Modifier.padding(start = 8.dp))
+                    }
+                    if (downloading) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Download in background", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(if (downloadProgress > 0f) "${(downloadProgress * 100).toInt()}%" else "In preparazione", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                         }
+                        LinearProgressIndicator(progress = { downloadProgress }, Modifier.fillMaxWidth().height(7.dp), trackColor = MaterialTheme.colorScheme.surfaceVariant)
                     }
-                }
-                if (item.versionCode > BuildConfig.VERSION_CODE.toLong()) {
-                    Button(onClick = { downloadAndInstall(item) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.Download, contentDescription = null); Text("Scarica e installa", Modifier.padding(start = 8.dp))
-                    }
-                    if (busy && downloading) {
-                        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Download in corso", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(if (progress > 0f) "${(progress * 100).toInt()}%" else "In preparazione", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                            }
-                            Surface(Modifier.fillMaxWidth().height(9.dp), shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceVariant) {
-                                Box {
-                                    Box(
-                                        Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).fillMaxHeight()
-                                            .background(
-                                                androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), MaterialTheme.colorScheme.primary)),
-                                                RoundedCornerShape(50)
-                                            )
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    if (downloadFailed) Text("Il download può essere ripetuto.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
                 }
             }
         }
-        OutlinedButton(onClick = { checkUpdates() }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-            if (busy && !downloading) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp) else Icon(Icons.Default.Refresh, contentDescription = null)
+        OutlinedButton(onClick = { checkUpdates() }, enabled = !checking, modifier = Modifier.fillMaxWidth()) {
+            if (checking) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Icon(Icons.Default.Refresh, null)
             Text("Controlla aggiornamenti", Modifier.padding(start = 8.dp))
         }
-        Text("Puoi controllare anche manualmente. Android chiederà sempre conferma prima di installare; i download completati restano disponibili in caso di errore e vengono eliminati dopo l'installazione riuscita.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Il download usa il servizio Android e continua in background anche cambiando pagina. Android chiederà sempre conferma prima di installare.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -340,39 +345,34 @@ private suspend fun fetchLatestRelease(channel: String): HaliMeoRelease? {
         var lastError: Exception? = null
         for (attempt in 1..2) {
             val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 12_000
-                readTimeout = 18_000
-                instanceFollowRedirects = true
+                connectTimeout = 12_000; readTimeout = 18_000; instanceFollowRedirects = true
                 setRequestProperty("Accept", "application/vnd.github+json")
                 setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
                 setRequestProperty("User-Agent", "HaliMeo-Android-Updater")
                 setRequestProperty("Cache-Control", "no-cache")
             }
             try {
-                if (connection.responseCode !in 200..299) {
-                    error("GitHub ha risposto ${connection.responseCode}")
-                }
+                if (connection.responseCode !in 200..299) error("GitHub ha risposto ${connection.responseCode}")
                 response = connection.inputStream.bufferedReader().use { it.readText() }
                 break
-            } catch (error: Exception) {
-                lastError = error
-                if (attempt < 2) Thread.sleep(600L)
-            } finally {
-                connection.disconnect()
-            }
+            } catch (error: Exception) { lastError = error; if (attempt < 2) Thread.sleep(600L) }
+            finally { connection.disconnect() }
         }
         response ?: throw (lastError ?: java.io.IOException("Risposta GitHub non disponibile"))
     }
-    val releases = JSONArray(json); val candidates = mutableListOf<HaliMeoRelease>()
+    val releases = JSONArray(json)
+    val candidates = mutableListOf<HaliMeoRelease>()
     for (i in 0 until releases.length()) {
         val item = releases.getJSONObject(i)
         if (item.optBoolean("draft", false)) continue
-        val pre = item.optBoolean("prerelease", false); val tag = item.optString("tag_name")
+        val pre = item.optBoolean("prerelease", false)
+        val tag = item.optString("tag_name")
         val matches = if (channel == "alpha") pre && tag.startsWith("alpha-build-") else !pre && tag.startsWith("stable-build-")
         if (!matches) continue
         val assets = item.optJSONArray("assets") ?: continue
         for (j in 0 until assets.length()) {
-            val asset = assets.getJSONObject(j); val name = asset.optString("name")
+            val asset = assets.getJSONObject(j)
+            val name = asset.optString("name")
             if (!name.endsWith(".apk", true)) continue
             val build = Regex("build(\\d+)", RegexOption.IGNORE_CASE).find(name)?.groupValues?.getOrNull(1)?.toLongOrNull() ?: continue
             val version = Regex("(\\d+\\.\\d+\\.\\d+)").find(name)?.groupValues?.getOrNull(1) ?: item.optString("name")
