@@ -51,6 +51,10 @@ internal object HaliMeoMotion {
     private val sharedAxisFadeOut =
         fadeOut(tween(SHARED_AXIS_FADE_OUT, easing = FastOutLinearInEasing))
 
+    /** Fast, nearly critically damped settling for tab changes and navigation taps. */
+    val pageSpring: SpringSpec<Float> =
+        spring(dampingRatio = 0.96f, stiffness = 1800f)
+
     val contentSizeSpring: SpringSpec<IntSize> =
         spring(dampingRatio = 0.88f, stiffness = 520f)
 
@@ -102,7 +106,7 @@ internal suspend fun PagerState.turnToPage(page: Int) {
         distance > 1 -> scrollToPage(page - 1)
         distance < -1 -> scrollToPage(page + 1)
     }
-    animateScrollToPage(page)
+    animateScrollToPage(page, animationSpec = HaliMeoMotion.pageSpring)
 }
 
 /**
