@@ -19,9 +19,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.SharedTransitionLayout
-import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.animateContentSize
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.animation.scaleOut
@@ -306,11 +303,6 @@ private val appThemeModeState = mutableStateOf("dark")
 @Composable private fun haliMeoAuthBackdrop(): Brush = if (isHaliMeoDark()) Brush.verticalGradient(listOf(Color(0xFF0A1426), Color(0xFF0B1220), Color(0xFF080D16))) else Brush.verticalGradient(listOf(Color(0xFFF4F8FC), Color(0xFFE7F0F8), Color(0xFFF5F0FA)))
 private val TextPrimary = Color(0xFFF5F7FA)
 
-@OptIn(ExperimentalSharedTransitionApi::class)
-private val LocalHaliMeoSharedTransitionScope = staticCompositionLocalOf<SharedTransitionScope?> { null }
-private val LocalHaliMeoAnimatedVisibilityScope = staticCompositionLocalOf<AnimatedVisibilityScope?> { null }
-
-
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable private fun HaliMeoTheme(content: @Composable () -> Unit) {
@@ -489,7 +481,7 @@ class MainActivity:ComponentActivity() {
         super.onDestroy()
     }
 }
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable private fun HaliMeoRoot() {
     val ctx= LocalContext.current; val activity=ctx as ComponentActivity
     val session=remember{SessionStore(ctx)}; val repo=remember{DiaryRepository(ctx)}
@@ -614,8 +606,6 @@ class MainActivity:ComponentActivity() {
             }
         }
     )},bottomBar={}, floatingActionButton = {}, content = { padding ->
-        SharedTransitionLayout(modifier = Modifier.padding(padding)) {
-            CompositionLocalProvider(LocalHaliMeoSharedTransitionScope provides this) {
         NavHost(
             navController = nav,
             startDestination = "main",
@@ -626,7 +616,6 @@ class MainActivity:ComponentActivity() {
             popExitTransition = { androidx.compose.animation.ExitTransition.None }
         ) {
             composable("main") {
-                CompositionLocalProvider(LocalHaliMeoAnimatedVisibilityScope provides this) {
                 androidx.compose.foundation.pager.HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize().hazeSource(navigationHaze),
@@ -649,8 +638,6 @@ class MainActivity:ComponentActivity() {
                             onUpdaterFocused = { focusUpdater = false }
                         )
                     }
-                }
-                }
             }
             composable(
                 route = "edit",
@@ -671,7 +658,6 @@ class MainActivity:ComponentActivity() {
                     else HaliMeoMotion.detailExit(forward = false)
                 }
             ) { backStack ->
-                CompositionLocalProvider(LocalHaliMeoAnimatedVisibilityScope provides this) {
                 EditScreen(editing, repo, { t, b, c, d, photo ->
                 activity.lifecycleScope.launch {
                     repo.save(t, b, c, d, editing?.id, photo)
@@ -680,7 +666,6 @@ class MainActivity:ComponentActivity() {
                     runCatching { repo.syncNow() }
                 }
             }, { editing = null; nav.popBackStack() })
-                }
             }
             composable(
                 route = "memory/{entryId}",
@@ -689,7 +674,6 @@ class MainActivity:ComponentActivity() {
                 popEnterTransition = { if (reduceAnimationsState.value) androidx.compose.animation.EnterTransition.None else HaliMeoMotion.detailEnter(forward = false) },
                 popExitTransition = { if (reduceAnimationsState.value) androidx.compose.animation.ExitTransition.None else HaliMeoMotion.detailExit(forward = false) }
             ) { backStack ->
-                CompositionLocalProvider(LocalHaliMeoAnimatedVisibilityScope provides this) {
                 val entryId = backStack.arguments?.getString("entryId")
                 val memory = entries.firstOrNull { it.id == entryId }
                 if (memory != null) MemoryDetailScreen(
@@ -706,7 +690,6 @@ class MainActivity:ComponentActivity() {
                     }
                 )
                 else LaunchedEffect(entryId) { nav.popBackStack() }
-                }
             }
             composable(
                 route = "tripMonaco",
@@ -715,9 +698,6 @@ class MainActivity:ComponentActivity() {
                 popEnterTransition = { if (reduceAnimationsState.value) androidx.compose.animation.EnterTransition.None else HaliMeoMotion.detailEnter(forward = false) },
                 popExitTransition = { if (reduceAnimationsState.value) androidx.compose.animation.ExitTransition.None else HaliMeoMotion.detailExit(forward = false) }
             ) { MissionScreen() }
-        }
-            }
-        }
     })
     // Read the continuously changing pager offset in the graphics layer, not the root composition.
     if (currentRoute != "edit" && currentRoute != "tripMonaco") Surface(
@@ -895,19 +875,21 @@ class MainActivity:ComponentActivity() {
         Surface(
             modifier = Modifier.size(46.dp)
                 .haliMeoPressScale(fabInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.96f, label = "newMemoryFabPress")
-                .clip(RoundedCornerShape(32.dp))
                 .hazeBlur(
                     input = HazeInput.Backdrop(navigationHaze),
                     style = navigationGlassStyle,
                     performanceMode = HazePerformanceMode.Performance,
                     expandLayerBounds = false
                 )
-                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.42f), RoundedCornerShape(32.dp)),
-            shape = RoundedCornerShape(32.dp),
-            color = Color.Transparent,
-            shadowElevation = 7.dp
+                .graphicsLayer { shape = RoundedCornerShape(18.dp); clip = true }
+                .clip(RoundedCornerShape(18.dp))
+                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.52f), RoundedCornerShape(18.dp)),
+            shape = RoundedCornerShape(18.dp),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.32f),
+            shadowElevation = 0.dp,
+            tonalElevation = 0.dp
         ) {
-            Box(Modifier.fillMaxSize().clip(RoundedCornerShape(32.dp)).clickable(interactionSource = fabInteraction, indication = LocalIndication.current, role = androidx.compose.ui.semantics.Role.Button, onClickLabel = "Nuovo ricordo") { navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); editing = null; nav.navigate("edit") }, contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp)).clickable(interactionSource = fabInteraction, indication = LocalIndication.current, role = androidx.compose.ui.semantics.Role.Button, onClickLabel = "Nuovo ricordo") { navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); editing = null; nav.navigate("edit") }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(21.dp), tint = MaterialTheme.colorScheme.onPrimary)
             }
         }
@@ -2991,7 +2973,6 @@ private fun DiaryScreen(
 }
 
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun SocialMemoryPost(
     entry: DiaryEntry, authorName: String, photo: android.graphics.Bitmap?, expanded: Boolean,
@@ -3005,22 +2986,11 @@ private fun SocialMemoryPost(
     val initials = authorName.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
         .take(2).mapNotNull { it.firstOrNull()?.uppercaseChar() }.joinToString("").ifBlank { "H" }
     val dateLabel = displayHaliMeoDate(entry.memoryDate)
-    val sharedTransitionScope = LocalHaliMeoSharedTransitionScope.current
-    val animatedVisibilityScope = LocalHaliMeoAnimatedVisibilityScope.current
     val photoAlpha by animateFloatAsState(
         targetValue = if (photo != null) 1f else 0f,
         animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "diaryPhotoReveal"
     )
-    val sharedPhotoModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-        with(sharedTransitionScope) {
-            Modifier.sharedElement(
-                rememberSharedContentState(key = "memory-photo-${entry.id}"),
-                animatedVisibilityScope,
-                boundsTransform = { _, _ -> spring(dampingRatio = 0.88f, stiffness = 430f) }
-            )
-        }
-    } else Modifier
     val likeScale by animateFloatAsState(
         targetValue = if (likedByMe) 1.10f else 1f,
         animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.72f, stiffness = 680f),
@@ -3030,7 +3000,6 @@ private fun SocialMemoryPost(
     Column(
         modifier.fillMaxWidth()
             .animateContentSize(animationSpec = HaliMeoMotion.contentSizeSpring)
-            .shadow(14.dp, cardShape, clip = false)
             .clip(cardShape)
             .background(
                 Brush.linearGradient(
@@ -3076,7 +3045,6 @@ private fun SocialMemoryPost(
                     bitmap = photo.asImageBitmap(),
                     contentDescription = "Foto del ricordo: ${entry.title}",
                     modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp)
-                        .then(sharedPhotoModifier)
                         .graphicsLayer { alpha = photoAlpha },
                     contentScale = ContentScale.FillWidth
                 )
@@ -3208,7 +3176,6 @@ private fun SocialMemoryPost(
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun MemoryDetailScreen(
     entry: DiaryEntry,
@@ -3230,22 +3197,11 @@ private fun MemoryDetailScreen(
         value = decodeDiaryPhoto(context, entry.id, entry.photoUri, maxDimension = 1800, repo = repo)
     }
     val shape = RoundedCornerShape(32.dp)
-    val sharedTransitionScope = LocalHaliMeoSharedTransitionScope.current
-    val animatedVisibilityScope = LocalHaliMeoAnimatedVisibilityScope.current
     val photoAlpha by animateFloatAsState(
         targetValue = if (bitmap != null) 1f else 0f,
         animationSpec = if (reduceAnimationsState.value) tween(0) else tween(100, easing = OneUiMotionEasing),
         label = "detailPhotoReveal"
     )
-    val sharedPhotoModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-        with(sharedTransitionScope) {
-            Modifier.sharedElement(
-                rememberSharedContentState(key = "memory-photo-${entry.id}"),
-                animatedVisibilityScope,
-                boundsTransform = { _, _ -> spring(dampingRatio = 0.88f, stiffness = 430f) }
-            )
-        }
-    } else Modifier
 
     Box(Modifier.fillMaxSize()) {
     HaliMeoAmbientBackdrop(Modifier.fillMaxSize())
@@ -3311,7 +3267,7 @@ private fun MemoryDetailScreen(
                 Image(
                     bitmap = bitmap!!.asImageBitmap(),
                     contentDescription = "Foto del ricordo",
-                    modifier = Modifier.fillMaxSize().then(sharedPhotoModifier).graphicsLayer { alpha = photoAlpha },
+                    modifier = Modifier.fillMaxSize().graphicsLayer { alpha = photoAlpha },
                     contentScale = ContentScale.Crop
                 )
                 Box(
