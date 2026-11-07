@@ -18,6 +18,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.animateContentSize
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.animation.scaleOut
@@ -275,6 +279,9 @@ private val appThemeModeState = mutableStateOf("dark")
 @Composable private fun haliMeoAuthBackdrop(): Brush = if (isHaliMeoDark()) Brush.verticalGradient(listOf(Color(0xFF0A1426), Color(0xFF0B1220), Color(0xFF080D16))) else Brush.verticalGradient(listOf(Color(0xFFF4F8FC), Color(0xFFE7F0F8), Color(0xFFF5F0FA)))
 private val TextPrimary = Color(0xFFF5F7FA)
 
+private val LocalHaliMeoSharedTransitionScope = staticCompositionLocalOf<SharedTransitionScope?> { null }
+private val LocalHaliMeoAnimatedVisibilityScope = staticCompositionLocalOf<AnimatedVisibilityScope?> { null }
+
 
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -449,7 +456,7 @@ class MainActivity:ComponentActivity() {
         super.onDestroy()
     }
 }
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalSharedTransitionApi::class)
 @Composable private fun HaliMeoRoot() {
     val ctx= LocalContext.current; val activity=ctx as ComponentActivity
     val session=remember{SessionStore(ctx)}; val repo=remember{DiaryRepository(ctx)}
@@ -572,16 +579,19 @@ class MainActivity:ComponentActivity() {
             }
         }
     )},bottomBar={}, floatingActionButton = {}, content = { padding ->
+        SharedTransitionLayout(modifier = Modifier.padding(padding)) {
+            CompositionLocalProvider(LocalHaliMeoSharedTransitionScope provides this) {
         NavHost(
             navController = nav,
             startDestination = "main",
-            modifier = Modifier.padding(padding),
+            modifier = Modifier.fillMaxSize(),
             enterTransition = { androidx.compose.animation.EnterTransition.None },
             exitTransition = { androidx.compose.animation.ExitTransition.None },
             popEnterTransition = { androidx.compose.animation.EnterTransition.None },
             popExitTransition = { androidx.compose.animation.ExitTransition.None }
         ) {
             composable("main") {
+                CompositionLocalProvider(LocalHaliMeoAnimatedVisibilityScope provides this) {
                 androidx.compose.foundation.pager.HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize().hazeSource(navigationHaze),
@@ -607,33 +617,38 @@ class MainActivity:ComponentActivity() {
                         )
                     }
                 }
+                }
             }
             composable(
                 route = "edit",
                 enterTransition = {
-                    if (reduceAnimationsState.value) fadeIn(tween(90))
+                    if (reduceAnimationsState.value) androidx.compose.animation.EnterTransition.None
                     else HaliMeoMotion.detailEnter(forward = true)
                 },
                 exitTransition = {
-                    if (reduceAnimationsState.value) fadeOut(tween(80))
+                    if (reduceAnimationsState.value) androidx.compose.animation.ExitTransition.None
                     else HaliMeoMotion.detailExit(forward = true)
                 },
                 popEnterTransition = {
-                    if (reduceAnimationsState.value) fadeIn(tween(80))
+                    if (reduceAnimationsState.value) androidx.compose.animation.EnterTransition.None
                     else HaliMeoMotion.detailEnter(forward = false)
                 },
                 popExitTransition = {
                     if (reduceAnimationsState.value) fadeOut(tween(80))
                     else HaliMeoMotion.detailExit(forward = false)
                 }
-            ) { EditScreen(editing, repo, { t, b, c, d, photo ->
+            ) { backStack ->
+                CompositionLocalProvider(LocalHaliMeoAnimatedVisibilityScope provides this) {
+                EditScreen(editing, repo, { t, b, c, d, photo ->
                 activity.lifecycleScope.launch {
                     repo.save(t, b, c, d, editing?.id, photo)
                     editing = null
                     nav.popBackStack()
                     runCatching { repo.syncNow() }
                 }
-            }, { editing = null; nav.popBackStack() }) }
+            }, { editing = null; nav.popBackStack() })
+                }
+            }
             composable(
                 route = "memory/{entryId}",
                 enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(90)) else HaliMeoMotion.detailEnter(forward = true) },
@@ -641,15 +656,24 @@ class MainActivity:ComponentActivity() {
                 popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(80)) else HaliMeoMotion.detailEnter(forward = false) },
                 popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.detailExit(forward = false) }
             ) { backStack ->
+                CompositionLocalProvider(LocalHaliMeoAnimatedVisibilityScope provides this) {
                 val entryId = backStack.arguments?.getString("entryId")
                 val memory = entries.firstOrNull { it.id == entryId }
                 if (memory != null) MemoryDetailScreen(
                     memory,
                     repo = repo,
                     onBack = { nav.popBackStack() },
-                    onEdit = { editing = memory; nav.navigate("edit") }
+                    onEdit = { editing = memory; nav.navigate("edit") },
+                    onDelete = {
+                        activity.lifecycleScope.launch {
+                            repo.delete(memory.id)
+                            nav.popBackStack()
+                            runCatching { repo.syncNow() }
+                        }
+                    }
                 )
                 else LaunchedEffect(entryId) { nav.popBackStack() }
+                }
             }
             composable(
                 route = "tripMonaco",
@@ -658,6 +682,8 @@ class MainActivity:ComponentActivity() {
                 popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(80)) else HaliMeoMotion.detailEnter(forward = false) },
                 popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.detailExit(forward = false) }
             ) { MissionScreen() }
+        }
+            }
         }
     })
     // Read the continuously changing pager offset in the graphics layer, not the root composition.
@@ -2895,7 +2921,7 @@ private fun SocialMemoryPost(
             if (entry.syncState != "SYNCED" || entry.photoSyncState != "SYNCED") {
                 Icon(Icons.Default.CloudUpload, contentDescription = "In attesa di sincronizzazione", tint = accent, modifier = Modifier.size(19.dp))
             } else {
-                Icon(Icons.Default.Lock, contentDescription = "Ricordo privato condiviso", tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f), modifier = Modifier.size(17.dp))
+                Icon(Icons.Default.CloudDone, contentDescription = "Ricordo sincronizzato", tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.88f), modifier = Modifier.size(19.dp))
             }
         }
 
@@ -2996,7 +3022,7 @@ private fun SocialMemoryPost(
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp), tint = accent)
                 }
             }
-            if (expanded && showManagement) {
+            if (showManagement) {
                 HorizontalDivider(modifier = Modifier.padding(top = 5.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.20f))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onEdit) { Icon(Icons.Default.Edit, null, Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text("Modifica") }
@@ -3022,6 +3048,7 @@ private fun MemoryDetailScreen(
 
     Column(
         Modifier.fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
@@ -3226,7 +3253,7 @@ private fun EditScreen(
 
     Column(
         Modifier.fillMaxSize()
-            .background(Color.Transparent)
+            .background(MaterialTheme.colorScheme.background)
             .hazeSource(editHaze)
             .verticalScroll(scrollState)
             .imePadding()
