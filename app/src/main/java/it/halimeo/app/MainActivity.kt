@@ -699,13 +699,13 @@ class MainActivity:ComponentActivity() {
                 popEnterTransition = { if (reduceAnimationsState.value) androidx.compose.animation.EnterTransition.None else HaliMeoMotion.detailEnter(forward = false) },
                 popExitTransition = { if (reduceAnimationsState.value) androidx.compose.animation.ExitTransition.None else HaliMeoMotion.detailExit(forward = false) }
             ) { MissionScreen() }
+        }
     })
     // Read the continuously changing pager offset in the graphics layer, not the root composition.
     if (currentRoute != "edit" && currentRoute != "tripMonaco") Surface(
-        modifier = Modifier.align(Alignment.BottomStart)
-            // Keep the right edge anchored to the + action while shortening the bar
-            // from the left, so the two controls read as one balanced bottom cluster.
-            .padding(start = 48.dp, end = 78.dp)
+        modifier = Modifier.align(Alignment.BottomCenter)
+            // Center the navigation independently of the floating + action.
+            .padding(horizontal = 72.dp)
             .fillMaxWidth()
             .navigationBarsPadding()
             // A little taller and raised: its visual center now lines up with the + button.
@@ -864,7 +864,6 @@ class MainActivity:ComponentActivity() {
             }
         }
     }
-    }
 
     AnimatedVisibility(
         visible = currentRoute == "main" && pagerState.currentPage == 0,
@@ -894,7 +893,6 @@ class MainActivity:ComponentActivity() {
                 Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(21.dp), tint = MaterialTheme.colorScheme.onPrimary)
             }
         }
-    }
     }
     if (showUpdatePrompt) {
         val available = HaliMeoUpdateState.release
