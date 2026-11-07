@@ -258,26 +258,49 @@ private fun haliMeoTextFieldColors() = OutlinedTextFieldDefaults.colors(
 private fun HaliMeoPopupBackdropBlur() {
     val view = LocalView.current
     val density = LocalDensity.current.density
-    val window = remember(view) {
-        var parent: android.view.ViewParent? = view.parent
-        var dialogWindow: android.view.Window? = null
-        while (parent != null && dialogWindow == null) {
-            if (parent is DialogWindowProvider) dialogWindow = parent.window
-            parent = parent.parent
+    DisposableEffect(view, density) {
+        fun resolveDialogWindow(): android.view.Window? {
+            var parent: android.view.ViewParent? = view.parent
+            while (parent != null) {
+                if (parent is DialogWindowProvider) return parent.window
+                parent = parent.parent
+            }
+            return null
         }
-        dialogWindow
-    }
-    DisposableEffect(window, density) {
-        if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        fun applyBlur() {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+            val window = resolveDialogWindow() ?: return
             window.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
             window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND or WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-            window.attributes = window.attributes.apply { dimAmount = 0.18f }
-            window.setBackgroundBlurRadius((56f * density).roundToInt())
+            window.attributes = window.attributes.apply { dimAmount = 0.22f }
+            window.setBackgroundBlurRadius((72f * density).roundToInt())
+            if (BuildConfig.DEBUG) {
+                val blurEnabled = runCatching {
+                    view.context.getSystemService(android.view.WindowManager::class.java).isCrossWindowBlurEnabled
+                }.getOrDefault(false)
+                android.util.Log.d("HaliMeoPopupBlur", "Dialog window attached; cross-window blur enabled=$blurEnabled")
+            }
         }
+        val attachListener = object : android.view.View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: android.view.View) = applyBlur()
+            override fun onViewDetachedFromWindow(v: android.view.View) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    resolveDialogWindow()?.let { window ->
+                        window.setBackgroundBlurRadius(0)
+                        window.clearFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                    }
+                }
+            }
+        }
+        view.addOnAttachStateChangeListener(attachListener)
+        if (view.isAttachedToWindow) applyBlur()
         onDispose {
-            if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                window.setBackgroundBlurRadius(0)
-                window.clearFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            view.removeOnAttachStateChangeListener(attachListener)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                resolveDialogWindow()?.let { window ->
+                    window.setBackgroundBlurRadius(0)
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                }
             }
         }
     }
@@ -747,7 +770,7 @@ class MainActivity:ComponentActivity() {
             .height(56.dp)
             .then(
                 if (reduceStaticEffectsState.value) Modifier.background(navigationGlassTint, RoundedCornerShape(50))
-                else Modifier.clip(RoundedCornerShape(50)).hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)
+                else Modifier.hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle).clip(RoundedCornerShape(50))
             ),
         shape = RoundedCornerShape(50),
         color = Color.Transparent,
@@ -907,8 +930,8 @@ class MainActivity:ComponentActivity() {
         Surface(
             modifier = Modifier.size(46.dp)
                 .haliMeoPressScale(fabInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.96f, label = "newMemoryFabPress")
-                .clip(RoundedCornerShape(32.dp))
-                .then(if (reduceStaticEffectsState.value) Modifier else Modifier.hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)),
+                .then(if (reduceStaticEffectsState.value) Modifier else Modifier.hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle))
+                .clip(RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
             color = MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.96f else 0.62f),
             shadowElevation = 7.dp
@@ -924,7 +947,7 @@ class MainActivity:ComponentActivity() {
         if (available != null) {
             AlertDialog(
                                 shape = RoundedCornerShape(30.dp),
-                containerColor = frostedSurfaceStrongColor().copy(alpha = 0.74f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                containerColor = frostedSurfaceStrongColor().copy(alpha = 0.64f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 onDismissRequest = { showUpdatePrompt = false },
                 icon = { Icon(Icons.Default.SystemUpdate, contentDescription = null) },
                 title = { HaliMeoPopupBackdropBlur(); Text("Nuova versione disponibile") },
@@ -1274,8 +1297,8 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(profileCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsProfilePress")
-                .clip(RoundedCornerShape(32.dp))
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
+                .clip(RoundedCornerShape(32.dp))
                 .clickable(interactionSource = profileCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("profile" in expandedSettingsSections) expandedSettingsSections - "profile" else expandedSettingsSections + "profile" }
                 .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
@@ -1356,8 +1379,8 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(invitesCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsInvitesPress")
-                .clip(RoundedCornerShape(32.dp))
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
+                .clip(RoundedCornerShape(32.dp))
                 .clickable(interactionSource = invitesCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("invites" in expandedSettingsSections) expandedSettingsSections - "invites" else expandedSettingsSections + "invites" }
                 .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
@@ -1416,7 +1439,7 @@ private fun SettingsScreen(
 
                         if (inviteCode.isNotBlank()) {
                             Card(
-                                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle).border(1.dp, frostedEdgeColor(), RoundedCornerShape(20.dp)),
+                                modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle).clip(RoundedCornerShape(20.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(20.dp)),
                                 shape = RoundedCornerShape(20.dp),
                                 colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
                             ) {
@@ -1474,8 +1497,8 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(appearanceCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsAppearancePress")
-                .clip(RoundedCornerShape(32.dp))
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
+                .clip(RoundedCornerShape(32.dp))
                 .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp))
                 .clickable(interactionSource = appearanceCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("appearance" in expandedSettingsSections) expandedSettingsSections - "appearance" else expandedSettingsSections + "appearance" },
             shape = RoundedCornerShape(32.dp),
@@ -1791,11 +1814,11 @@ private fun SettingsScreen(
                         reduceAnimationsState.value = it
                     }, colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
-                        checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f),
-                        checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.88f),
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.88f),
-                        uncheckedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.72f),
+                        checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.96f),
+                        checkedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.96f),
+                        uncheckedThumbColor = Color.White,
+                        uncheckedTrackColor = if (isHaliMeoDark()) Color(0xFF555A63) else Color(0xFFD1D5DC),
+                        uncheckedBorderColor = if (isHaliMeoDark()) Color(0xFF666C76) else Color(0xFFB8BEC8),
                         uncheckedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
                     ))
                 }
@@ -1810,11 +1833,11 @@ private fun SettingsScreen(
                         reduceStaticEffectsState.value = it
                     }, colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
-                        checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f),
-                        checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.88f),
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.88f),
-                        uncheckedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.72f),
+                        checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.96f),
+                        checkedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.96f),
+                        uncheckedThumbColor = Color.White,
+                        uncheckedTrackColor = if (isHaliMeoDark()) Color(0xFF555A63) else Color(0xFFD1D5DC),
+                        uncheckedBorderColor = if (isHaliMeoDark()) Color(0xFF666C76) else Color(0xFFB8BEC8),
                         uncheckedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
                     ))
                 }
@@ -1830,8 +1853,8 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(dateCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsDatePress")
-                .clip(RoundedCornerShape(32.dp))
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
+                .clip(RoundedCornerShape(32.dp))
                 .clickable(interactionSource = dateCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("date" in expandedSettingsSections) expandedSettingsSections - "date" else expandedSettingsSections + "date" }
                 .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
@@ -1883,8 +1906,8 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(syncCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsSyncPress")
-                .clip(RoundedCornerShape(32.dp))
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
+                .clip(RoundedCornerShape(32.dp))
                 .clickable(interactionSource = syncCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("sync" in expandedSettingsSections) expandedSettingsSections - "sync" else expandedSettingsSections + "sync" }
                 .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
@@ -2527,7 +2550,7 @@ private fun DiaryScreen(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle),
+                modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(diaryHaze), diaryGlassStyle).clip(RoundedCornerShape(22.dp)),
                 singleLine = true,
                 shape = RoundedCornerShape(22.dp),
                 placeholder = { Text("Cerca un ricordo…") },
@@ -3013,8 +3036,8 @@ private fun SocialMemoryPost(
         modifier.fillMaxWidth()
             .animateContentSize(animationSpec = HaliMeoMotion.contentSizeSpring)
             .shadow(12.dp, cardShape, clip = false)
-            .clip(cardShape)
             .hazeBlur(HazeInput.Sources(hazeState), glassStyle)
+            .clip(cardShape)
             .background(Brush.linearGradient(listOf(frostedSurfaceStrongColor(), frostedSurfaceColor(), frostedSurfaceStrongColor())))
             .border(1.dp, frostedEdgeColor(), cardShape)
     ) {
