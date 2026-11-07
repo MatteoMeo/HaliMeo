@@ -257,56 +257,8 @@ private fun haliMeoTextFieldColors() = OutlinedTextFieldDefaults.colors(
 )
 
 @Composable
-private fun HaliMeoPopupBackdropBlur() {
-    val view = LocalView.current
-    val density = LocalDensity.current.density
-    DisposableEffect(view, density) {
-        fun resolveDialogWindow(): android.view.Window? {
-            var parent: android.view.ViewParent? = view.parent
-            while (parent != null) {
-                if (parent is DialogWindowProvider) return parent.window
-                parent = parent.parent
-            }
-            return null
-        }
-        fun applyBlur() {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
-            val window = resolveDialogWindow() ?: return
-            window.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
-            window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND or WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-            window.attributes = window.attributes.apply { dimAmount = 0.22f }
-            window.setBackgroundBlurRadius((72f * density).roundToInt())
-            if (BuildConfig.DEBUG) {
-                val blurEnabled = runCatching {
-                    view.context.getSystemService(android.view.WindowManager::class.java).isCrossWindowBlurEnabled
-                }.getOrDefault(false)
-                android.util.Log.d("HaliMeoPopupBlur", "Dialog window attached; cross-window blur enabled=$blurEnabled")
-            }
-        }
-        val attachListener = object : android.view.View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(v: android.view.View) = applyBlur()
-            override fun onViewDetachedFromWindow(v: android.view.View) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    resolveDialogWindow()?.let { window ->
-                        window.setBackgroundBlurRadius(0)
-                        window.clearFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-                    }
-                }
-            }
-        }
-        view.addOnAttachStateChangeListener(attachListener)
-        if (view.isAttachedToWindow) applyBlur()
-        onDispose {
-            view.removeOnAttachStateChangeListener(attachListener)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                resolveDialogWindow()?.let { window ->
-                    window.setBackgroundBlurRadius(0)
-                    window.clearFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-                }
-            }
-        }
-    }
-}
+private fun haliMeoPopupSurfaceColor(): Color =
+    MaterialTheme.colorScheme.surface.copy(alpha = 1f)
 
 @Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.10f else 0.18f).compositeOver(Color(0xA9101419)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.075f).compositeOver(Color(0xE8FFFFFF))
 @Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.12f else 0.22f).compositeOver(Color(0xC20C0F12)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.11f).compositeOver(Color(0xF0FFFFFF))
@@ -966,10 +918,10 @@ class MainActivity:ComponentActivity() {
         if (available != null) {
             AlertDialog(
                                 shape = RoundedCornerShape(30.dp),
-                containerColor = frostedSurfaceStrongColor().copy(alpha = 0.64f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                containerColor = haliMeoPopupSurfaceColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 onDismissRequest = { showUpdatePrompt = false },
                 icon = { Icon(Icons.Default.SystemUpdate, contentDescription = null) },
-                title = { HaliMeoPopupBackdropBlur(); Text("Nuova versione disponibile") },
+                title = { Text("Nuova versione disponibile") },
                 text = {
                     Text("È disponibile HaliMeo ${available.versionName}. Vuoi aprire l'updater per installare l'aggiornamento?")
                 },
@@ -2194,9 +2146,9 @@ private fun SettingsScreen(
         if (showDeveloperPinDialog) {
             AlertDialog(
                                 shape = RoundedCornerShape(30.dp),
-                containerColor = frostedSurfaceStrongColor().copy(alpha = 0.74f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                containerColor = haliMeoPopupSurfaceColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 onDismissRequest = { showDeveloperPinDialog = false; developerPin = "" },
-                title = { HaliMeoPopupBackdropBlur(); Text("Opzioni sviluppatore") },
+                title = { Text("Opzioni sviluppatore") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Inserisci il PIN per sbloccare gli strumenti avanzati.")
@@ -2456,13 +2408,12 @@ private fun DiaryScreen(
                         onDismissRequest = { showCalendar = false },
             confirmButton = { TextButton(onClick = { selectedDate = calendarState.selectedDateMillis?.let { java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneOffset.UTC).toLocalDate().toString() }; showCalendar = false }) { Text("Filtra") } },
             dismissButton = { TextButton(onClick = { showCalendar = false }) { Text("Annulla") } },
-            colors = DatePickerDefaults.colors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.76f))
+            colors = DatePickerDefaults.colors(containerColor = haliMeoPopupSurfaceColor())
         ) {
-            HaliMeoPopupBackdropBlur()
             DatePicker(
                 state = calendarState,
                 colors = DatePickerDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = haliMeoPopupSurfaceColor(),
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
                     headlineContentColor = MaterialTheme.colorScheme.onSurface,
                     weekdayContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -2807,9 +2758,9 @@ private fun DiaryScreen(
     if (albumEntry != null) {
         AlertDialog(
                         shape = RoundedCornerShape(30.dp),
-            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.74f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            containerColor = haliMeoPopupSurfaceColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { albumEntry = null },
-            title = { HaliMeoPopupBackdropBlur(); Text("Aggiungi a un album") },
+            title = { Text("Aggiungi a un album") },
             text = {
                 Column(Modifier.fillMaxWidth().heightIn(max = 380.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (albumBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
@@ -2860,9 +2811,9 @@ private fun DiaryScreen(
     if (albumsBrowserOpen) {
         AlertDialog(
                         shape = RoundedCornerShape(30.dp),
-            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.74f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            containerColor = haliMeoPopupSurfaceColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { albumsBrowserOpen = false },
-            title = { HaliMeoPopupBackdropBlur(); Text("I vostri album") },
+            title = { Text("I vostri album") },
             text = {
                 Column(Modifier.fillMaxWidth().heightIn(max = 430.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
@@ -2920,9 +2871,9 @@ private fun DiaryScreen(
     if (selectedAlbum != null) {
         AlertDialog(
                         shape = RoundedCornerShape(30.dp),
-            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.74f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            containerColor = haliMeoPopupSurfaceColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { selectedAlbum = null; albumDetail = null },
-            title = { HaliMeoPopupBackdropBlur(); Text(albumDetail?.title ?: selectedAlbum?.title ?: "Album") },
+            title = { Text(albumDetail?.title ?: selectedAlbum?.title ?: "Album") },
             text = {
                 Column(Modifier.fillMaxWidth().heightIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     if (albumDetailBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
@@ -2962,9 +2913,9 @@ private fun DiaryScreen(
     if (commentsEntry != null) {
         AlertDialog(
                         shape = RoundedCornerShape(30.dp),
-            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.74f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            containerColor = haliMeoPopupSurfaceColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { commentsEntry = null },
-            title = { HaliMeoPopupBackdropBlur(); Text("Commenti") },
+            title = { Text("Commenti") },
             text = {
                 Column(Modifier.fillMaxWidth().heightIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (commentsBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
@@ -3458,9 +3409,9 @@ private fun MemoryDetailScreen(
     if (showDeleteConfirmation) {
         AlertDialog(
                         shape = RoundedCornerShape(30.dp),
-            containerColor = frostedSurfaceStrongColor().copy(alpha = 0.74f), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            containerColor = haliMeoPopupSurfaceColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onDismissRequest = { showDeleteConfirmation = false },
-            title = { HaliMeoPopupBackdropBlur(); Text("Eliminare questo ricordo?") },
+            title = { Text("Eliminare questo ricordo?") },
             text = { Text("Il ricordo verrà rimosso dal diario su questo dispositivo e la cancellazione verrà sincronizzata con l'altro telefono appena possibile.") },
             confirmButton = {
                 TextButton(onClick = { showDeleteConfirmation = false; onDelete() }) {
