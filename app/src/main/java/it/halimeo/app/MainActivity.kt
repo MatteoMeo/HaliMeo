@@ -476,12 +476,8 @@ class MainActivity:ComponentActivity() {
             if (reduceAnimationsState.value) {
                 pagerState.scrollToPage(index)
             } else {
-                // A firmer spring shortens the perceived response to navbar taps while
-                // keeping the indicator and page content on the exact same pager timeline.
-                pagerState.animateScrollToPage(
-                    page = index,
-                    animationSpec = spring(dampingRatio = 0.96f, stiffness = 1800f)
-                )
+                // Match Morphe's navigation: keep long jumps to one visible page of motion.
+                pagerState.turnToPage(index)
             }
         }
     }
@@ -562,23 +558,19 @@ class MainActivity:ComponentActivity() {
                 route = "edit",
                 enterTransition = {
                     if (reduceAnimationsState.value) fadeIn(tween(90))
-                    else fadeIn(tween(90, easing = OneUiMotionEasing)) +
-                        scaleIn(initialScale = 0.92f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(220, easing = OneUiMotionEasing))
+                    else HaliMeoMotion.sharedAxisZEnter(forward = true)
                 },
                 exitTransition = {
                     if (reduceAnimationsState.value) fadeOut(tween(80))
-                    else fadeOut(tween(130, easing = OneUiMotionEasing)) +
-                        scaleOut(targetScale = 1.03f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(130, easing = OneUiMotionEasing))
+                    else HaliMeoMotion.sharedAxisZExit(forward = true)
                 },
                 popEnterTransition = {
                     if (reduceAnimationsState.value) fadeIn(tween(80))
-                    else fadeIn(tween(130, easing = OneUiMotionEasing)) +
-                        scaleIn(initialScale = 1.03f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(130, easing = OneUiMotionEasing))
+                    else HaliMeoMotion.sharedAxisZEnter(forward = false)
                 },
                 popExitTransition = {
                     if (reduceAnimationsState.value) fadeOut(tween(80))
-                    else fadeOut(tween(90, easing = OneUiMotionEasing)) +
-                        scaleOut(targetScale = 0.92f, transformOrigin = TransformOrigin(0.92f, 0.90f), animationSpec = tween(220, easing = OneUiMotionEasing))
+                    else HaliMeoMotion.sharedAxisZExit(forward = false)
                 }
             ) { EditScreen(editing, { t, b, c, d, photo ->
                 activity.lifecycleScope.launch {
@@ -590,10 +582,10 @@ class MainActivity:ComponentActivity() {
             }, { editing = null; nav.popBackStack() }) }
             composable(
                 route = "memory/{entryId}",
-                enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(90)) else fadeIn(tween(130, easing = OneUiMotionEasing)) + slideInHorizontally(initialOffsetX = { it / 12 }, animationSpec = tween(220, easing = OneUiMotionEasing)) },
-                exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else fadeOut(tween(110, easing = OneUiMotionEasing)) + slideOutHorizontally(targetOffsetX = { -it / 18 }, animationSpec = tween(140, easing = OneUiMotionEasing)) },
-                popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(80)) else fadeIn(tween(110, easing = OneUiMotionEasing)) + slideInHorizontally(initialOffsetX = { -it / 18 }, animationSpec = tween(150, easing = OneUiMotionEasing)) },
-                popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else fadeOut(tween(130, easing = OneUiMotionEasing)) + slideOutHorizontally(targetOffsetX = { it / 12 }, animationSpec = tween(210, easing = OneUiMotionEasing)) }
+                enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(90)) else HaliMeoMotion.sharedAxisZEnter(forward = true) },
+                exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.sharedAxisZExit(forward = true) },
+                popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(80)) else HaliMeoMotion.sharedAxisZEnter(forward = false) },
+                popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.sharedAxisZExit(forward = false) }
             ) { backStack ->
                 val entryId = backStack.arguments?.getString("entryId")
                 val memory = entries.firstOrNull { it.id == entryId }
@@ -604,7 +596,13 @@ class MainActivity:ComponentActivity() {
                 )
                 else LaunchedEffect(entryId) { nav.popBackStack() }
             }
-            composable("tripMonaco") { MissionScreen() }
+            composable(
+                route = "tripMonaco",
+                enterTransition = { if (reduceAnimationsState.value) fadeIn(tween(90)) else HaliMeoMotion.sharedAxisZEnter(forward = true) },
+                exitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.sharedAxisZExit(forward = true) },
+                popEnterTransition = { if (reduceAnimationsState.value) fadeIn(tween(80)) else HaliMeoMotion.sharedAxisZEnter(forward = false) },
+                popExitTransition = { if (reduceAnimationsState.value) fadeOut(tween(80)) else HaliMeoMotion.sharedAxisZExit(forward = false) }
+            ) { MissionScreen() }
         }
     })
     // Read the continuously changing pager offset in the graphics layer, not the root composition.
@@ -635,7 +633,7 @@ class MainActivity:ComponentActivity() {
                             navigationScope.launch {
                                 val destination = pagerState.targetPage.coerceIn(0, 2)
                                 if (reduceAnimationsState.value) pagerState.scrollToPage(destination)
-                                else pagerState.animateScrollToPage(destination, animationSpec = spring(dampingRatio = 0.94f, stiffness = 1500f))
+                                else pagerState.animateScrollToPage(destination)
                             }
                         },
                         onHorizontalDrag = { change, dragAmount ->
@@ -843,7 +841,7 @@ private fun FloatingNavItem(
     )
     val itemScale by animateFloatAsState(
         targetValue = if (selected) 1.02f else 1f,
-        animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.86f, stiffness = 620f),
+        animationSpec = if (reduceAnimationsState.value) tween(0) else HaliMeoMotion.listSpring(dampingRatio = 0.82f),
         label = "navItemScale"
     )
     val navInteraction = remember { MutableInteractionSource() }
@@ -2401,7 +2399,7 @@ private fun DiaryScreen(
                             modifier = Modifier.animateItem(
                                 fadeInSpec = tween(150, easing = OneUiMotionEasing),
                                 fadeOutSpec = tween(110, easing = OneUiMotionEasing),
-                                placementSpec = spring(dampingRatio = 0.86f, stiffness = 520f)
+                                placementSpec = HaliMeoMotion.listSpring()
                             ),
                             entry = entry,
                             authorName = social?.authorName ?: "Diario condiviso",
