@@ -1018,8 +1018,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             Modifier.align(Alignment.TopCenter).offset(x = driftX.dp, y = (-140).dp + driftY.dp).size(460.dp)
                 .background(
                     Brush.radialGradient(
-                        0.0f to palette.primary.copy(alpha = 0.28f),
-                        0.42f to palette.secondary.copy(alpha = 0.11f),
+                        0.0f to palette.primary.copy(alpha = 0.36f),
+                        0.42f to palette.secondary.copy(alpha = 0.17f),
                         1.0f to Color.Transparent
                     ), RoundedCornerShape(50)
                 )
@@ -1028,8 +1028,8 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             Modifier.align(Alignment.CenterStart).offset(x = (-210).dp - driftX.dp * 0.55f, y = 40.dp + driftY.dp).size(380.dp)
                 .background(
                     Brush.radialGradient(
-                        0.0f to palette.tertiary.copy(alpha = 0.14f),
-                        0.48f to palette.tertiary.copy(alpha = 0.055f),
+                        0.0f to palette.tertiary.copy(alpha = 0.20f),
+                        0.48f to palette.tertiary.copy(alpha = 0.085f),
                         1.0f to Color.Transparent
                     ), RoundedCornerShape(50)
                 )
@@ -1038,7 +1038,7 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             Modifier.align(Alignment.BottomEnd).offset(x = 190.dp - driftX.dp * 0.45f, y = 150.dp - driftY.dp).size(400.dp)
                 .background(
                     Brush.radialGradient(
-                        0.0f to palette.secondary.copy(alpha = 0.14f),
+                        0.0f to palette.secondary.copy(alpha = 0.19f),
                         0.45f to palette.primary.copy(alpha = 0.05f),
                         1.0f to Color.Transparent
                     ), RoundedCornerShape(50)
@@ -2628,6 +2628,8 @@ private fun DiaryScreen(
                                 fadeOutSpec = tween(110, easing = OneUiMotionEasing),
                                 placementSpec = HaliMeoMotion.listSpring()
                             ),
+                            hazeState = diaryHaze,
+                            glassStyle = diaryGlassStyle,
                             entry = entry,
                             authorName = social?.authorName ?: "Diario condiviso",
                             photo = entryPhoto,
@@ -2923,7 +2925,9 @@ private fun SocialMemoryPost(
     entry: DiaryEntry, authorName: String, photo: android.graphics.Bitmap?, expanded: Boolean,
     likeCount: Int = 0, likedByMe: Boolean = false, commentCount: Int = 0, socialEnabled: Boolean = true,
     onToggleLike: () -> Unit = {}, onComments: () -> Unit = {}, onAddToAlbum: () -> Unit = {}, onOpen: () -> Unit, onToggleCaption: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hazeState: HazeState,
+    glassStyle: HazeBlurStyle
 ) {
     val accent = MaterialTheme.colorScheme.primary
     val initials = authorName.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
@@ -2954,8 +2958,10 @@ private fun SocialMemoryPost(
     Column(
         modifier.fillMaxWidth()
             .animateContentSize(animationSpec = HaliMeoMotion.contentSizeSpring)
+            .shadow(12.dp, cardShape, clip = false)
             .clip(cardShape)
-            .background(frostedSurfaceStrongColor())
+            .hazeBlur(HazeInput.Sources(hazeState), glassStyle)
+            .background(Brush.linearGradient(listOf(frostedSurfaceStrongColor(), frostedSurfaceColor(), frostedSurfaceStrongColor())))
             .border(1.dp, frostedEdgeColor(), cardShape)
     ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -3006,18 +3012,57 @@ private fun SocialMemoryPost(
                 }
             }
         } else {
-            Surface(
-                Modifier.fillMaxWidth().heightIn(min = 148.dp).clickable(onClick = onOpen),
-                shape = RoundedCornerShape(0.dp),
-                color = accent.copy(alpha = 0.09f)
+            Box(
+                Modifier.fillMaxWidth().heightIn(min = 190.dp)
+                    .clip(RoundedCornerShape(26.dp))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                accent.copy(alpha = if (isHaliMeoDark()) 0.30f else 0.17f),
+                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.20f),
+                                frostedSurfaceColor()
+                            )
+                        )
+                    )
+                    .clickable(onClick = onOpen)
             ) {
+                Icon(
+                    Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = accent.copy(alpha = 0.13f),
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 10.dp).size(112.dp)
+                )
                 Column(
-                    Modifier.fillMaxWidth().padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = accent, modifier = Modifier.size(30.dp))
-                    Text("Un momento da ricordare", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(
+                            Modifier.size(30.dp).clip(CircleShape).background(accent.copy(alpha = 0.18f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.EditNote, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
+                        }
+                        Text("RICORDO IN PAROLE", color = accent, style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold, letterSpacing = 1.25.sp)
+                        Spacer(Modifier.weight(1f))
+                        Text(dateLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                    }
+                    Text(
+                        entry.title,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.headlineSmall.copy(letterSpacing = (-0.45).sp),
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (entry.body.isNotBlank()) {
+                        Text(entry.body, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 21.sp),
+                            maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                    Text("APRI IL RICORDO", color = accent, style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
                 }
             }
         }
@@ -3044,7 +3089,7 @@ private fun SocialMemoryPost(
             }
         }
 
-        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp)) {
+        if (photo != null) Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp)) {
             Text(
                 entry.title,
                 Modifier.fillMaxWidth().clickable(onClick = onOpen),
@@ -3059,14 +3104,14 @@ private fun SocialMemoryPost(
 
 
         Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(
+            if (photo != null) Text(
                 entry.body,
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
                 maxLines = if (expanded) Int.MAX_VALUE else 3,
                 overflow = TextOverflow.Ellipsis
             )
-            if (entry.body.length > 140) {
+            if (photo != null && entry.body.length > 140) {
                 TextButton(onClick = onToggleCaption, contentPadding = PaddingValues(0.dp), modifier = Modifier.height(30.dp)) {
                     Text(if (expanded) "Mostra meno" else "Leggi tutto", color = accent, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                 }
