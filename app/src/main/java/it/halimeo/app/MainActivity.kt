@@ -141,6 +141,21 @@ private suspend fun decodeMemoryPhoto(context: android.content.Context, uri: Str
         .getOrDefault(decoded) // decodeScaledBitmap returns a cache-owned bitmap; never recycle it here.
 }
 
+private suspend fun decodeDiaryPhoto(
+    context: android.content.Context,
+    entryId: String,
+    uri: String?,
+    maxDimension: Int,
+    repo: DiaryRepository
+): android.graphics.Bitmap? {
+    if (uri.isNullOrBlank()) return null
+    return if (uri.startsWith(REMOTE_PHOTO_PREFIX)) {
+        decodeRemoteScaledBitmap(uri, maxDimension) { repo.loadRemotePhotoBytes(entryId) }
+    } else {
+        decodeMemoryPhoto(context, uri, maxDimension)
+    }
+}
+
 private fun applyLauncherIcon(context: android.content.Context, variant: String) {
     // Alias class names come from the manifest namespace, not applicationId.
     // This matters for debug builds, whose applicationId has the ".debug" suffix.
@@ -605,7 +620,7 @@ class MainActivity:ComponentActivity() {
                     if (reduceAnimationsState.value) fadeOut(tween(80))
                     else HaliMeoMotion.sharedAxisZExit(forward = false)
                 }
-            ) { EditScreen(editing, { t, b, c, d, photo ->
+            ) { EditScreen(editing, repo, { t, b, c, d, photo ->
                 activity.lifecycleScope.launch {
                     repo.save(t, b, c, d, editing?.id, photo)
                     editing = null
@@ -624,6 +639,7 @@ class MainActivity:ComponentActivity() {
                 val memory = entries.firstOrNull { it.id == entryId }
                 if (memory != null) MemoryDetailScreen(
                     memory,
+                    repo = repo,
                     onBack = { nav.popBackStack() },
                     onEdit = { editing = memory; nav.navigate("edit") }
                 )
@@ -2480,7 +2496,7 @@ private fun DiaryScreen(
                                         photoHighlights.forEach { highlight ->
                                             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
                                                 val storyBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, highlight.photoUri) {
-                                                    value = highlight.photoUri?.let { decodeMemoryPhoto(diaryContext, it, maxDimension = 720) }
+                                                    value = decodeDiaryPhoto(diaryContext, highlight.id, highlight.photoUri, maxDimension = 480, repo = repo)
                                                 }
                                                 Surface(
                                                     modifier = Modifier.size(62.dp).clip(CircleShape).clickable { onOpenMemory(highlight) },
@@ -2533,7 +2549,7 @@ private fun DiaryScreen(
                         val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext) {
                             // The social feed is image-first: decode only items composed by the lazy list,
                             // at a bounded resolution suitable for the post preview.
-                            value = entry.photoUri?.let { decodeMemoryPhoto(photoContext, it, maxDimension = 1800) }
+                            value = decodeDiaryPhoto(photoContext, entry.id, entry.photoUri, maxDimension = 1280, repo = repo)
                         }
                         val social = socialEntries[entry.id]
                         SocialMemoryPost(
@@ -2985,6 +3001,7 @@ private fun SocialMemoryPost(
 @Composable
 private fun MemoryDetailScreen(
     entry: DiaryEntry,
+    repo: DiaryRepository,
     onBack: () -> Unit,
     onEdit: () -> Unit
 ) {
@@ -3012,7 +3029,7 @@ private fun MemoryDetailScreen(
         }
         val context = LocalContext.current
         val bitmap by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri) {
-            value = entry.photoUri?.let { decodeMemoryPhoto(context, it, maxDimension = 2200) }
+            value = decodeDiaryPhoto(context, entry.id, entry.photoUri, maxDimension = 1600, repo = repo)
         }
         SocialMemoryPost(
             entry = entry,
@@ -3032,6 +3049,7 @@ private fun MemoryDetailScreen(
 @Composable
 private fun EditScreen(
     existing: DiaryEntry?,
+    repo: DiaryRepository,
     onSave: (String, String, String, String, String?) -> Unit,
     onCancel: () -> Unit
 ) {
@@ -3085,7 +3103,7 @@ private fun EditScreen(
         }
     }
     val photoBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, photoUri, context) {
-        value = photoUri?.takeIf { it.isNotBlank() }?.let { decodeMemoryPhoto(context, it, maxDimension = 2000) }
+        value = decodeDiaryPhoto(context, existing?.id.orEmpty(), photoUri, maxDimension = 1400, repo = repo)
     }
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = MaterialTheme.colorScheme.primary,
