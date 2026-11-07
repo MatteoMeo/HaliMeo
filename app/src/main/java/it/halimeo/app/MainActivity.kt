@@ -878,7 +878,7 @@ class MainActivity:ComponentActivity() {
         val available = HaliMeoUpdateState.release
         if (available != null) {
             AlertDialog(
-                modifier = LocalHaliMeoPopupHazeModifier.current,
+                modifier = if (reduceStaticEffectsState.value) Modifier else Modifier.hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle),
                 shape = RoundedCornerShape(30.dp),
                 containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 onDismissRequest = { showUpdatePrompt = false },
