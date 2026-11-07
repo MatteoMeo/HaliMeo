@@ -2,4 +2,5 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <cache-path name="camera_photos" path="." />
     <cache-path name="apk_updates" path="updates/" />
+    <external-files-path name="downloaded_updates" path="Download/" />
 </paths>
