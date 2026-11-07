@@ -587,9 +587,11 @@ class MainActivity:ComponentActivity() {
     val navigationGlassBackground = if (isHaliMeoDark()) Color(0xFF101419) else Color(0xFFF3F6FA)
     val navigationGlassStyle = remember(navigationGlassTint, navigationGlassBackground) {
         HazeBlurStyle {
-            backgroundColor(navigationGlassBackground.copy(alpha = 0.88f))
-            colorEffects(listOf(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.38f))))
-            fallbackColorEffect(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.42f)))
+            // Denser glass: retain visible backdrop detail while preventing the
+            // tab bar from washing out against bright diary photos and light themes.
+            backgroundColor(navigationGlassBackground.copy(alpha = 0.94f))
+            colorEffects(listOf(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.48f))))
+            fallbackColorEffect(HazeColorEffect.tint(navigationGlassTint.copy(alpha = 0.58f)))
         }
     }
     val navigationScope = rememberCoroutineScope()
@@ -941,9 +943,16 @@ class MainActivity:ComponentActivity() {
         Surface(
             modifier = Modifier.size(46.dp)
                 .haliMeoPressScale(fabInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.96f, label = "newMemoryFabPress")
-                .clip(RoundedCornerShape(32.dp)),
+                .clip(RoundedCornerShape(32.dp))
+                .hazeBlur(
+                    input = HazeInput.Backdrop(navigationHaze),
+                    style = navigationGlassStyle,
+                    performanceMode = HazePerformanceMode.Performance,
+                    expandLayerBounds = false
+                )
+                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.42f), RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
+            color = Color.Transparent,
             shadowElevation = 7.dp
         ) {
             Box(Modifier.fillMaxSize().clip(RoundedCornerShape(32.dp)).clickable(interactionSource = fabInteraction, indication = LocalIndication.current, role = androidx.compose.ui.semantics.Role.Button, onClickLabel = "Nuovo ricordo") { navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); editing = null; nav.navigate("edit") }, contentAlignment = Alignment.Center) {
