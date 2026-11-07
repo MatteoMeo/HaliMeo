@@ -298,6 +298,7 @@ private fun displayHaliMeoDate(value: String): String {
     return date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yy"))
 }
 private val lastSyncAtState = mutableStateOf(0L)
+private val profilePhotoRefreshState = mutableStateOf(0)
 private val reduceAnimationsState = mutableStateOf(false)
 private val reduceStaticEffectsState = mutableStateOf(false)
 private val appThemeModeState = mutableStateOf("dark")
@@ -1324,6 +1325,7 @@ private fun SettingsScreen(
                                         repo.uploadProfilePhoto(selectedPhoto)
                                         profilePhotoUploadedUri = selectedPhoto
                                         profilePrefs.edit().putString("profile_photo_uploaded_uri", selectedPhoto).apply()
+                                        profilePhotoRefreshState.value++
                                     }
                                 }
                                 result.onSuccess {
@@ -2624,7 +2626,7 @@ private fun DiaryScreen(
                         val social = socialEntries[entry.id]
                         val authorId = social?.authorId?.takeIf { it.isNotBlank() } ?: currentUserId
                         val authorAvatar by produceState<android.graphics.Bitmap?>(
-                            initialValue = null, authorId, repo
+                            initialValue = null, authorId, repo, profilePhotoRefreshState.value
                         ) {
                             value = if (authorId.isBlank()) null else runCatching {
                                 repo.loadProfilePhotoBytes(authorId)?.let { bytes ->
