@@ -9,6 +9,7 @@ on:
       - '*.gradle.kts'
       - 'gradle/**'
       - 'gradle.properties'
+      - '.github/scripts/**'
       - 'gradlew'
       - '.github/workflows/android-debug-apk.yml'
   workflow_dispatch:
@@ -20,6 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
+  actions: read
   contents: write
 
 jobs:
@@ -127,10 +129,32 @@ jobs:
           cp "$SIGNED_APK" "HaliMeo-${HALIMEO_VERSION_NAME}-build${HALIMEO_VERSION_CODE}-debug.apk"
           echo "Firma verificata: l’APK usa la chiave Alpha persistente."
 
+      - name: Individua l'ultimo APK Alpha pubblicato con successo
+        id: previous-build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT_RUN_ID: ${{ github.run_id }}
+          CURRENT_BRANCH: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUNS="$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/android-debug-apk.yml/runs?branch=${CURRENT_BRANCH}&status=success&per_page=100")"
+          PREVIOUS_SHA="$(printf '%s' "$RUNS" | jq -r --arg id "$CURRENT_RUN_ID" \
+            '[.workflow_runs[] | select((.id | tostring) != $id and .conclusion == "success" and .head_branch == env.CURRENT_BRANCH)] | sort_by(.run_number) | last | .head_sha // empty')"
+          if [ -n "$PREVIOUS_SHA" ] && git cat-file -e "${PREVIOUS_SHA}^{commit}" 2>/dev/null; then
+            echo "sha=$PREVIOUS_SHA" >> "$GITHUB_OUTPUT"
+            echo "Changelog dal precedente APK riuscito: $PREVIOUS_SHA"
+          else
+            echo "sha=" >> "$GITHUB_OUTPUT"
+            echo "Nessun APK precedente riuscito trovato: verrà usato il fallback Git."
+          fi
+
       - name: Genera il changelog in italiano dalle modifiche reali
         env:
           EVENT_NAME: ${{ github.event_name }}
           BEFORE_SHA: ${{ github.event.before }}
+          PREVIOUS_BUILD_SHA: ${{ steps.previous-build.outputs.sha }}
           CURRENT_SHA: ${{ github.sha }}
           BUILD_NUMBER: ${{ github.run_number }}
           VERSION_NAME: 1.0.${{ github.run_number }}

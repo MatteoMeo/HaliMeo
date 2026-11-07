@@ -15,6 +15,7 @@ def main():
     build = os.environ["BUILD_NUMBER"]
     channel = os.getenv("RELEASE_CHANNEL", "Alpha")
     before = os.getenv("BEFORE_SHA", "")
+    previous_build = os.getenv("PREVIOUS_BUILD_SHA", "").strip()
     # Usa l'ultimo tag dello stesso canale raggiungibile dal commit precedente
     # a questa build. Non scegliere un tag più recente appartenente a un'altra
     # linea di storia: produrrebbe changelog ripetuti o incompleti.
@@ -24,9 +25,16 @@ def main():
         previous = git("describe", "--tags", "--match", pattern, "--abbrev=0", f"{current}^")
     except subprocess.CalledProcessError:
         pass
-    if previous:
+    if previous_build and previous_build != current:
+        try:
+            base = git("merge-base", previous_build, current)
+        except subprocess.CalledProcessError:
+            base = ""
+    elif previous:
         base = previous
-    elif before and before != "0000000000000000000000000000000000000000":
+    else:
+        base = ""
+    if not base and before and before != "0000000000000000000000000000000000000000":
         base = before
     else:
         parents = git("rev-list", "--parents", "-n", "1", current).split()

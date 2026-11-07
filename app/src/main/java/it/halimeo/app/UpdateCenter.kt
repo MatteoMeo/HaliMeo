@@ -10,6 +10,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
@@ -78,6 +82,16 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
     var downloading by remember { mutableStateOf(false) }
     var progress by remember { mutableFloatStateOf(0f) }
     var pendingInstallFile by remember { mutableStateOf<File?>(null) }
+    val changelogScrollState = rememberScrollState()
+    val changelogNestedScroll = remember(changelogScrollState) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val atTop = changelogScrollState.value == 0 && available.y > 0f
+                val atBottom = changelogScrollState.value >= changelogScrollState.maxValue && available.y < 0f
+                return if (atTop || atBottom) Offset(0f, available.y) else Offset.Zero
+            }
+        }
+    }
     val scope = rememberCoroutineScope()
     val installLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val installedFile = pendingInstallFile
@@ -202,7 +216,6 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
         Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.62f))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(11.dp)
     ) {
@@ -217,7 +230,7 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("Controllo automatico all'avvio", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                Text("Controllo automatico all'avvio", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                 Text("Verifica le nuove versioni ogni volta che apri HaliMeo", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Switch(
@@ -277,12 +290,11 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
                 }
                 if (item.changelog.isNotBlank()) {
                     Surface(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.72f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp).nestedScroll(changelogNestedScroll),
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.72f)
                     ) {
-                        Column(Modifier.verticalScroll(rememberScrollState()).padding(12.dp)) {
+                        Column(Modifier.verticalScroll(changelogScrollState).padding(12.dp)) {
                             Text(item.changelog.take(5000), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface)
                         }
                     }

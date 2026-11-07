@@ -233,7 +233,7 @@ private val FrostedSurfaceStrong = Color(0xD90D1420)
 private val OneUiMotionEasing = CubicBezierEasing(0.22f, 0.25f, 0f, 1f)
 @Composable private fun frostedGlassBrush(): Brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.065f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.075f)))
 @Composable private fun isHaliMeoDark(): Boolean = when (appThemeModeState.value) { "light" -> false; "system" -> isSystemInDarkTheme(); else -> true }
-@Composable private fun frostedEdgeColor(): Color = if (isHaliMeoDark()) Color.White.copy(alpha = 0.20f) else Color(0xFF59647A).copy(alpha = 0.22f)
+@Composable private fun frostedEdgeColor(): Color = Color.Transparent
 @Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.08f else 0.14f).compositeOver(Color(0xD9101419)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.055f).compositeOver(Color(0xF2FFFFFF))
 @Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.10f else 0.18f).compositeOver(Color(0xE60C0F12)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.09f).compositeOver(Color(0xFAFFFFFF))
 private val customBackgroundColorState = mutableStateOf("default")
@@ -605,8 +605,6 @@ class MainActivity:ComponentActivity() {
                 ) { page ->
                     when (page) {
                         0 -> DiaryScreen(entries, repo,
-                            { editing = it; nav.navigate("edit") },
-                            { entry -> activity.lifecycleScope.launch { repo.delete(entry.id) } },
                             { entry -> nav.navigate("memory/${entry.id}") }
                         )
                         1 -> TripsScreen(onOpenMonaco = { nav.navigate("tripMonaco") })
@@ -850,23 +848,25 @@ class MainActivity:ComponentActivity() {
     }
     }
 
-    val fabInteraction = remember { MutableInteractionSource() }
-    Surface(
-        modifier = Modifier.align(Alignment.BottomEnd)
-            .padding(end = 12.dp)
-            .navigationBarsPadding()
-            .padding(bottom = 15.dp)
-            .size(46.dp)
-            .haliMeoPressScale(fabInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.96f, label = "newMemoryFabPress")
-            .clip(RoundedCornerShape(24.dp))
-            .then(if (reduceStaticEffectsState.value) Modifier else Modifier.hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.96f else 0.62f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor()),
-        shadowElevation = 7.dp
+    AnimatedVisibility(
+        visible = currentRoute == "main" && pagerState.currentPage == 0,
+        modifier = Modifier.align(Alignment.BottomEnd).padding(end = 12.dp).navigationBarsPadding().padding(bottom = 15.dp),
+        enter = if (reduceAnimationsState.value) fadeIn(tween(0)) else fadeIn(tween(150, easing = OneUiMotionEasing)) + scaleIn(initialScale = 0.82f, animationSpec = spring(dampingRatio = 0.78f, stiffness = 620f)),
+        exit = if (reduceAnimationsState.value) fadeOut(tween(0)) else fadeOut(tween(100, easing = OneUiMotionEasing)) + scaleOut(targetScale = 0.88f, animationSpec = spring(dampingRatio = 0.9f, stiffness = 700f))
     ) {
-        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)).clickable(interactionSource = fabInteraction, indication = LocalIndication.current, role = androidx.compose.ui.semantics.Role.Button, onClickLabel = "Nuovo ricordo") { navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); editing = null; nav.navigate("edit") }, contentAlignment = Alignment.Center) {
-            Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(21.dp), tint = MaterialTheme.colorScheme.onPrimary)
+        val fabInteraction = remember { MutableInteractionSource() }
+        Surface(
+            modifier = Modifier.size(46.dp)
+                .haliMeoPressScale(fabInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.96f, label = "newMemoryFabPress")
+                .clip(RoundedCornerShape(32.dp))
+                .then(if (reduceStaticEffectsState.value) Modifier else Modifier.hazeBlur(HazeInput.Sources(navigationHaze), navigationGlassStyle)),
+            shape = RoundedCornerShape(32.dp),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.96f else 0.62f),
+            shadowElevation = 7.dp
+        ) {
+            Box(Modifier.fillMaxSize().clip(RoundedCornerShape(32.dp)).clickable(interactionSource = fabInteraction, indication = LocalIndication.current, role = androidx.compose.ui.semantics.Role.Button, onClickLabel = "Nuovo ricordo") { navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); editing = null; nav.navigate("edit") }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(21.dp), tint = MaterialTheme.colorScheme.onPrimary)
+            }
         }
     }
     }
@@ -874,6 +874,8 @@ class MainActivity:ComponentActivity() {
         val available = HaliMeoUpdateState.release
         if (available != null) {
             AlertDialog(
+                shape = RoundedCornerShape(30.dp),
+                colors = AlertDialogDefaults.colors(containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
                 onDismissRequest = { showUpdatePrompt = false },
                 icon = { Icon(Icons.Default.SystemUpdate, contentDescription = null) },
                 title = { Text("Nuova versione disponibile") },
@@ -1223,10 +1225,10 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(profileCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsProfilePress")
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(32.dp))
                 .clickable(interactionSource = profileCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("profile" in expandedSettingsSections) expandedSettingsSections - "profile" else expandedSettingsSections + "profile" }
-                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
-            shape = RoundedCornerShape(24.dp),
+                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
+            shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1302,10 +1304,10 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(invitesCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsInvitesPress")
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(32.dp))
                 .clickable(interactionSource = invitesCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("invites" in expandedSettingsSections) expandedSettingsSections - "invites" else expandedSettingsSections + "invites" }
-                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
-            shape = RoundedCornerShape(24.dp),
+                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
+            shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1419,9 +1421,9 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(appearanceCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsAppearancePress")
-                .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(32.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp))
                 .clickable(interactionSource = appearanceCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("appearance" in expandedSettingsSections) expandedSettingsSections - "appearance" else expandedSettingsSections + "appearance" },
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1751,10 +1753,10 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(dateCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsDatePress")
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(32.dp))
                 .clickable(interactionSource = dateCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("date" in expandedSettingsSections) expandedSettingsSections - "date" else expandedSettingsSections + "date" }
-                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
-            shape = RoundedCornerShape(24.dp),
+                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
+            shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1801,10 +1803,10 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(syncCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsSyncPress")
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(32.dp))
                 .clickable(interactionSource = syncCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("sync" in expandedSettingsSections) expandedSettingsSections - "sync" else expandedSettingsSections + "sync" }
-                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
-            shape = RoundedCornerShape(24.dp),
+                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
+            shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1878,8 +1880,9 @@ private fun SettingsScreen(
 
         Card(
             modifier = Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
-            shape = RoundedCornerShape(24.dp),
+                .clip(RoundedCornerShape(32.dp))
+                .clickable { expandedSettingsSections = if ("appInfo" in expandedSettingsSections) expandedSettingsSections - "appInfo" else expandedSettingsSections + "appInfo" },
+            shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1892,34 +1895,39 @@ private fun SettingsScreen(
                         Text("Dettagli di HaliMeo e della build installata", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
                     Text("v${BuildConfig.VERSION_NAME}", color = accentText, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Icon(if ("appInfo" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null, tint = accentText)
                 }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Developer", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
-                    Text("MatteoMeo", color = primaryText, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Versione build", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
-                    Text("${BuildConfig.VERSION_CODE}", color = primaryText, style = MaterialTheme.typography.bodyMedium)
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Canale", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
-                    Text(if (BuildConfig.DEBUG) "Debug" else "Alpha", color = primaryText, style = MaterialTheme.typography.bodyMedium)
-                }
-                Text("Package: ${BuildConfig.APPLICATION_ID}", color = secondaryText, style = MaterialTheme.typography.labelSmall)
-                Text("Diario privato condiviso · Android API 37", color = secondaryText, style = MaterialTheme.typography.labelSmall)
-                Box(Modifier.fillMaxWidth().bringIntoViewRequester(updateCenterRequester)) {
-                    UpdateCenterCard(activity)
+                AnimatedVisibility(visible = "appInfo" in expandedSettingsSections, enter = HaliMeoMotion.sectionEnter(reduceAnimationsState.value), exit = HaliMeoMotion.sectionExit(reduceAnimationsState.value)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.16f))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Developer", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
+                            Text("MatteoMeo", color = primaryText, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Versione build", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
+                            Text("${BuildConfig.VERSION_CODE}", color = primaryText, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Canale", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
+                            Text(if (BuildConfig.DEBUG) "Debug" else "Alpha", color = primaryText, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Text("Package: ${BuildConfig.APPLICATION_ID}", color = secondaryText, style = MaterialTheme.typography.labelSmall)
+                        Text("Diario privato condiviso · Android API 37", color = secondaryText, style = MaterialTheme.typography.labelSmall)
+                        Box(Modifier.fillMaxWidth().bringIntoViewRequester(updateCenterRequester)) {
+                            UpdateCenterCard(activity)
+                        }
+                    }
                 }
             }
         }
 
         Card(
             modifier = Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(32.dp))
                 .clickable { if (developerUnlocked) developerUnlocked = false else { showDeveloperPinDialog = true; developerPin = ""; developerPinError = false } }
-                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
-            shape = RoundedCornerShape(24.dp),
+                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
+            shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2039,6 +2047,8 @@ private fun SettingsScreen(
 
         if (showDeveloperPinDialog) {
             AlertDialog(
+                shape = RoundedCornerShape(30.dp),
+                colors = AlertDialogDefaults.colors(containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
                 onDismissRequest = { showDeveloperPinDialog = false; developerPin = "" },
                 title = { Text("Opzioni sviluppatore") },
                 text = {
@@ -2109,7 +2119,7 @@ private fun SettingsScreen(
         }
     }
     Column(Modifier.fillMaxSize().background(haliMeoAuthBackdrop()).hazeSource(authHaze).verticalScroll(rememberScrollState()).imePadding().padding(20.dp),verticalArrangement=Arrangement.Center){Text("HaliMeo",style=MaterialTheme.typography.displayMedium,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black);Text("Un posto solo vostro.",color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.height(16.dp))
-        Card(colors=CardDefaults.cardColors(containerColor=frostedSurfaceStrongColor()), modifier=Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(authHaze), authGlassStyle).clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)), shape=RoundedCornerShape(24.dp)) {
+        Card(colors=CardDefaults.cardColors(containerColor=frostedSurfaceStrongColor()), modifier=Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(authHaze), authGlassStyle).clip(RoundedCornerShape(32.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)), shape=RoundedCornerShape(32.dp)) {
             Column(Modifier.padding(12.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     val dotColor = when (serverOnline) { true -> Color(0xFF86E3B0); false -> Color(0xFFFF8E9B); null -> Color(0xFFFFD18A) }
@@ -2186,8 +2196,6 @@ private fun categoryIcon(category: String): androidx.compose.ui.graphics.vector.
 private fun DiaryScreen(
     entries: List<DiaryEntry>,
     repo: DiaryRepository,
-    onEdit: (DiaryEntry) -> Unit,
-    onDelete: (DiaryEntry) -> Unit,
     onOpenMemory: (DiaryEntry) -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
@@ -2195,7 +2203,6 @@ private fun DiaryScreen(
     var selectedDate by remember { mutableStateOf<String?>(null) }
     var showCalendar by remember { mutableStateOf(false) }
     val calendarState = rememberDatePickerState()
-    var pendingDelete by remember { mutableStateOf<DiaryEntry?>(null) }
     var expandedEntryIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var socialEntries by remember { mutableStateOf<Map<String, it.halimeo.app.network.SocialFeedEntry>>(emptyMap()) }
     var commentsEntry by remember { mutableStateOf<DiaryEntry?>(null) }
@@ -2467,8 +2474,8 @@ private fun DiaryScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Card(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
-                        shape = RoundedCornerShape(24.dp),
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
+                        shape = RoundedCornerShape(32.dp),
                         colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
                     ) {
                         Column(
@@ -2640,8 +2647,6 @@ private fun DiaryScreen(
                             onToggleCaption = {
                                 expandedEntryIds = if (expanded) expandedEntryIds - entry.id else expandedEntryIds + entry.id
                             },
-                            onEdit = { onEdit(entry) },
-                            onDelete = { pendingDelete = entry }
                         )
                     }
                 }
@@ -2651,6 +2656,8 @@ private fun DiaryScreen(
     }
     if (albumEntry != null) {
         AlertDialog(
+            shape = RoundedCornerShape(30.dp),
+            colors = AlertDialogDefaults.colors(containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
             onDismissRequest = { albumEntry = null },
             title = { Text("Aggiungi a un album") },
             text = {
@@ -2700,6 +2707,8 @@ private fun DiaryScreen(
     }
     if (albumsBrowserOpen) {
         AlertDialog(
+            shape = RoundedCornerShape(30.dp),
+            colors = AlertDialogDefaults.colors(containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
             onDismissRequest = { albumsBrowserOpen = false },
             title = { Text("I vostri album") },
             text = {
@@ -2756,6 +2765,8 @@ private fun DiaryScreen(
     }
     if (selectedAlbum != null) {
         AlertDialog(
+            shape = RoundedCornerShape(30.dp),
+            colors = AlertDialogDefaults.colors(containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
             onDismissRequest = { selectedAlbum = null; albumDetail = null },
             title = { Text(albumDetail?.title ?: selectedAlbum?.title ?: "Album") },
             text = {
@@ -2796,6 +2807,8 @@ private fun DiaryScreen(
     }
     if (commentsEntry != null) {
         AlertDialog(
+            shape = RoundedCornerShape(30.dp),
+            colors = AlertDialogDefaults.colors(containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
             onDismissRequest = { commentsEntry = null },
             title = { Text("Commenti") },
             text = {
@@ -2868,15 +2881,6 @@ private fun DiaryScreen(
             dismissButton = { TextButton(onClick = { commentsEntry = null }) { Text("Chiudi") } }
         )
     }
-    if (pendingDelete != null) {
-        AlertDialog(
-            onDismissRequest = { pendingDelete = null },
-            title = { Text("Eliminare questo ricordo?") },
-            text = { Text("Il ricordo verrà rimosso dalla tua lista e la modifica sarà sincronizzata quando possibile.") },
-            confirmButton = { TextButton(onClick = { pendingDelete?.let(onDelete); pendingDelete = null }) { Text("Elimina", color = MaterialTheme.colorScheme.error) } },
-            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Annulla") } }
-        )
-    }
 }
 
 
@@ -2886,7 +2890,6 @@ private fun SocialMemoryPost(
     entry: DiaryEntry, authorName: String, photo: android.graphics.Bitmap?, expanded: Boolean,
     likeCount: Int = 0, likedByMe: Boolean = false, commentCount: Int = 0, socialEnabled: Boolean = true,
     onToggleLike: () -> Unit = {}, onComments: () -> Unit = {}, onAddToAlbum: () -> Unit = {}, onOpen: () -> Unit, onToggleCaption: () -> Unit,
-    onEdit: () -> Unit, onDelete: () -> Unit, showManagement: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val accent = MaterialTheme.colorScheme.primary
@@ -2897,7 +2900,7 @@ private fun SocialMemoryPost(
     val animatedVisibilityScope = LocalHaliMeoAnimatedVisibilityScope.current
     val photoAlpha by animateFloatAsState(
         targetValue = if (photo != null) 1f else 0f,
-        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(220, easing = OneUiMotionEasing),
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "diaryPhotoReveal"
     )
     val sharedPhotoModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
@@ -2914,7 +2917,7 @@ private fun SocialMemoryPost(
         animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.72f, stiffness = 680f),
         label = "postLikeScale"
     )
-    val cardShape = RoundedCornerShape(28.dp)
+    val cardShape = RoundedCornerShape(32.dp)
     Column(
         modifier.fillMaxWidth()
             .animateContentSize(animationSpec = HaliMeoMotion.contentSizeSpring)
@@ -2986,18 +2989,6 @@ private fun SocialMemoryPost(
             }
         }
 
-        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp)) {
-            Text(
-                entry.title,
-                Modifier.fillMaxWidth().clickable(onClick = onOpen),
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleLarge.copy(letterSpacing = (-0.35).sp),
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -3019,6 +3010,20 @@ private fun SocialMemoryPost(
                 Icon(Icons.Default.CollectionsBookmark, contentDescription = "Aggiungi a un album", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(21.dp))
             }
         }
+
+        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp)) {
+            Text(
+                entry.title,
+                Modifier.fillMaxWidth().clickable(onClick = onOpen),
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleLarge.copy(letterSpacing = (-0.35).sp),
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+
 
         Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text(
@@ -3042,13 +3047,6 @@ private fun SocialMemoryPost(
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp), tint = accent)
                 }
             }
-            if (showManagement) {
-                HorizontalDivider(modifier = Modifier.padding(top = 5.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.20f))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onEdit) { Icon(Icons.Default.Edit, null, Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text("Modifica") }
-                    TextButton(onClick = onDelete) { Icon(Icons.Default.DeleteOutline, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text("Elimina", color = MaterialTheme.colorScheme.error) }
-                }
-            }
         }
     }
 }
@@ -3063,16 +3061,23 @@ private fun MemoryDetailScreen(
     onDelete: () -> Unit
 ) {
     var showDeleteConfirmation by remember(entry.id) { mutableStateOf(false) }
+    var detailComments by remember(entry.id) { mutableStateOf<List<it.halimeo.app.network.SocialComment>>(emptyList()) }
+    var commentsLoading by remember(entry.id) { mutableStateOf(true) }
     val context = LocalContext.current
+    LaunchedEffect(entry.id) {
+        commentsLoading = true
+        detailComments = runCatching { repo.loadEntryComments(entry.id) }.getOrDefault(emptyList())
+        commentsLoading = false
+    }
     val bitmap by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri) {
         value = decodeDiaryPhoto(context, entry.id, entry.photoUri, maxDimension = 1800, repo = repo)
     }
-    val shape = RoundedCornerShape(28.dp)
+    val shape = RoundedCornerShape(32.dp)
     val sharedTransitionScope = LocalHaliMeoSharedTransitionScope.current
     val animatedVisibilityScope = LocalHaliMeoAnimatedVisibilityScope.current
     val photoAlpha by animateFloatAsState(
         targetValue = if (bitmap != null) 1f else 0f,
-        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(240, easing = OneUiMotionEasing),
+        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(100, easing = OneUiMotionEasing),
         label = "detailPhotoReveal"
     )
     val sharedPhotoModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
@@ -3087,7 +3092,7 @@ private fun MemoryDetailScreen(
 
     Column(
         Modifier.fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surface)))
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
@@ -3203,8 +3208,8 @@ private fun MemoryDetailScreen(
 
         if (entry.body.isNotBlank()) {
             Card(
-                modifier = Modifier.fillMaxWidth().border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp)),
-                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier.fillMaxWidth().border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
+                shape = RoundedCornerShape(32.dp),
                 colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
             ) {
                 Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -3217,19 +3222,35 @@ private fun MemoryDetailScreen(
             }
         }
 
-        OutlinedButton(
-            onClick = onEdit,
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(18.dp)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(32.dp),
+            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
         ) {
-            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("Modifica ricordo")
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.ChatBubbleOutline, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(19.dp))
+                    Text("COMMENTI", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    Text(detailComments.size.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                }
+                when {
+                    commentsLoading -> LinearProgressIndicator(Modifier.fillMaxWidth())
+                    detailComments.isEmpty() -> Text("Ancora nessun commento. Questo ricordo aspetta il primo.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                    else -> detailComments.take(3).forEach { comment ->
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(comment.authorName, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                            Text(comment.body, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            }
         }
         Spacer(Modifier.height(24.dp))
     }
     if (showDeleteConfirmation) {
         AlertDialog(
+            shape = RoundedCornerShape(30.dp),
+            colors = AlertDialogDefaults.colors(containerColor = frostedSurfaceStrongColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant),
             onDismissRequest = { showDeleteConfirmation = false },
             title = { Text("Eliminare questo ricordo?") },
             text = { Text("Il ricordo verrà rimosso dal diario su questo dispositivo e la cancellazione verrà sincronizzata con l'altro telefono appena possibile.") },
@@ -3313,11 +3334,11 @@ private fun EditScreen(
         unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
         cursorColor = MaterialTheme.colorScheme.primary
     )
-    val cardShape = RoundedCornerShape(28.dp)
+    val cardShape = RoundedCornerShape(32.dp)
 
     Column(
         Modifier.fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surface)))
             .hazeSource(editHaze)
             .verticalScroll(scrollState)
             .imePadding()
@@ -3596,7 +3617,7 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
                 transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
             },
             color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.headlineMedium.copy(letterSpacing = (-0.65).sp),
+            style = MaterialTheme.typography.headlineMedium.copy(fontSize = 33.sp, letterSpacing = (-0.9).sp),
             fontWeight = FontWeight.Bold,
             maxLines = 1
         )
@@ -3611,9 +3632,9 @@ private fun TripsScreen(onOpenMonaco: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(tripInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.975f, label = "tripCardPress")
                 .hazeBlur(HazeInput.Sources(tripsHaze), tripsGlassStyle)
-                .clip(RoundedCornerShape(26.dp))
+                .clip(RoundedCornerShape(30.dp))
                 .clickable(interactionSource = tripInteraction, indication = LocalIndication.current, onClick = onOpenMonaco),
-            shape = RoundedCornerShape(26.dp),
+            shape = RoundedCornerShape(30.dp),
             color = frostedSurfaceColor(),
             border = androidx.compose.foundation.BorderStroke(1.dp, frostedEdgeColor()),
             tonalElevation = 0.dp
