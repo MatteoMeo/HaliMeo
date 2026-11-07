@@ -638,6 +638,7 @@ class MainActivity:ComponentActivity() {
                             onUpdaterFocused = { focusUpdater = false }
                         )
                     }
+                }
             }
             composable(
                 route = "edit",
