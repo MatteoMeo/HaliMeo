@@ -122,25 +122,38 @@ class DiaryRepository(context: Context) {
         val metadataToSync = (pending + pendingPhotoEntries).distinctBy { it.id }
         val response = api.sync(auth, SyncRequest(metadataToSync.map { it.toDto() }))
         val remoteById = response.changes.associateBy { it.id }
-        val photosToDownload = mutableSetOf<String>()
         for (dto in response.changes) {
             val local = dao.get(dto.id)
             val localTextIsNewer = local != null && local.updatedAt > dto.updatedAt
             val remotePhotoIsNewer = dto.photoUpdatedAt > (local?.photoUpdatedAt ?: 0L)
-            if (localTextIsNewer && !remotePhotoIsNewer) continue
-            val preserveLocalPhoto = local != null && !remotePhotoIsNewer
-            if (remotePhotoIsNewer && dto.photoDeletedAt == null) photosToDownload += dto.id
+            val serverPhotoUri = if (dto.photoUpdatedAt > 0L && dto.photoDeletedAt == null) {
+                remotePhotoUri(dto.id, dto.photoUpdatedAt)
+            } else null
+
+            // Previously downloaded server photos are migrated to a lightweight remote
+            // reference. Pending local uploads are deliberately kept on-device until sent.
+            if (localTextIsNewer && !remotePhotoIsNewer && local != null) {
+                if (local.photoSyncState == "SYNCED" && local.photoUri != serverPhotoUri) {
+                    deleteManagedPhoto(local.photoUri)
+                    dao.upsert(local.copy(photoUri = serverPhotoUri))
+                }
+                continue
+            }
+
+            val keepPendingLocalPhoto = local != null &&
+                !remotePhotoIsNewer && local.photoSyncState != "SYNCED"
             val merged = if (localTextIsNewer && local != null) local.copy(
-                photoUri = if (preserveLocalPhoto) local.photoUri else null,
+                photoUri = if (keepPendingLocalPhoto) local.photoUri else serverPhotoUri,
                 photoUpdatedAt = maxOf(dto.photoUpdatedAt, local.photoUpdatedAt),
                 photoDeletedAt = if (remotePhotoIsNewer) dto.photoDeletedAt else local.photoDeletedAt,
-                photoSyncState = if (preserveLocalPhoto) local.photoSyncState else "PENDING"
+                photoSyncState = if (keepPendingLocalPhoto) local.photoSyncState else "SYNCED"
             ) else dto.toEntity().copy(
-                photoUri = if (preserveLocalPhoto) local?.photoUri else null,
+                photoUri = if (keepPendingLocalPhoto) local?.photoUri else serverPhotoUri,
                 photoUpdatedAt = maxOf(dto.photoUpdatedAt, local?.photoUpdatedAt ?: 0L),
                 photoDeletedAt = if (remotePhotoIsNewer) dto.photoDeletedAt else local?.photoDeletedAt,
-                photoSyncState = if (preserveLocalPhoto) local?.photoSyncState ?: "SYNCED" else if (dto.photoUpdatedAt == 0L || dto.photoDeletedAt != null) "SYNCED" else "PENDING"
+                photoSyncState = if (keepPendingLocalPhoto) local?.photoSyncState ?: "PENDING" else "SYNCED"
             )
+            if (!keepPendingLocalPhoto) deleteManagedPhoto(local?.photoUri)
             dao.upsert(merged)
         }
         pending.forEach { entry ->
@@ -176,30 +189,30 @@ class DiaryRepository(context: Context) {
             val body = file.asRequestBody(mime.toMediaType())
             val part = MultipartBody.Part.createFormData("photo", file.name, body)
             val result = api.uploadPhoto(auth, entry.id, entry.photoUpdatedAt, part)
-            if (result["ignored"] == true) dao.markPhotoSynced(entry.id, entry.photoUpdatedAt)
-            else {
+            if (result["ignored"] == true) {
+                val confirmed = (result["photoUpdatedAt"] as? Number)?.toLong()
+                if (confirmed != null && confirmed >= entry.photoUpdatedAt) {
+                    dao.markPhotoUploaded(entry.id, entry.photoUpdatedAt, confirmed, remotePhotoUri(entry.id, confirmed))
+                    deleteManagedPhoto(localUri)
+                } else {
+                    dao.markPhotoSynced(entry.id, entry.photoUpdatedAt)
+                }
+            } else {
                 val confirmed = (result["photoUpdatedAt"] as? Number)?.toLong() ?: entry.photoUpdatedAt
-                dao.confirmPhotoRevision(entry.id, entry.photoUpdatedAt, confirmed, null)
+                dao.markPhotoUploaded(entry.id, entry.photoUpdatedAt, confirmed, remotePhotoUri(entry.id, confirmed))
+                deleteManagedPhoto(localUri)
             }
         }
 
-        // Download remote photo revisions after uploads, keeping the file app-private for offline use.
+        // Remote photos are not prefetched or persisted. Their image bytes are requested
+        // only when a visible diary item needs them, and kept in the in-memory bitmap cache.
         for (dto in response.changes) {
             val local = dao.get(dto.id) ?: continue
-            if ((dto.id !in photosToDownload && dto.photoUpdatedAt <= local.photoUpdatedAt) || dto.photoDeletedAt != null) {
-                if (dto.photoDeletedAt != null && dto.photoDeletedAt >= local.photoUpdatedAt) {
-                    deleteManagedPhoto(local.photoUri)
-                    dao.upsert(local.copy(photoUri=null, photoUpdatedAt=dto.photoUpdatedAt,
-                        photoDeletedAt=dto.photoDeletedAt, photoSyncState="SYNCED"))
-                }
-                continue
+            if (dto.photoDeletedAt != null && dto.photoDeletedAt >= local.photoUpdatedAt) {
+                deleteManagedPhoto(local.photoUri)
+                dao.upsert(local.copy(photoUri = null, photoUpdatedAt = dto.photoUpdatedAt,
+                    photoDeletedAt = dto.photoDeletedAt, photoSyncState = "SYNCED"))
             }
-            val downloaded = api.downloadPhoto(auth, dto.id)
-            val destination = File(photoDir, "${dto.id}-remote-${dto.photoUpdatedAt}.img")
-            downloaded.byteStream().use { input -> destination.outputStream().use { output -> input.copyTo(output) } }
-            deleteManagedPhoto(local.photoUri)
-            dao.upsert(local.copy(photoUri=Uri.fromFile(destination).toString(),
-                photoUpdatedAt=dto.photoUpdatedAt, photoDeletedAt=null, photoSyncState="SYNCED"))
         }
 
         // Replay queued likes and comments only after their diary entry is confirmed on the server.
@@ -224,6 +237,16 @@ class DiaryRepository(context: Context) {
         val token = session.token() ?: throw IllegalStateException("Accedi per usare le funzioni social.")
         return "Bearer $token"
     }
+
+    /**
+     * Fetches a single image only when its diary item is actually displayed.
+     * The response is consumed in memory and is never written to the photo directory.
+     */
+    suspend fun loadRemotePhotoBytes(entryId: String): ByteArray? = runCatching {
+        ApiClient.api.downloadPhoto(authorizedHeader(), entryId).use { response ->
+            response.byteStream().use { input -> input.readBytes() }
+        }
+    }.getOrNull()
 
     suspend fun loadSocialFeed(): SocialFeedResponse {
         val response = ApiClient.api.socialFeed(authorizedHeader())
