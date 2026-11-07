@@ -5,14 +5,20 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -23,15 +29,47 @@ import androidx.compose.ui.unit.IntSize
 /**
  * Shared motion tokens for HaliMeo.
  *
- * The timings follow a short, spatial-first motion language: controls respond immediately,
- * while expanding content gets enough time to remain readable. The interaction patterns are
- * adapted independently from the ideas used in Morphe Manager; no Morphe source is copied.
+ * Motion is inspired by the spatial transitions and settling list movement used in Morphe
+ * Manager, adapted to HaliMeo's own navigation and visual language.
  */
 internal object HaliMeoMotion {
     private val easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
 
+    private const val SHARED_AXIS_DURATION = 300
+    private const val SHARED_AXIS_FADE_OUT = 90
+    private const val SHARED_AXIS_FADE_IN = SHARED_AXIS_DURATION - SHARED_AXIS_FADE_OUT
+    private const val SHARED_AXIS_Z_BELOW = 0.8f
+    private const val SHARED_AXIS_Z_ABOVE = 1.1f
+
+    private val sharedAxisScale = tween<Float>(
+        durationMillis = SHARED_AXIS_DURATION,
+        easing = FastOutSlowInEasing
+    )
+
+    private val sharedAxisFadeIn =
+        fadeIn(tween(SHARED_AXIS_FADE_IN, delayMillis = SHARED_AXIS_FADE_OUT, easing = LinearOutSlowInEasing))
+    private val sharedAxisFadeOut =
+        fadeOut(tween(SHARED_AXIS_FADE_OUT, easing = FastOutLinearInEasing))
+
     val contentSizeSpring: SpringSpec<IntSize> =
         spring(dampingRatio = 0.88f, stiffness = 520f)
+
+    /** Morphe-style list settling: a quick, lightly bouncy placement spring. */
+    fun <T> listSpring(dampingRatio: Float = 0.8f): SpringSpec<T> =
+        spring(stiffness = 400f, dampingRatio = dampingRatio)
+
+    /** Shared Z-axis transition for screens that move deeper into the navigation stack. */
+    fun sharedAxisZEnter(forward: Boolean): EnterTransition =
+        scaleIn(
+            animationSpec = sharedAxisScale,
+            initialScale = if (forward) SHARED_AXIS_Z_BELOW else SHARED_AXIS_Z_ABOVE
+        ) + sharedAxisFadeIn
+
+    fun sharedAxisZExit(forward: Boolean): ExitTransition =
+        scaleOut(
+            animationSpec = sharedAxisScale,
+            targetScale = if (forward) SHARED_AXIS_Z_ABOVE else SHARED_AXIS_Z_BELOW
+        ) + sharedAxisFadeOut
 
     fun sectionEnter(reduceMotion: Boolean): EnterTransition =
         if (reduceMotion) {
@@ -52,6 +90,19 @@ internal object HaliMeoMotion {
                 shrinkTowards = Alignment.Top
             ) + fadeOut(animationSpec = tween(durationMillis = 115, easing = easing))
         }
+}
+
+/**
+ * Navigate at most one pager page at a time. A distant destination is first positioned
+ * next to the current page, so intermediate screens are not animated across the viewport.
+ */
+internal suspend fun PagerState.turnToPage(page: Int) {
+    val distance = page - currentPage
+    when {
+        distance > 1 -> scrollToPage(page - 1)
+        distance < -1 -> scrollToPage(page + 1)
+    }
+    animateScrollToPage(page)
 }
 
 /**
