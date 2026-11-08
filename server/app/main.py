@@ -4,7 +4,7 @@ from io import BytesIO
 from dotenv import load_dotenv
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Depends, Header, UploadFile, File, Query
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, Response
 from PIL import Image, ImageOps
 from pydantic import BaseModel, EmailStr, Field
 from passlib.context import CryptContext
@@ -139,6 +139,11 @@ class AlbumIn(BaseModel):
 
 class AlbumEntryIn(BaseModel):
     entryId: str = Field(min_length=1, max_length=80)
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    # The API has no browser UI; answer silently instead of logging a noisy 404.
+    return Response(status_code=204)
 
 @app.get("/v1/health")
 def health(): return {"status":"ok","service":"halimeo","time":now_ms()}
