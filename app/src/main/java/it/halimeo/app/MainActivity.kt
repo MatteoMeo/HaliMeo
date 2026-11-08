@@ -501,6 +501,7 @@ class MainActivity:ComponentActivity() {
     val ctx= LocalContext.current; val activity=ctx as ComponentActivity
     val session=remember{SessionStore(ctx)}; val repo=remember{DiaryRepository(ctx)}
     var signed by remember{mutableStateOf<Boolean?>(null)}; var displayName by remember{mutableStateOf("")}
+    var focusUpdater by remember { mutableStateOf(false) }
     LaunchedEffect(Unit){signed=!session.token().isNullOrBlank();displayName=session.name()}
     if(signed==null){Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA)),contentAlignment=Alignment.Center){LoadingIndicator(modifier=Modifier.size(64.dp), color=MaterialTheme.colorScheme.primary)};return}
     if(signed==false){AuthScreen(
