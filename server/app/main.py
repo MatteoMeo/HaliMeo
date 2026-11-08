@@ -1,4 +1,4 @@
-import os, sqlite3, secrets, hashlib, time, uuid, mimetypes, smtplib, logging
+import os, sqlite3, secrets, hashlib, time, uuid, mimetypes, smtplib, logging, urllib.parse, urllib.request, json
 from pathlib import Path
 from io import BytesIO
 from email.message import EmailMessage
@@ -41,6 +41,13 @@ with db() as c:
       id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, display_name TEXT NOT NULL,
       password_hash TEXT NOT NULL, created_at INTEGER NOT NULL, disabled INTEGER NOT NULL DEFAULT 0
     );
+    CREATE TABLE IF NOT EXISTS social_identities(
+      provider TEXT NOT NULL, provider_user_id TEXT NOT NULL, user_id TEXT NOT NULL,
+      email TEXT NOT NULL, created_at INTEGER NOT NULL,
+      PRIMARY KEY(provider, provider_user_id),
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_social_identity_user ON social_identities(user_id);
     CREATE TABLE IF NOT EXISTS invites(
       code_hash TEXT PRIMARY KEY, created_by TEXT NOT NULL, created_at INTEGER NOT NULL,
       expires_at INTEGER NOT NULL, used_at INTEGER, used_by TEXT
@@ -115,6 +122,10 @@ def public_user(u): return {"userId": u["id"], "displayName": u["display_name"]}
 class LoginIn(BaseModel):
     email: EmailStr
     password: str = Field(min_length=10, max_length=128)
+class SocialLoginIn(BaseModel):
+    providerToken: str = Field(min_length=20, max_length=10000)
+    inviteCode: Optional[str] = Field(default=None, min_length=16, max_length=128)
+    displayName: Optional[str] = Field(default=None, min_length=1, max_length=60)
 class RedeemIn(LoginIn):
     inviteCode: str = Field(min_length=16, max_length=128)
     displayName: str = Field(min_length=1, max_length=60)
@@ -159,6 +170,98 @@ def favicon():
 
 @app.get("/v1/health")
 def health(): return {"status":"ok","service":"halimeo","time":now_ms()}
+
+
+def verify_social_identity(provider: str, provider_token: str):
+    """Verify provider credentials server-side; never trust client-supplied email or profile data."""
+    if provider == "google":
+        client_id = os.getenv("HALIMEO_GOOGLE_CLIENT_ID", "").strip()
+        if not client_id:
+            raise HTTPException(503, "Accesso Google non configurato sul server")
+        try:
+            from google.oauth2 import id_token
+            from google.auth.transport.requests import Request
+            claims = id_token.verify_oauth2_token(provider_token, Request(), client_id)
+            if claims.get("iss") not in ("accounts.google.com", "https://accounts.google.com") or not claims.get("email_verified"):
+                raise ValueError("Unverified Google identity")
+            return str(claims["sub"]), str(claims["email"]).lower(), str(claims.get("name") or "")
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(401, "Token Google non valido o scaduto")
+    if provider == "facebook":
+        app_id = os.getenv("HALIMEO_FACEBOOK_APP_ID", "").strip()
+        app_secret = os.getenv("HALIMEO_FACEBOOK_APP_SECRET", "").strip()
+        if not app_id or not app_secret:
+            raise HTTPException(503, "Accesso Facebook non configurato sul server")
+        try:
+            query = urllib.parse.urlencode({
+                "input_token": provider_token,
+                "access_token": f"{app_id}|{app_secret}"
+            })
+            with urllib.request.urlopen("https://graph.facebook.com/debug_token?" + query, timeout=8) as response:
+                debug = json.loads(response.read().decode("utf-8"))["data"]
+            if not debug.get("is_valid") or str(debug.get("app_id")) != app_id:
+                raise ValueError("Invalid Facebook token")
+            with urllib.request.urlopen(
+                "https://graph.facebook.com/me?" + urllib.parse.urlencode({
+                    "fields": "id,name,email", "access_token": provider_token
+                }), timeout=8
+            ) as response:
+                profile = json.loads(response.read().decode("utf-8"))
+            if not profile.get("id") or not profile.get("email"):
+                raise ValueError("Facebook email unavailable")
+            return str(profile["id"]), str(profile["email"]).lower(), str(profile.get("name") or "")
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(401, "Token Facebook non valido, scaduto o senza email verificabile")
+    raise HTTPException(400, "Provider non supportato")
+
+
+@app.post("/v1/auth/social/{provider}")
+def social_login(provider: str, data: SocialLoginIn):
+    provider = provider.lower().strip()
+    provider_user_id, email, provider_name = verify_social_identity(provider, data.providerToken)
+    now = int(time.time())
+    with db() as c:
+        identity = c.execute(
+            "SELECT u.* FROM social_identities s JOIN users u ON u.id=s.user_id "
+            "WHERE s.provider=? AND s.provider_user_id=? AND u.disabled=0",
+            (provider, provider_user_id)
+        ).fetchone()
+        if identity:
+            user = dict(identity)
+        else:
+            # Do not silently link a social identity to an existing password account by email.
+            if c.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
+                raise HTTPException(409, "Esiste già un account con questa email. Accedi con la password prima di collegare il provider.")
+            if not data.inviteCode:
+                raise HTTPException(403, "Per creare un account HaliMeo serve un codice invito.")
+            digest = hashlib.sha256(data.inviteCode.encode()).hexdigest()
+            invite = c.execute(
+                "SELECT * FROM invites WHERE code_hash=? AND used_at IS NULL AND expires_at>=?",
+                (digest, now)
+            ).fetchone()
+            if not invite:
+                raise HTTPException(400, "Invito non valido, scaduto o già utilizzato")
+            user_id = secrets.token_urlsafe(18)
+            display_name = (data.displayName or provider_name or email.split("@", 1)[0]).strip()[:60]
+            # A random, undisclosed password hash prevents password login until the user
+            # explicitly sets one through a future account-security flow.
+            password_hash = pwd.hash(secrets.token_urlsafe(48))
+            c.execute(
+                "INSERT INTO users(id,email,display_name,password_hash,created_at) VALUES(?,?,?,?,?)",
+                (user_id, email, display_name, password_hash, now)
+            )
+            c.execute(
+                "INSERT INTO social_identities(provider,provider_user_id,user_id,email,created_at) VALUES(?,?,?,?,?)",
+                (provider, provider_user_id, user_id, email, now)
+            )
+            c.execute("UPDATE invites SET used_at=?,used_by=? WHERE code_hash=?", (now, user_id, digest))
+            c.execute("INSERT INTO audit_log(user_id,action,at) VALUES(?,?,?)", (user_id, "social_invite_redeemed", now))
+            user = dict(c.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone())
+    return {"accessToken": make_token(user), "tokenType": "Bearer", **public_user(user)}
 
 @app.post("/v1/auth/login")
 def login(data: LoginIn):
