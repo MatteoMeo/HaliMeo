@@ -263,6 +263,28 @@ def social_login(provider: str, data: SocialLoginIn):
             user = dict(c.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone())
     return {"accessToken": make_token(user), "tokenType": "Bearer", **public_user(user)}
 
+@app.post("/v1/auth/social/{provider}/link")
+def link_social_identity(provider: str, data: SocialLoginIn, user=Depends(current_user)):
+    provider = provider.lower().strip()
+    provider_user_id, email, _ = verify_social_identity(provider, data.providerToken)
+    if email != user["email"].lower():
+        raise HTTPException(400, "L'email verificata dal provider deve coincidere con quella dell'account HaliMeo.")
+    with db() as c:
+        existing = c.execute(
+            "SELECT user_id FROM social_identities WHERE provider=? AND provider_user_id=?",
+            (provider, provider_user_id)
+        ).fetchone()
+        if existing and existing["user_id"] != user["id"]:
+            raise HTTPException(409, "Questa identità è già collegata a un altro account HaliMeo.")
+        c.execute(
+            "INSERT OR IGNORE INTO social_identities(provider,provider_user_id,user_id,email,created_at) VALUES(?,?,?,?,?)",
+            (provider, provider_user_id, user["id"], email, int(time.time()))
+        )
+        c.execute("INSERT INTO audit_log(user_id,action,at) VALUES(?,?,?)",
+                  (user["id"], "social_identity_linked:" + provider, int(time.time())))
+    return {"linked": True, "provider": provider}
+
+
 @app.post("/v1/auth/login")
 def login(data: LoginIn):
     with db() as c:
