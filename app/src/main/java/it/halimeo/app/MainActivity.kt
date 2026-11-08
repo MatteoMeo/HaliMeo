@@ -731,214 +731,203 @@ class MainActivity:ComponentActivity() {
             ) { MissionScreen() }
         }
     })
-    // Read the continuously changing pager offset in the graphics layer, not the root composition.
-    if (currentRoute != "edit" && currentRoute != "tripMonaco") Surface(
-        modifier = Modifier.align(Alignment.BottomCenter)
-            .zIndex(1f)
-            // Reserve the right-side slot for the create action; both controls share the same bottom baseline.
-            .fillMaxWidth(0.60f)
-            .navigationBarsPadding()
-            // A little taller and raised: its visual center now lines up with the + button.
-            .padding(vertical = 8.dp)
-            .height(56.dp)
-            .clip(RoundedCornerShape(50))
-            .hazeBlur(
-                input = HazeInput.Backdrop(navigationHaze),
-                style = navigationGlassStyle,
-                performanceMode = HazePerformanceMode.Performance,
-                expandLayerBounds = false
-            ),
-        shape = RoundedCornerShape(50),
-        color = Color.Transparent,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)),
-        tonalElevation = 0.dp
-    ) {
-        BoxWithConstraints(
-            Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp)
+    // Navigation dock and create action are independent siblings in one horizontal
+    // layout. The FAB owns its own 56dp slot to the right; it can never cover the dock.
+    if (currentRoute != "edit" && currentRoute != "tripMonaco") {
+        Row(
+            Modifier.align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            val tabWidth = (maxWidth - 6.dp) / 3
-            val navigationSlotWidthPx = with(LocalDensity.current) { (tabWidth + 3.dp).toPx().coerceAtLeast(1f) }
-            var isNavigationDragging by remember { mutableStateOf(false) }
-            var isNavigationSettling by remember { mutableStateOf(false) }
-            var navigationPillPosition by remember { mutableFloatStateOf(pagerState.currentPage.toFloat()) }
-            val navigationPillAnimatable = remember(pagerState) {
-                androidx.compose.animation.core.Animatable(pagerState.currentPage.toFloat())
-            }
-            Box(
-                Modifier.fillMaxSize()
-                    .pointerInput(pagerState, navigationSlotWidthPx) {
-                        detectDragGestures(
-                            onDragStart = {
-                                navigationPillPosition = if (isNavigationSettling) {
-                                    navigationPillAnimatable.value
-                                } else {
-                                    (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 2f)
-                                }
-                                isNavigationDragging = true
-                                isNavigationSettling = false
-                                navigationScope.launch { navigationPillAnimatable.stop() }
-                            },
-                            onDragEnd = {
-                                val releasedAt = navigationPillPosition
-                                val destination = releasedAt.roundToInt().coerceIn(0, 2)
-                                if (reduceAnimationsState.value) {
-                                    isNavigationDragging = false
-                                    isNavigationSettling = false
-                                    navigationScope.launch { pagerState.scrollToPage(destination) }
-                                } else {
-                                    isNavigationSettling = true
-                                    navigationScope.launch {
-                                        // Keep the pill at the exact release point until its spring
-                                        // and the pager animation can start together. This avoids
-                                        // the old snap-back to the pager's stale currentPage.
-                                        navigationPillAnimatable.snapTo(releasedAt)
-                                        isNavigationDragging = false
-                                        kotlinx.coroutines.coroutineScope {
-                                            launch {
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp)
+                    .clip(RoundedCornerShape(50))
+                    .hazeBlur(
+                        input = HazeInput.Backdrop(navigationHaze),
+                        style = navigationGlassStyle,
+                        performanceMode = HazePerformanceMode.Performance,
+                        expandLayerBounds = false
+                    ),
+                shape = RoundedCornerShape(50),
+                color = Color.Transparent,
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)),
+                tonalElevation = 0.dp
+            ) {
+                BoxWithConstraints(
+                    Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp)
+                ) {
+                    val tabWidth = (maxWidth - 6.dp) / 3
+                    val navigationSlotWidthPx = with(LocalDensity.current) { (tabWidth + 3.dp).toPx().coerceAtLeast(1f) }
+                    var isNavigationDragging by remember { mutableStateOf(false) }
+                    var isNavigationSettling by remember { mutableStateOf(false) }
+                    var navigationPillPosition by remember { mutableFloatStateOf(pagerState.currentPage.toFloat()) }
+                    val navigationPillAnimatable = remember(pagerState) {
+                        androidx.compose.animation.core.Animatable(pagerState.currentPage.toFloat())
+                    }
+                    Box(
+                        Modifier.fillMaxSize()
+                            .pointerInput(pagerState, navigationSlotWidthPx) {
+                                detectDragGestures(
+                                    onDragStart = {
+                                        navigationPillPosition = if (isNavigationSettling) {
+                                            navigationPillAnimatable.value
+                                        } else {
+                                            (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 2f)
+                                        }
+                                        isNavigationDragging = true
+                                        isNavigationSettling = false
+                                        navigationScope.launch { navigationPillAnimatable.stop() }
+                                    },
+                                    onDragEnd = {
+                                        val releasedAt = navigationPillPosition
+                                        val destination = releasedAt.roundToInt().coerceIn(0, 2)
+                                        if (reduceAnimationsState.value) {
+                                            isNavigationDragging = false
+                                            isNavigationSettling = false
+                                            navigationScope.launch { pagerState.scrollToPage(destination) }
+                                        } else {
+                                            isNavigationSettling = true
+                                            navigationScope.launch {
+                                                navigationPillAnimatable.snapTo(releasedAt)
+                                                isNavigationDragging = false
+                                                kotlinx.coroutines.coroutineScope {
+                                                    launch {
+                                                        navigationPillAnimatable.animateTo(
+                                                            destination.toFloat(),
+                                                            animationSpec = HaliMeoMotion.navigationPillSpring
+                                                        )
+                                                    }
+                                                    launch {
+                                                        pagerState.animateScrollToPage(
+                                                            destination,
+                                                            animationSpec = HaliMeoMotion.pageSpring
+                                                        )
+                                                    }
+                                                }
+                                                isNavigationSettling = false
+                                            }
+                                        }
+                                    },
+                                    onDragCancel = {
+                                        val releasedAt = navigationPillPosition
+                                        val destination = pagerState.currentPage
+                                        if (reduceAnimationsState.value) {
+                                            isNavigationDragging = false
+                                            navigationScope.launch { pagerState.scrollToPage(destination) }
+                                        } else {
+                                            isNavigationSettling = true
+                                            navigationScope.launch {
+                                                navigationPillAnimatable.snapTo(releasedAt)
+                                                isNavigationDragging = false
                                                 navigationPillAnimatable.animateTo(
                                                     destination.toFloat(),
                                                     animationSpec = HaliMeoMotion.navigationPillSpring
                                                 )
-                                            }
-                                            launch {
-                                                pagerState.animateScrollToPage(
-                                                    destination,
-                                                    animationSpec = HaliMeoMotion.pageSpring
-                                                )
+                                                isNavigationSettling = false
                                             }
                                         }
-                                        isNavigationSettling = false
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        navigationPillPosition = (
+                                            navigationPillPosition + dragAmount.x / navigationSlotWidthPx
+                                        ).coerceIn(0f, 2f)
                                     }
-                                }
-                            },
-                            onDragCancel = {
-                                val releasedAt = navigationPillPosition
-                                val destination = pagerState.currentPage
-                                if (reduceAnimationsState.value) {
-                                    isNavigationDragging = false
-                                    navigationScope.launch { pagerState.scrollToPage(destination) }
-                                } else {
-                                    isNavigationSettling = true
-                                    navigationScope.launch {
-                                        navigationPillAnimatable.snapTo(releasedAt)
-                                        isNavigationDragging = false
-                                        navigationPillAnimatable.animateTo(
-                                            destination.toFloat(),
-                                            animationSpec = HaliMeoMotion.navigationPillSpring
-                                        )
-                                        isNavigationSettling = false
-                                    }
-                                }
-                            },
-                            onDrag = { change, dragAmount ->
-                                // This is a local gesture: move only the pill with the finger.
-                                // Do not dispatch deltas to PagerState, or the page underneath
-                                // will scroll and the indicator will appear to move backwards.
-                                change.consume()
-                                navigationPillPosition = (
-                                    navigationPillPosition + dragAmount.x / navigationSlotWidthPx
-                                ).coerceIn(0f, 2f)
+                                )
                             }
+                    ) {
+                        Box(
+                            Modifier.graphicsLayer {
+                                val pagePosition = when {
+                                    isNavigationDragging -> navigationPillPosition
+                                    isNavigationSettling -> navigationPillAnimatable.value
+                                    reduceAnimationsState.value -> pagerState.currentPage.toFloat()
+                                    else -> (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 2f)
+                                }
+                                translationX = (tabWidth + 3.dp).toPx() * pagePosition
+                            }
+                                .width(tabWidth)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color.White.copy(alpha = 0.18f),
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                        )
+                                    )
+                                )
+                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50))
                         )
+                        Row(
+                            Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            FloatingNavItem(Modifier.weight(1f), primaryTab == 0, "Diario", Icons.Default.Book) {
+                                navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                selectPrimaryTab(0)
+                            }
+                            FloatingNavItem(Modifier.weight(1f), primaryTab == 1, "Viaggi", Icons.Default.FlightTakeoff) {
+                                navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                selectPrimaryTab(1)
+                            }
+                            FloatingNavItem(Modifier.weight(1f), primaryTab == 2, "Impostazioni", Icons.Default.Settings) {
+                                navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                selectPrimaryTab(2)
+                            }
+                        }
                     }
-            ) {
-            // During the gesture the pill is attached to the finger. On release, its own spring
-            // and the page spring run concurrently from their respective current positions.
-            Box(
-                Modifier.graphicsLayer {
-                    val pagePosition = when {
-                        isNavigationDragging -> navigationPillPosition
-                        isNavigationSettling -> navigationPillAnimatable.value
-                        reduceAnimationsState.value -> pagerState.currentPage.toFloat()
-                        else -> (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 2f)
-                    }
-                    translationX = (tabWidth + 3.dp).toPx() * pagePosition
-                }
-                    .width(tabWidth)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(50))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.18f),
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                            )
-                        )
-                    )
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.72f), RoundedCornerShape(50))
-            )
-            Row(
-                Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                FloatingNavItem(
-                    Modifier.weight(1f), primaryTab == 0, "Diario", Icons.Default.Book
-                ) {
-                    navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                    selectPrimaryTab(0)
-                }
-                FloatingNavItem(
-                    Modifier.weight(1f), primaryTab == 1, "Viaggi", Icons.Default.FlightTakeoff
-                ) {
-                    navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                    selectPrimaryTab(1)
-                }
-                FloatingNavItem(
-                    Modifier.weight(1f), primaryTab == 2, "Impostazioni", Icons.Default.Settings
-                ) {
-                    navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                    selectPrimaryTab(2)
                 }
             }
-        }
-    }
 
-    // A newly built, always-opaque One UI-style create button. It sits in the
-    // root overlay (not inside the pager or a post), so cards can never cover it.
-    if (primaryTab == 0 && currentRoute == "main") {
-        val createFabInteraction = remember { MutableInteractionSource() }
-        Surface(
-            onClick = {
-                navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                editing = null
-                nav.navigate("edit")
-            },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .zIndex(30f)
-                .padding(end = 20.dp)
-                .navigationBarsPadding()
-                .padding(bottom = 8.dp)
-                .requiredSize(56.dp)
-                .clip(CircleShape)
-                .haliMeoPressScale(
-                    createFabInteraction,
-                    reduceMotion = reduceAnimationsState.value,
-                    pressedScale = 0.92f,
-                    label = "diaryCreateAction"
-                ),
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp,
-                MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.28f)
-            ),
-            shadowElevation = 10.dp,
-            tonalElevation = 0.dp
-        ) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "Nuovo ricordo",
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(29.dp)
-                )
+            // Standalone action: separate hit target, separate surface, fixed size.
+            // It sits beside (never over) the navigation dock.
+            if (primaryTab == 0 && currentRoute == "main") {
+                val createFabInteraction = remember { MutableInteractionSource() }
+                Surface(
+                    onClick = {
+                        navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                        editing = null
+                        nav.navigate("edit")
+                    },
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .haliMeoPressScale(
+                            createFabInteraction,
+                            reduceMotion = reduceAnimationsState.value,
+                            pressedScale = 0.92f,
+                            label = "diaryCreateAction"
+                        ),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.28f)
+                    ),
+                    shadowElevation = 8.dp,
+                    tonalElevation = 0.dp
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Nuovo ricordo",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                }
             }
         }
-    }
     }
     }
 }
