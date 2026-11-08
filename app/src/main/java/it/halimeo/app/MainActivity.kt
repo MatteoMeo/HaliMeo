@@ -3250,7 +3250,7 @@ private fun SocialMemoryPost(
                     Image(
                         bitmap = photo.asImageBitmap(),
                         contentDescription = "Foto del ricordo: ${entry.title}",
-                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = photoAlpha; scaleX = detailPhotoScale; scaleY = detailPhotoScale },
+                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = photoAlpha },
                         contentScale = ContentScale.Fit
                     )
                 }
