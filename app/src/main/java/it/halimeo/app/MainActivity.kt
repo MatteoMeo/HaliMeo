@@ -121,6 +121,8 @@ import it.halimeo.app.data.*
 import it.halimeo.app.network.*
 import it.halimeo.app.sync.SyncScheduler
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.delay
 import kotlin.math.ceil
@@ -886,10 +888,11 @@ class MainActivity:ComponentActivity() {
         }
     }
 
-    // Keep the create action in the root overlay, above the pager, posts and glass navbar.
-    // Material 3 FAB colors follow the active dynamic app palette (including custom accents).
+    // A newly built, always-opaque One UI-style create button. It sits in the
+    // root overlay (not inside the pager or a post), so cards can never cover it.
     if (primaryTab == 0 && currentRoute == "main") {
-        FloatingActionButton(
+        val createFabInteraction = remember { MutableInteractionSource() }
+        Surface(
             onClick = {
                 navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                 editing = null
@@ -897,32 +900,34 @@ class MainActivity:ComponentActivity() {
             },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .zIndex(20f)
+                .zIndex(30f)
                 .padding(end = 20.dp)
                 .navigationBarsPadding()
                 .padding(bottom = 88.dp)
-                .size(56.dp)
+                .size(58.dp)
                 .haliMeoPressScale(
-                    remember { MutableInteractionSource() },
+                    createFabInteraction,
                     reduceMotion = reduceAnimationsState.value,
-                    pressedScale = 0.94f,
-                    label = "newMemoryFabPress"
+                    pressedScale = 0.92f,
+                    label = "diaryCreateAction"
                 ),
-            shape = RoundedCornerShape(18.dp),
-            containerColor = MaterialTheme.colorScheme.primary,
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
-            elevation = FloatingActionButtonDefaults.elevation(
-                defaultElevation = 7.dp,
-                pressedElevation = 3.dp,
-                focusedElevation = 7.dp,
-                hoveredElevation = 7.dp
-            )
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.28f)
+            ),
+            shadowElevation = 10.dp,
+            tonalElevation = 0.dp
         ) {
-            Icon(
-                Icons.Default.Add,
-                contentDescription = "Nuovo ricordo",
-                modifier = Modifier.size(27.dp)
-            )
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Nuovo ricordo",
+                    modifier = Modifier.size(29.dp)
+                )
+            }
         }
     }
     if (showUpdatePrompt) {
