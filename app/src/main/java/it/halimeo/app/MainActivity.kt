@@ -2343,7 +2343,7 @@ private fun DiaryScreen(
             val semaphore = kotlinx.coroutines.sync.Semaphore(permits = 3)
             val decoded = kotlinx.coroutines.coroutineScope {
                 missing.map { entry ->
-                    kotlinx.coroutines.async {
+                    async {
                         semaphore.withPermit {
                             entry.id to decodeDiaryPhoto(
                                 diaryContext,
