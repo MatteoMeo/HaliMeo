@@ -209,8 +209,8 @@ def verify_social_identity(provider: str, provider_token: str):
                 }), timeout=8
             ) as response:
                 profile = json.loads(response.read().decode("utf-8"))
-            if not profile.get("id") or not profile.get("email"):
-                raise ValueError("Facebook email unavailable")
+            if not profile.get("id") or not profile.get("email") or str(debug.get("user_id")) != str(profile.get("id")):
+                raise ValueError("Facebook identity mismatch or email unavailable")
             return str(profile["id"]), str(profile["email"]).lower(), str(profile.get("name") or "")
         except HTTPException:
             raise
