@@ -3192,11 +3192,14 @@ private fun SocialMemoryPost(
             )
             .border(1.dp, frostedEdgeColor(), cardShape)
     ) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Box(
-                Modifier.size(38.dp).clip(CircleShape)
-                    .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.28f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.22f))))
-                    .border(1.dp, accent.copy(alpha = 0.32f), CircleShape),
+                Modifier.size(40.dp).clip(CircleShape)
+                    .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.30f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.24f))))
+                    .border(1.dp, accent.copy(alpha = 0.42f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 if (authorAvatar != null) {
@@ -3210,15 +3213,25 @@ private fun SocialMemoryPost(
                     Text(initials, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 }
             }
-            Spacer(Modifier.width(9.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(authorName.ifBlank { "HaliMeo" }, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Text(dateLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(authorName.ifBlank { "HaliMeo" }, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text(dateLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                    Text("·", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                    Text(entry.category.ifBlank { "Ricordo" }, color = accent, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
-            if (entry.syncState != "SYNCED" || entry.photoSyncState != "SYNCED") {
-                Icon(Icons.Default.CloudUpload, contentDescription = "In attesa di sincronizzazione", tint = accent, modifier = Modifier.size(19.dp))
-            } else {
-                Icon(Icons.Default.CloudDone, contentDescription = "Ricordo sincronizzato", tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.88f), modifier = Modifier.size(19.dp))
+            Surface(
+                shape = CircleShape,
+                color = if (entry.syncState == "SYNCED" && entry.photoSyncState == "SYNCED") accent.copy(alpha = 0.13f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
+            ) {
+                Icon(
+                    if (entry.syncState == "SYNCED" && entry.photoSyncState == "SYNCED") Icons.Default.CloudDone else Icons.Default.CloudUpload,
+                    contentDescription = if (entry.syncState == "SYNCED" && entry.photoSyncState == "SYNCED") "Ricordo sincronizzato" else "In attesa di sincronizzazione",
+                    tint = accent,
+                    modifier = Modifier.padding(7.dp).size(16.dp)
+                )
             }
         }
 
@@ -3334,24 +3347,47 @@ private fun SocialMemoryPost(
         }
 
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 1.dp),
-            verticalAlignment = Alignment.CenterVertically
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(9.dp)
         ) {
-            IconButton(onClick = { showHeartBurst = true; onToggleLike() }, enabled = socialEnabled, modifier = Modifier.size(38.dp)) {
+            // Compact expressive action chips replace the old row of isolated Material icons.
+            Row(
+                Modifier.clip(RoundedCornerShape(50))
+                    .background(if (likedByMe) Color(0xFFE66F8B).copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f))
+                    .clickable(enabled = socialEnabled) { showHeartBurst = true; onToggleLike() }
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
                 Icon(
                     if (likedByMe) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = if (likedByMe) "Rimuovi mi piace" else "Mi piace",
                     tint = if (likedByMe) Color(0xFFE66F8B) else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(23.dp).graphicsLayer { scaleX = likeScale; scaleY = likeScale }
+                    modifier = Modifier.size(19.dp).graphicsLayer { scaleX = likeScale; scaleY = likeScale }
                 )
+                Text(likeCount.toString(), color = if (likedByMe) Color(0xFFE66F8B) else MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
             }
-            Text(likeCount.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
-            IconButton(onClick = onComments, enabled = socialEnabled, modifier = Modifier.padding(start = 6.dp).size(38.dp)) {
-                Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Commenti", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(21.dp))
+            Row(
+                Modifier.clip(RoundedCornerShape(50))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f))
+                    .clickable(enabled = socialEnabled, onClick = onComments)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Commenti", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(19.dp))
+                Text(commentCount.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
             }
-            Text(commentCount.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
-            IconButton(onClick = onAddToAlbum, enabled = socialEnabled, modifier = Modifier.padding(start = 8.dp).size(44.dp)) {
-                Icon(Icons.Default.CollectionsBookmark, contentDescription = "Aggiungi a un album", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(21.dp))
+            Spacer(Modifier.weight(1f))
+            Box(
+                Modifier.size(38.dp).clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.20f), CircleShape)
+                    .clickable(enabled = socialEnabled, onClick = onAddToAlbum),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.CollectionsBookmark, contentDescription = "Aggiungi a un album", tint = accent, modifier = Modifier.size(19.dp))
             }
         }
 
@@ -3388,42 +3424,59 @@ private fun SocialMemoryPost(
             }
         }
 
-        if (photo != null) Column(Modifier.fillMaxWidth().padding(start = 13.dp, end = 13.dp, top = 8.dp)) {
-            Text(
-                entry.title,
-                Modifier.fillMaxWidth().clickable(onClick = onOpen),
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleLarge.copy(letterSpacing = (-0.35).sp),
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+        if (photo != null) {
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 5.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Text(
+                    entry.title,
+                    Modifier.fillMaxWidth().clickable(onClick = onOpen),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleLarge.copy(letterSpacing = (-0.45).sp),
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (entry.body.isNotBlank()) {
+                    Text(
+                        entry.body,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                        maxLines = if (expanded) Int.MAX_VALUE else 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (entry.body.length > 110) {
+                        Text(
+                            if (expanded) "Mostra meno" else "Continua a leggere",
+                            color = accent,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clickable(onClick = onToggleCaption)
+                        )
+                    }
+                }
+            }
         }
-
-
-
-        Column(Modifier.fillMaxWidth().padding(start = 13.dp, end = 13.dp, bottom = 9.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            if (photo != null) Text(
-                entry.body,
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
-                maxLines = if (expanded) Int.MAX_VALUE else 3,
-                overflow = TextOverflow.Ellipsis
+        Row(
+            Modifier.fillMaxWidth().padding(start = 15.dp, end = 14.dp, bottom = 11.dp, top = if (photo == null) 0.dp else 1.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                if (photo == null) "RICORDO" else "NEL VOSTRO DIARIO",
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.68f),
+                style = MaterialTheme.typography.labelSmall,
+                letterSpacing = 0.75.sp
             )
-            if (photo != null && entry.body.length > 140) {
-                TextButton(onClick = onToggleCaption, contentPadding = PaddingValues(0.dp), modifier = Modifier.height(30.dp)) {
-                    Text(if (expanded) "Mostra meno" else "Leggi tutto", color = accent, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                }
-            }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(dateLabel, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f), style = MaterialTheme.typography.labelSmall)
-                Spacer(Modifier.weight(1f))
-                TextButton(onClick = onOpen, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp), modifier = Modifier.height(32.dp)) {
-                    Text("Apri ricordo", color = accent, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.width(4.dp))
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp), tint = accent)
-                }
-            }
+            Spacer(Modifier.weight(1f))
+            Text(
+                "Apri",
+                color = accent,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onOpen).padding(horizontal = 8.dp, vertical = 5.dp)
+            )
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = accent, modifier = Modifier.size(15.dp))
         }
     }
 }
