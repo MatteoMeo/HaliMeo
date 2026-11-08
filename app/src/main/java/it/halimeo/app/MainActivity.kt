@@ -225,6 +225,12 @@ private fun haliMeoAtmosphere(key: String): HaliMeoAtmosphere? = when (key) {
     "forest" -> HaliMeoAtmosphere(Color(0xFF62C69A), Color(0xFF8CBF79), Color(0xFF102B26), Color(0xFF091512))
     "amethyst" -> HaliMeoAtmosphere(Color(0xFFB18CFF), Color(0xFF6D8DFF), Color(0xFF241B3F), Color(0xFF0D1020))
     "graphite" -> HaliMeoAtmosphere(Color(0xFF9AAFC4), Color(0xFF6C879B), Color(0xFF202B36), Color(0xFF090D13))
+    "ruby" -> HaliMeoAtmosphere(Color(0xFFFF718A), Color(0xFFB94B77), Color(0xFF351426), Color(0xFF120A14))
+    "citrus" -> HaliMeoAtmosphere(Color(0xFFE5D45C), Color(0xFF65B98A), Color(0xFF24351F), Color(0xFF10170F))
+    "arctic" -> HaliMeoAtmosphere(Color(0xFF78D5F5), Color(0xFF8EA9FF), Color(0xFF172E48), Color(0xFF091522))
+    "copper" -> HaliMeoAtmosphere(Color(0xFFFFB16B), Color(0xFFC87553), Color(0xFF3B241D), Color(0xFF160F0D))
+    "lavender_mist" -> HaliMeoAtmosphere(Color(0xFFC6A5FF), Color(0xFF83A5EA), Color(0xFF302846), Color(0xFF13101F))
+    "emerald" -> HaliMeoAtmosphere(Color(0xFF4BD6B0), Color(0xFF4E9F91), Color(0xFF12352F), Color(0xFF091713))
     else -> null
 }
 
@@ -494,12 +500,6 @@ class MainActivity:ComponentActivity() {
     val ctx= LocalContext.current; val activity=ctx as ComponentActivity
     val session=remember{SessionStore(ctx)}; val repo=remember{DiaryRepository(ctx)}
     var signed by remember{mutableStateOf<Boolean?>(null)}; var displayName by remember{mutableStateOf("")}
-    var showUpdatePrompt by remember { mutableStateOf(false) }
-    var focusUpdater by remember { mutableStateOf(false) }
-    LaunchedEffect(HaliMeoUpdateState.checkedAt, HaliMeoUpdateState.release) {
-        val available = HaliMeoUpdateState.release
-        showUpdatePrompt = available != null && available.versionCode > BuildConfig.VERSION_CODE.toLong()
-    }
     LaunchedEffect(Unit){signed=!session.token().isNullOrBlank();displayName=session.name()}
     if(signed==null){Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA)),contentAlignment=Alignment.Center){LoadingIndicator(modifier=Modifier.size(64.dp), color=MaterialTheme.colorScheme.primary)};return}
     if(signed==false){AuthScreen(
@@ -732,7 +732,7 @@ class MainActivity:ComponentActivity() {
     if (currentRoute != "edit" && currentRoute != "tripMonaco") Surface(
         modifier = Modifier.align(Alignment.BottomCenter)
             .zIndex(1f)
-            // Give the bar an explicit centered width; keep the + button separate.
+            // Reserve the right-side slot for the create action; both controls share the same bottom baseline.
             .fillMaxWidth(0.64f)
             .navigationBarsPadding()
             // A little taller and raised: its visual center now lines up with the + button.
@@ -903,9 +903,9 @@ class MainActivity:ComponentActivity() {
                 nav.navigate("edit")
             },
             modifier = Modifier
-                .align(Alignment.BottomEnd)
+                 .align(Alignment.BottomCenter)
                 .zIndex(30f)
-                .padding(end = 20.dp)
+                .offset(x = LocalConfiguration.current.screenWidthDp.dp * 0.32f + 34.dp)
                 .navigationBarsPadding()
                 .padding(bottom = 8.dp)
                 .size(56.dp)
@@ -932,33 +932,6 @@ class MainActivity:ComponentActivity() {
                     modifier = Modifier.size(29.dp)
                 )
             }
-        }
-    }
-    if (showUpdatePrompt) {
-        val available = HaliMeoUpdateState.release
-        if (available != null) {
-            AlertDialog(
-                                shape = RoundedCornerShape(30.dp),
-                containerColor = haliMeoPopupSurfaceColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                onDismissRequest = { showUpdatePrompt = false },
-                icon = { Icon(Icons.Default.SystemUpdate, contentDescription = null) },
-                title = { Text("Nuova versione disponibile") },
-                text = {
-                    Text("È disponibile HaliMeo ${available.versionName}. Vuoi aprire l'updater per installare l'aggiornamento?")
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showUpdatePrompt = false
-                            focusUpdater = true
-                            selectPrimaryTab(2)
-                        }
-                    ) { Text("Installa") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showUpdatePrompt = false }) { Text("Ignora") }
-                }
-            )
         }
     }
     }
@@ -1573,37 +1546,6 @@ private fun SettingsScreen(
                 }
                 Text("Il tema chiaro mantiene gli stessi accenti, sfondi e personalizzazioni del tema scuro.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 val activeAtmosphere = haliMeoAtmosphere(backgroundColor)
-                Text("Preset rapidi", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                    listOf("deep_ocean" to "Oceano", "amethyst" to "Ametista", "forest" to "Foresta", "sunset" to "Tramonto").forEach { preset ->
-                        val presetColors = haliMeoAtmosphere(preset.first)!!
-                        Surface(
-                            modifier = Modifier.width(104.dp).clip(RoundedCornerShape(18.dp)).clickable {
-                                backgroundColor = preset.first
-                                backgroundPhoto = null
-                                customBackgroundColorState.value = preset.first
-                                customBackgroundUriState.value = null
-                                ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
-                                    .edit().putString("background_color", preset.first).remove("background_photo").apply()
-                            },
-                            shape = RoundedCornerShape(18.dp),
-                            color = frostedSurfaceColor(),
-                            border = androidx.compose.foundation.BorderStroke(
-                                if (backgroundColor == preset.first) 2.dp else 1.dp,
-                                if (backgroundColor == preset.first) MaterialTheme.colorScheme.primary else frostedEdgeColor()
-                            )
-                        ) {
-                            Column(Modifier.padding(7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                Box(Modifier.fillMaxWidth().height(38.dp).clip(RoundedCornerShape(12.dp))
-                                    .background(Brush.linearGradient(listOf(presetColors.top, presetColors.primary, presetColors.secondary, presetColors.bottom))),
-                                    contentAlignment = Alignment.CenterEnd) {
-                                    if (backgroundColor == preset.first) Icon(Icons.Default.CheckCircle, contentDescription = "Preset selezionato", tint = Color.White, modifier = Modifier.padding(7.dp).size(17.dp))
-                                }
-                                Text(preset.second, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    }
-                }
                 Box(
                     Modifier.fillMaxWidth().height(142.dp).clip(RoundedCornerShape(26.dp))
                         .background(
@@ -1663,15 +1605,21 @@ private fun SettingsScreen(
                     )
                     Text("Intensa", color = secondaryText, style = MaterialTheme.typography.labelSmall)
                 }
-                Text("Atmosfere One UI 9", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Text("Scegli una profondità di colore completa: sfondo sfumato, luce ambientale e accenti coordinati.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                Text("Preset rapidi", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text("Atmosfere complete con sfondo, luce e accenti coordinati.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 val atmosphereOptions = listOf(
                     "aurora" to "Aurora",
                     "deep_ocean" to "Oceano",
                     "sunset" to "Tramonto",
                     "forest" to "Foresta",
                     "amethyst" to "Ametista",
-                    "graphite" to "Grafite"
+                    "graphite" to "Grafite",
+                    "ruby" to "Rubino",
+                    "citrus" to "Agrumi",
+                    "arctic" to "Artico",
+                    "copper" to "Rame",
+                    "lavender_mist" to "Lavanda",
+                    "emerald" to "Smeraldo"
                 )
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -1680,7 +1628,7 @@ private fun SettingsScreen(
                     atmosphereOptions.forEach { option ->
                         val colors = haliMeoAtmosphere(option.first)!!
                         Column(
-                            modifier = Modifier.width(82.dp).clip(RoundedCornerShape(18.dp))
+                            modifier = Modifier.width(86.dp).clip(RoundedCornerShape(20.dp))
                                 .clickable {
                                     settingsFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                                     backgroundColor = option.first
@@ -1694,7 +1642,7 @@ private fun SettingsScreen(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Box(
-                                Modifier.fillMaxWidth().height(68.dp).clip(RoundedCornerShape(18.dp))
+                                Modifier.fillMaxWidth().height(72.dp).clip(RoundedCornerShape(20.dp))
                                     .background(Brush.linearGradient(listOf(colors.top, colors.primary, colors.secondary, colors.bottom)))
                                     .border(
                                         if (backgroundColor == option.first) 2.dp else 1.dp,
@@ -3064,7 +3012,7 @@ private fun SocialMemoryPost(
         animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.72f, stiffness = 680f),
         label = "postLikeScale"
     )
-    val cardShape = RoundedCornerShape(32.dp)
+    val cardShape = RoundedCornerShape(26.dp)
     Column(
         modifier.fillMaxWidth()
             .animateContentSize(animationSpec = HaliMeoMotion.contentSizeSpring)
@@ -3080,9 +3028,9 @@ private fun SocialMemoryPost(
             )
             .border(1.dp, frostedEdgeColor(), cardShape)
     ) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(44.dp).clip(CircleShape)
+                Modifier.size(38.dp).clip(CircleShape)
                     .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.28f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.22f))))
                     .border(1.dp, accent.copy(alpha = 0.32f), CircleShape),
                 contentAlignment = Alignment.Center
@@ -3098,7 +3046,7 @@ private fun SocialMemoryPost(
                     Text(initials, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 }
             }
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(9.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(authorName.ifBlank { "HaliMeo" }, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Text(dateLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
@@ -3194,17 +3142,15 @@ private fun SocialMemoryPost(
                             style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 21.sp),
                             maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
-                    Text("APRI IL RICORDO", color = accent, style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
                 }
             }
         }
 
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 1.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onToggleLike, enabled = socialEnabled, modifier = Modifier.size(44.dp)) {
+            IconButton(onClick = onToggleLike, enabled = socialEnabled, modifier = Modifier.size(38.dp)) {
                 Icon(
                     if (likedByMe) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = if (likedByMe) "Rimuovi mi piace" else "Mi piace",
@@ -3213,7 +3159,7 @@ private fun SocialMemoryPost(
                 )
             }
             Text(likeCount.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
-            IconButton(onClick = onComments, enabled = socialEnabled, modifier = Modifier.padding(start = 8.dp).size(44.dp)) {
+            IconButton(onClick = onComments, enabled = socialEnabled, modifier = Modifier.padding(start = 6.dp).size(38.dp)) {
                 Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Commenti", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(21.dp))
             }
             Text(commentCount.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
@@ -3224,7 +3170,7 @@ private fun SocialMemoryPost(
 
         if (latestComments.isNotEmpty()) {
             Column(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 2.dp),
                 verticalArrangement = Arrangement.spacedBy(5.dp)
             ) {
                 latestComments.takeLast(2).forEach { comment ->
@@ -3255,7 +3201,7 @@ private fun SocialMemoryPost(
             }
         }
 
-        if (photo != null) Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp)) {
+        if (photo != null) Column(Modifier.fillMaxWidth().padding(start = 13.dp, end = 13.dp, top = 8.dp)) {
             Text(
                 entry.title,
                 Modifier.fillMaxWidth().clickable(onClick = onOpen),
@@ -3269,7 +3215,7 @@ private fun SocialMemoryPost(
 
 
 
-        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Column(Modifier.fillMaxWidth().padding(start = 13.dp, end = 13.dp, bottom = 9.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             if (photo != null) Text(
                 entry.body,
                 color = MaterialTheme.colorScheme.onSurface,
