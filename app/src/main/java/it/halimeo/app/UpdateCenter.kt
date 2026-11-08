@@ -97,6 +97,27 @@ internal suspend fun checkForUpdatesOnLaunch(context: Context) {
 private fun updateApkFile(context: Context, name: String) =
     File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir, name)
 
+/**
+ * Remove only APKs downloaded by HaliMeo's own updater after their version is
+ * already installed. Keep any newer pending update and leave unrelated files/cache
+ * untouched. Android removes this app-specific directory on uninstall.
+ */
+internal fun cleanupInstalledUpdateApks(context: Context) {
+    val directory = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir
+    val releaseApk = Regex("""HaliMeo-.*-build(\\d+)-debug\\.apk""", RegexOption.IGNORE_CASE)
+    val installedCode = BuildConfig.VERSION_CODE.toLong()
+    runCatching {
+        directory.listFiles()?.forEach { file ->
+            if (!file.isFile) return@forEach
+            val buildCode = releaseApk.matchEntire(file.name)
+                ?.groupValues?.getOrNull(1)?.toLongOrNull()
+            if (buildCode != null && buildCode <= installedCode) {
+                file.delete()
+            }
+        }
+    }
+}
+
 private fun digestMatches(file: File, expected: String?): Boolean {
     if (!file.isFile || file.length() <= 0L) return false
     if (expected.isNullOrBlank()) return true
