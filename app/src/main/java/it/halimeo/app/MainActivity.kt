@@ -2160,15 +2160,19 @@ private fun SettingsScreen(
 }
 
 }
-@Composable private fun AuthScreen(onLogin:(String,String,(String)->Unit)->Unit,onRedeem:(String,String,String,String,(String)->Unit)->Unit){
+@Composable
+private fun AuthScreen(
+    onLogin: (String, String, (String) -> Unit) -> Unit,
+    onRedeem: (String, String, String, String, (String) -> Unit) -> Unit
+) {
     val authHaze = rememberHazeState()
-    val authGlassTint = frostedSurfaceStrongColor()
-    val authGlassStyleBackground = MaterialTheme.colorScheme.surface
-    val authGlassStyle = remember(authGlassTint) {
+    val glassTint = frostedSurfaceStrongColor()
+    val glassBackground = MaterialTheme.colorScheme.surface
+    val glassStyle = remember(glassTint, glassBackground) {
         HazeBlurStyle {
-            backgroundColor(authGlassStyleBackground.copy(alpha = 0.42f))
-            colorEffects(listOf(HazeColorEffect.tint(authGlassTint.copy(alpha = 0.15f))))
-            fallbackColorEffect(HazeColorEffect.tint(authGlassTint.copy(alpha = 0.28f)))
+            backgroundColor(glassBackground.copy(alpha = 0.46f))
+            colorEffects(listOf(HazeColorEffect.tint(glassTint.copy(alpha = 0.13f))))
+            fallbackColorEffect(HazeColorEffect.tint(glassTint.copy(alpha = 0.24f)))
         }
     }
     var redeem by remember { mutableStateOf(false) }
@@ -2187,157 +2191,404 @@ private fun SettingsScreen(
     val scope = rememberCoroutineScope()
     var serverOnline by remember { mutableStateOf<Boolean?>(null) }
     var serverMessage by remember { mutableStateOf("Verifica connessione…") }
+
     LaunchedEffect(Unit) {
         while (true) {
-            serverOnline = null
-            serverMessage = "Verifica connessione…"
             try {
                 ApiClient.api.health()
                 serverOnline = true
-                serverMessage = "Server online"
+                serverMessage = "HaliMeo è online"
             } catch (_: Exception) {
                 serverOnline = false
-                serverMessage = "Server offline o non raggiungibile"
+                serverMessage = "Server non raggiungibile"
             }
             delay(15000)
         }
     }
-    val fieldShape = RoundedCornerShape(22.dp)
-    Column(
-        Modifier.fillMaxSize().background(haliMeoAuthBackdrop()).hazeSource(authHaze)
-            .verticalScroll(rememberScrollState()).imePadding().padding(20.dp),
-        verticalArrangement = Arrangement.Center
+
+    val fieldShape = RoundedCornerShape(20.dp)
+    val accent = MaterialTheme.colorScheme.primary
+    val dark = isHaliMeoDark()
+
+    Box(
+        Modifier.fillMaxSize()
+            .background(haliMeoAuthBackdrop())
+            .hazeSource(authHaze)
     ) {
-        Text("HaliMeo", style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Black)
-        Text("Un posto solo vostro.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(16.dp))
-        Card(
-            colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor()),
-            modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(authHaze), authGlassStyle)
-                .clip(RoundedCornerShape(32.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
-            shape = RoundedCornerShape(32.dp)
+        // Quiet ambient light: the login inherits the app accent without adding
+        // expensive animated layers or a second visual language.
+        Box(
+            Modifier.align(Alignment.TopEnd).padding(top = 28.dp, end = 8.dp)
+                .size(230.dp)
+                .background(
+                    Brush.radialGradient(
+                        listOf(accent.copy(alpha = if (dark) 0.19f else 0.13f), Color.Transparent)
+                    ),
+                    CircleShape
+                )
+        )
+        Column(
+            Modifier.fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .padding(horizontal = 22.dp, vertical = 26.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val dotColor = when (serverOnline) { true -> Color(0xFF86E3B0); false -> Color(0xFFFF8E9B); null -> Color(0xFFFFD18A) }
-                    Box(Modifier.size(10.dp).background(dotColor, RoundedCornerShape(50)))
-                    Text(serverMessage, color = dotColor, style = MaterialTheme.typography.labelLarge)
-                }
-                Text("Connessione automatica a HaliMeo", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.height(18.dp))
+            Box(
+                Modifier.size(76.dp)
+                    .background(
+                        Brush.linearGradient(
+                            listOf(accent.copy(alpha = 0.30f), accent.copy(alpha = 0.10f))
+                        ),
+                        RoundedCornerShape(26.dp)
+                    )
+                    .border(1.dp, accent.copy(alpha = 0.30f), RoundedCornerShape(26.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(36.dp)
+                )
             }
-        }
-        Spacer(Modifier.height(18.dp))
-        if (recovery) {
-            Text("Recupera l'accesso", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(18.dp))
             Text(
-                if (resetCodeSent) "Inserisci il codice a 8 cifre ricevuto via email e scegli una nuova password."
-                else "Ti invieremo un codice temporaneo all'indirizzo associato al tuo account.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium
+                "HaliMeo",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
-            OutlinedTextField(
-                value = email, onValueChange = { email = it.trim() }, label = { Text("Email dell'account") },
-                modifier = Modifier.fillMaxWidth().semantics { contentType = androidx.compose.ui.autofill.ContentType.EmailAddress },
-                shape = fieldShape, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email),
-                colors = haliMeoTextFieldColors()
+            Spacer(Modifier.height(5.dp))
+            Text(
+                "I vostri momenti, il vostro spazio.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (resetCodeSent) {
-                OutlinedTextField(
-                    value = code, onValueChange = { code = it.filter(Char::isDigit).take(8) },
-                    label = { Text("Codice ricevuto via email") }, modifier = Modifier.fillMaxWidth(),
-                    shape = fieldShape, singleLine = true, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword),
-                    colors = haliMeoTextFieldColors()
-                )
-                OutlinedTextField(
-                    value = newPassword, onValueChange = { newPassword = it },
-                    label = { Text("Nuova password") }, modifier = Modifier.fillMaxWidth(),
-                    shape = fieldShape, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
-                    colors = haliMeoTextFieldColors()
-                )
-            }
-            if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
-            if (info.isNotBlank()) Text(info, color = MaterialTheme.colorScheme.primary)
-            Button(
-                enabled = !busy && email.contains("@") && if (resetCodeSent) code.length == 8 && newPassword.length >= 10 else true,
-                onClick = {
-                    busy = true; error = ""; info = ""
-                    scope.launch {
-                        try {
-                            if (!resetCodeSent) {
-                                val result = ApiClient.api.requestPasswordReset(PasswordResetRequest(email))
-                                resetCodeSent = true
-                                info = result.message
-                            } else {
-                                val result = ApiClient.api.confirmPasswordReset(PasswordResetConfirmRequest(email, code, newPassword))
-                                info = result.message
-                                recovery = false; resetCodeSent = false; code = ""; newPassword = ""; pass = ""
+            Spacer(Modifier.height(24.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth()
+                    .hazeBlur(HazeInput.Sources(authHaze), glassStyle)
+                    .border(1.dp, frostedEdgeColor(), RoundedCornerShape(30.dp)),
+                shape = RoundedCornerShape(30.dp),
+                colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
+            ) {
+                Column(
+                    Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(9.dp)
+                                .background(
+                                    when (serverOnline) {
+                                        true -> Color(0xFF75D6A2)
+                                        false -> Color(0xFFFF8996)
+                                        null -> Color(0xFFFFC66D)
+                                    },
+                                    CircleShape
+                                )
+                        )
+                        Spacer(Modifier.width(9.dp))
+                        Text(
+                            serverMessage,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Icon(
+                            if (serverOnline == true) Icons.Default.CloudDone else Icons.Default.Cloud,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    if (recovery) {
+                        Text(
+                            "Recupera il tuo accesso",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            if (resetCodeSent)
+                                "Inserisci il codice ricevuto via email e scegli una nuova password."
+                            else
+                                "Ti invieremo un codice temporaneo all'indirizzo associato al tuo account.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it.trim() },
+                            label = { Text("Indirizzo email") },
+                            leadingIcon = { Icon(Icons.Default.MailOutline, null) },
+                            modifier = Modifier.fillMaxWidth().semantics {
+                                contentType = androidx.compose.ui.autofill.ContentType.EmailAddress
+                            },
+                            shape = fieldShape,
+                            singleLine = true,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
+                            ),
+                            colors = haliMeoTextFieldColors()
+                        )
+                        if (resetCodeSent) {
+                            OutlinedTextField(
+                                value = code,
+                                onValueChange = { code = it.filter(Char::isDigit).take(8) },
+                                label = { Text("Codice di verifica") },
+                                leadingIcon = { Icon(Icons.Default.Pin, null) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = fieldShape,
+                                singleLine = true,
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
+                                ),
+                                colors = haliMeoTextFieldColors()
+                            )
+                            OutlinedTextField(
+                                value = newPassword,
+                                onValueChange = { newPassword = it },
+                                label = { Text("Nuova password") },
+                                leadingIcon = { Icon(Icons.Default.Lock, null) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = fieldShape,
+                                singleLine = true,
+                                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Password
+                                ),
+                                colors = haliMeoTextFieldColors()
+                            )
+                        }
+                        if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
+                        if (info.isNotBlank()) Text(info, color = accent)
+                        Button(
+                            enabled = !busy && email.contains("@") &&
+                                (!resetCodeSent || (code.length == 8 && newPassword.length >= 10)),
+                            onClick = {
+                                busy = true
+                                error = ""
+                                info = ""
+                                scope.launch {
+                                    try {
+                                        if (!resetCodeSent) {
+                                            val result = ApiClient.api.requestPasswordReset(PasswordResetRequest(email))
+                                            resetCodeSent = true
+                                            info = result.message
+                                        } else {
+                                            val result = ApiClient.api.confirmPasswordReset(
+                                                PasswordResetConfirmRequest(email, code, newPassword)
+                                            )
+                                            info = result.message
+                                            recovery = false
+                                            resetCodeSent = false
+                                            code = ""
+                                            newPassword = ""
+                                            pass = ""
+                                        }
+                                    } catch (e: Exception) {
+                                        error = e.message?.substringAfter(": ").orEmpty()
+                                            .ifBlank { "Operazione non riuscita. Riprova." }
+                                    } finally {
+                                        busy = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(54.dp),
+                            shape = RoundedCornerShape(18.dp)
+                        ) {
+                            if (busy) CircularProgressIndicator(Modifier.size(19.dp), strokeWidth = 2.dp)
+                            else Icon(if (resetCodeSent) Icons.Default.LockReset else Icons.Default.MarkEmailRead, null)
+                            Spacer(Modifier.width(9.dp))
+                            Text(if (resetCodeSent) "REIMPOSTA PASSWORD" else "INVIA CODICE")
+                        }
+                        TextButton(
+                            onClick = {
+                                recovery = false
+                                resetCodeSent = false
+                                error = ""
+                                info = ""
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Torna all'accesso") }
+                    } else {
+                        Text(
+                            if (redeem) "Entra a far parte di HaliMeo"
+                            else "Bentornato",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            if (redeem)
+                                "Crea il tuo account e inserisci il codice personale che hai ricevuto."
+                            else
+                                "Accedi al vostro spazio privato e ritrova tutti i vostri ricordi.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .background(frostedSurfaceColor(), RoundedCornerShape(16.dp))
+                                .padding(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            listOf("Accedi" to false, "Registrati" to true).forEach { (label, selected) ->
+                                val active = redeem == selected
+                                Box(
+                                    Modifier.weight(1f)
+                                        .clip(RoundedCornerShape(13.dp))
+                                        .background(if (active) accent.copy(alpha = 0.18f) else Color.Transparent)
+                                        .clickable {
+                                            redeem = selected
+                                            error = ""
+                                            info = ""
+                                            pass = ""
+                                        }
+                                        .padding(vertical = 11.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        label,
+                                        color = if (active) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
                             }
-                        } catch (e: Exception) {
-                            error = e.message?.substringAfter(": ").orEmpty().ifBlank { "Operazione non riuscita. Controlla la connessione e riprova." }
-                        } finally { busy = false }
+                        }
+
+                        if (redeem) {
+                            OutlinedTextField(
+                                value = inviteCode,
+                                onValueChange = { inviteCode = it.trim() },
+                                label = { Text("Codice invito") },
+                                leadingIcon = { Icon(Icons.Default.ConfirmationNumber, null) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = fieldShape,
+                                singleLine = true,
+                                colors = haliMeoTextFieldColors()
+                            )
+                            OutlinedTextField(
+                                value = name,
+                                onValueChange = { name = it },
+                                label = { Text("Come vuoi essere chiamato?") },
+                                leadingIcon = { Icon(Icons.Default.PersonOutline, null) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = fieldShape,
+                                singleLine = true,
+                                colors = haliMeoTextFieldColors()
+                            )
+                        }
+
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it.trim() },
+                            label = { Text("Email") },
+                            leadingIcon = { Icon(Icons.Default.MailOutline, null) },
+                            modifier = Modifier.fillMaxWidth().semantics {
+                                contentType = androidx.compose.ui.autofill.ContentType.Username
+                            },
+                            shape = fieldShape,
+                            singleLine = true,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
+                            ),
+                            colors = haliMeoTextFieldColors()
+                        )
+                        OutlinedTextField(
+                            value = pass,
+                            onValueChange = { pass = it },
+                            label = { Text("Password") },
+                            leadingIcon = { Icon(Icons.Default.LockOutline, null) },
+                            modifier = Modifier.fillMaxWidth().semantics {
+                                contentType = androidx.compose.ui.autofill.ContentType.Password
+                            },
+                            shape = fieldShape,
+                            singleLine = true,
+                            visualTransformation = if (passwordVisible)
+                                androidx.compose.ui.text.input.VisualTransformation.None
+                            else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Password
+                            ),
+                            trailingIcon = {
+                                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                    Icon(
+                                        if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = if (passwordVisible) "Nascondi password" else "Mostra password"
+                                    )
+                                }
+                            },
+                            colors = haliMeoTextFieldColors()
+                        )
+                        if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
+                        if (info.isNotBlank()) Text(info, color = accent)
+
+                        Button(
+                            enabled = !busy && email.contains("@") && pass.length >= 10 &&
+                                (!redeem || (inviteCode.isNotBlank() && name.isNotBlank())),
+                            onClick = {
+                                busy = true
+                                val fail: (String) -> Unit = { error = it; busy = false }
+                                if (redeem) onRedeem(inviteCode, name, email, pass, fail)
+                                else onLogin(email, pass, fail)
+                            },
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            shape = RoundedCornerShape(18.dp)
+                        ) {
+                            if (busy) CircularProgressIndicator(Modifier.size(19.dp), strokeWidth = 2.dp)
+                            else Icon(if (redeem) Icons.Default.MarkEmailRead else Icons.Default.ArrowForward, null)
+                            Spacer(Modifier.width(9.dp))
+                            Text(if (redeem) "CREA ACCOUNT CON INVITO" else "ACCEDI")
+                        }
+
+                        if (!redeem) {
+                            TextButton(
+                                onClick = { recovery = true; error = ""; info = "" },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Password dimenticata?") }
+                        } else {
+                            Row(
+                                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                                    .background(accent.copy(alpha = 0.08f)).padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(Icons.Default.Shield, null, tint = accent)
+                                Text(
+                                    "HaliMeo è privato: il codice invito è necessario per attivare l'accesso.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                else Icon(if (resetCodeSent) Icons.Default.LockReset else Icons.Default.MarkEmailRead, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(if (resetCodeSent) "REIMPOSTA PASSWORD" else "INVIA CODICE")
-            }
-            TextButton(onClick = { recovery = false; resetCodeSent = false; error = ""; info = "" }, modifier = Modifier.fillMaxWidth()) {
-                Text("Torna al login")
-            }
-        } else {
-            if (redeem) {
-                OutlinedTextField(inviteCode, { inviteCode = it }, label = { Text("Codice invito") }, modifier = Modifier.fillMaxWidth(), shape = fieldShape, colors = haliMeoTextFieldColors())
-                OutlinedTextField(name, { name = it }, label = { Text("Nome") }, modifier = Modifier.fillMaxWidth(), shape = fieldShape, colors = haliMeoTextFieldColors())
-            }
-            OutlinedTextField(
-                value = email, onValueChange = { email = it.trim() }, label = { Text("Email") },
-                modifier = Modifier.fillMaxWidth().semantics { contentType = androidx.compose.ui.autofill.ContentType.Username },
-                shape = fieldShape, singleLine = true,
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email),
-                colors = haliMeoTextFieldColors()
-            )
-            OutlinedTextField(
-                value = pass, onValueChange = { pass = it }, label = { Text("Password") },
-                modifier = Modifier.fillMaxWidth().semantics { contentType = androidx.compose.ui.autofill.ContentType.Password },
-                shape = fieldShape, singleLine = true,
-                visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
-                trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = if (passwordVisible) "Nascondi password" else "Mostra password")
-                    }
-                },
-                colors = haliMeoTextFieldColors()
-            )
-            if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
-            if (info.isNotBlank()) Text(info, color = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.height(8.dp))
-            Button(
-                enabled = !busy,
-                onClick = { busy = true; val fail: (String) -> Unit = { error = it; busy = false }; if (redeem) onRedeem(inviteCode, name, email, pass, fail) else onLogin(email, pass, fail) },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                else Text(if (redeem) "ACCETTA INVITO" else "ACCEDI")
-            }
-            if (!redeem) {
-                TextButton(onClick = { recovery = true; error = ""; info = "" }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Password dimenticata?")
                 }
             }
-            TextButton(onClick = { redeem = !redeem; error = ""; info = ""; pass = "" }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (redeem) "Ho già un account" else "Ho un codice invito")
+
+            Spacer(Modifier.height(18.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+                Text(
+                    "Uno spazio privato, accessibile solo su invito.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            Text(
-                "Puoi salvare l'accesso con il Gestore password Android: il sistema può richiedere impronta o riconoscimento del viso per compilare le credenziali.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall
-            )
+            Spacer(Modifier.height(12.dp))
         }
     }
 }
+
 @Composable
 private fun categoryAccent(category: String, memorySeed: String = category): Color {
     val dark = isHaliMeoDark()
