@@ -122,7 +122,7 @@ class PasswordResetRequest(BaseModel):
     email: EmailStr
 class PasswordResetConfirm(BaseModel):
     email: EmailStr
-    code: str = Field(min_length=8, max_length=8, pattern=r"^\\d{8}$")
+    code: str = Field(min_length=8, max_length=8, pattern=r"^\d{8}$")
     newPassword: str = Field(min_length=10, max_length=128)
 class InviteIn(BaseModel):
     expiresInDays: int = Field(default=7, ge=1, le=30)
@@ -182,9 +182,14 @@ def send_password_reset_email(destination: str, code: str):
     message["From"] = sender
     message["To"] = destination
     message.set_content(
-        f"Ciao!\\n\\nHai richiesto di reimpostare la password del tuo account HaliMeo.\\n"
-        f"Il tuo codice è: {code}\\n\\nScade tra 10 minuti. Se non hai richiesto tu questa operazione, ignora questa email.\\n"
-        "Per sicurezza non condividere questo codice con nessuno."
+        f"""Ciao!
+
+Hai richiesto di reimpostare la password del tuo account HaliMeo.
+
+Il tuo codice è: {code}
+
+Scade tra 10 minuti. Se non hai richiesto tu questa operazione, ignora questa email.
+Per sicurezza non condividere questo codice con nessuno."""
     )
     try:
         smtp_class = smtplib.SMTP_SSL if use_ssl else smtplib.SMTP
@@ -231,6 +236,7 @@ def confirm_password_reset(data: PasswordResetConfirm):
             raise HTTPException(400, "Codice non valido o scaduto. Richiedine uno nuovo.")
         if not secrets.compare_digest(reset["token_hash"], digest):
             c.execute("UPDATE password_resets SET attempts=attempts+1 WHERE email=?", (email,))
+            c.commit()
             raise HTTPException(400, "Codice non valido o scaduto. Richiedine uno nuovo.")
         user = c.execute("SELECT id FROM users WHERE email=? AND disabled=0", (email,)).fetchone()
         if not user:
