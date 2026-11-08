@@ -733,7 +733,7 @@ class MainActivity:ComponentActivity() {
         modifier = Modifier.align(Alignment.BottomCenter)
             .zIndex(1f)
             // Give the bar an explicit centered width; keep the + button separate.
-            .fillMaxWidth(0.72f)
+            .fillMaxWidth(0.64f)
             .navigationBarsPadding()
             // A little taller and raised: its visual center now lines up with the + button.
             .padding(vertical = 8.dp)
@@ -907,8 +907,8 @@ class MainActivity:ComponentActivity() {
                 .zIndex(30f)
                 .padding(end = 20.dp)
                 .navigationBarsPadding()
-                .padding(bottom = 88.dp)
-                .size(58.dp)
+                .padding(bottom = 8.dp)
+                .size(56.dp)
                 .haliMeoPressScale(
                     createFabInteraction,
                     reduceMotion = reduceAnimationsState.value,
@@ -1533,8 +1533,8 @@ private fun SettingsScreen(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SettingsCategoryIcon(Icons.Default.Palette, Color(0xFF9A78E8))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("PERSONALIZZAZIONE", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
-                        if ("appearance" !in expandedSettingsSections) Text("Tema, colori, sfondo e prestazioni", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                        Text("THEME STUDIO", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                        if ("appearance" !in expandedSettingsSections) Text("Palette, atmosfere, luce e prestazioni", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     }
                     Icon(if ("appearance" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("appearance" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
                 }
@@ -1573,6 +1573,37 @@ private fun SettingsScreen(
                 }
                 Text("Il tema chiaro mantiene gli stessi accenti, sfondi e personalizzazioni del tema scuro.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 val activeAtmosphere = haliMeoAtmosphere(backgroundColor)
+                Text("Preset rapidi", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    listOf("deep_ocean" to "Oceano", "amethyst" to "Ametista", "forest" to "Foresta", "sunset" to "Tramonto").forEach { preset ->
+                        val presetColors = haliMeoAtmosphere(preset.first)!!
+                        Surface(
+                            modifier = Modifier.width(104.dp).clip(RoundedCornerShape(18.dp)).clickable {
+                                backgroundColor = preset.first
+                                backgroundPhoto = null
+                                customBackgroundColorState.value = preset.first
+                                customBackgroundUriState.value = null
+                                ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+                                    .edit().putString("background_color", preset.first).remove("background_photo").apply()
+                            },
+                            shape = RoundedCornerShape(18.dp),
+                            color = frostedSurfaceColor(),
+                            border = androidx.compose.foundation.BorderStroke(
+                                if (backgroundColor == preset.first) 2.dp else 1.dp,
+                                if (backgroundColor == preset.first) MaterialTheme.colorScheme.primary else frostedEdgeColor()
+                            )
+                        ) {
+                            Column(Modifier.padding(7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Box(Modifier.fillMaxWidth().height(38.dp).clip(RoundedCornerShape(12.dp))
+                                    .background(Brush.linearGradient(listOf(presetColors.top, presetColors.primary, presetColors.secondary, presetColors.bottom))),
+                                    contentAlignment = Alignment.CenterEnd) {
+                                    if (backgroundColor == preset.first) Icon(Icons.Default.CheckCircle, contentDescription = "Preset selezionato", tint = Color.White, modifier = Modifier.padding(7.dp).size(17.dp))
+                                }
+                                Text(preset.second, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
                 Box(
                     Modifier.fillMaxWidth().height(142.dp).clip(RoundedCornerShape(26.dp))
                         .background(
@@ -2726,6 +2757,7 @@ private fun DiaryScreen(
                             likeCount = social?.likeCount ?: 0,
                             likedByMe = social?.likedByMe ?: false,
                             commentCount = social?.commentCount ?: 0,
+                            latestComments = social?.comments.orEmpty(),
                             socialEnabled = entry.syncState == "SYNCED",
                             onToggleLike = {
                                 val currentSocial = socialEntries[entry.id] ?: it.halimeo.app.network.SocialFeedEntry(
@@ -3011,7 +3043,8 @@ private fun DiaryScreen(
 @Composable
 private fun SocialMemoryPost(
     entry: DiaryEntry, authorName: String, authorAvatar: android.graphics.Bitmap? = null, photo: android.graphics.Bitmap?, expanded: Boolean,
-    likeCount: Int = 0, likedByMe: Boolean = false, commentCount: Int = 0, socialEnabled: Boolean = true,
+    likeCount: Int = 0, likedByMe: Boolean = false, commentCount: Int = 0,
+    latestComments: List<it.halimeo.app.network.SocialComment> = emptyList(), socialEnabled: Boolean = true,
     onToggleLike: () -> Unit = {}, onComments: () -> Unit = {}, onAddToAlbum: () -> Unit = {}, onOpen: () -> Unit, onToggleCaption: () -> Unit,
     modifier: Modifier = Modifier,
     hazeState: HazeState,
@@ -3079,19 +3112,28 @@ private fun SocialMemoryPost(
 
         // Let the photograph lead the post: no inset card inside another card.
         if (photo != null) {
-            Box(
-                Modifier.fillMaxWidth().heightIn(max = 440.dp)
+            BoxWithConstraints(
+                Modifier.fillMaxWidth()
                     .pointerInput(entry.id) {
                         detectTapGestures(onTap = { onOpen() }, onDoubleTap = { if (socialEnabled) onToggleLike() })
                     }
             ) {
-                Image(
-                    bitmap = photo.asImageBitmap(),
-                    contentDescription = "Foto del ricordo: ${entry.title}",
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp)
-                        .graphicsLayer { alpha = photoAlpha },
-                    contentScale = ContentScale.FillWidth
-                )
+                // Preserve the original photograph ratio. Very tall images are fitted
+                // inside a bounded frame instead of being cropped or stretching the feed.
+                val naturalHeight = maxWidth * (photo.height.toFloat() / photo.width.toFloat())
+                val frameHeight = naturalHeight.coerceAtMost(520.dp)
+                Box(
+                    Modifier.fillMaxWidth().height(frameHeight)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        bitmap = photo.asImageBitmap(),
+                        contentDescription = "Foto del ricordo: ${entry.title}",
+                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = photoAlpha },
+                        contentScale = ContentScale.Fit
+                    )
+                }
                 if (likedByMe) {
                     Surface(
                         modifier = Modifier.align(Alignment.BottomEnd).padding(14.dp),
@@ -3177,6 +3219,39 @@ private fun SocialMemoryPost(
             Text(commentCount.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
             IconButton(onClick = onAddToAlbum, enabled = socialEnabled, modifier = Modifier.padding(start = 8.dp).size(44.dp)) {
                 Icon(Icons.Default.CollectionsBookmark, contentDescription = "Aggiungi a un album", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(21.dp))
+            }
+        }
+
+        if (latestComments.isNotEmpty()) {
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                latestComments.takeLast(2).forEach { comment ->
+                    Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Text(
+                            comment.authorName,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            comment.body,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+                Text(
+                    "Visualizza tutti i commenti",
+                    color = accent,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable(onClick = onComments)
+                )
             }
         }
 
@@ -3301,18 +3376,21 @@ private fun MemoryDetailScreen(
             }
         }
 
-        Box(
+        BoxWithConstraints(
             Modifier.fillMaxWidth()
-                .height(340.dp)
                 .clip(shape)
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
         ) {
+            val detailFrameHeight = if (bitmap != null) {
+                (maxWidth * (bitmap!!.height.toFloat() / bitmap!!.width.toFloat())).coerceAtMost(560.dp)
+            } else 260.dp
+            Box(Modifier.fillMaxWidth().height(detailFrameHeight), contentAlignment = Alignment.Center) {
             if (bitmap != null) {
                 Image(
                     bitmap = bitmap!!.asImageBitmap(),
                     contentDescription = "Foto del ricordo",
                     modifier = Modifier.fillMaxSize().graphicsLayer { alpha = photoAlpha },
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Fit
                 )
                 Box(
                     Modifier.align(Alignment.BottomStart).fillMaxWidth().height(150.dp)
@@ -3345,6 +3423,7 @@ private fun MemoryDetailScreen(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold)
                 }
+            }
             }
         }
 
