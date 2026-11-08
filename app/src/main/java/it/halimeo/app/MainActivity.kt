@@ -2325,7 +2325,7 @@ private fun DiaryScreen(
             cached == null
         }
         if (missing.isNotEmpty()) {
-            val semaphore = kotlinx.coroutines.sync.Semaphore(permits = 3)
+            val semaphore = kotlinx.coroutines.sync.Semaphore(permits = 2)
             val decoded = kotlinx.coroutines.coroutineScope {
                 missing.map { entry ->
                     async {
@@ -2334,7 +2334,7 @@ private fun DiaryScreen(
                                 diaryContext,
                                 entry.id,
                                 entry.photoUri,
-                                maxDimension = 1280,
+                                maxDimension = 1080,
                                 repo = repo
                             )
                         }
@@ -3151,6 +3151,9 @@ private fun SocialMemoryPost(
     glassStyle: HazeBlurStyle
 ) {
     val accent = MaterialTheme.colorScheme.primary
+    // Convert cache-owned bitmaps once per photo change, not on every recomposition.
+    val photoImage = remember(photo) { photo?.asImageBitmap() }
+    val avatarImage = remember(authorAvatar) { authorAvatar?.asImageBitmap() }
     val initials = authorName.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
         .take(2).mapNotNull { it.firstOrNull()?.uppercaseChar() }.joinToString("").ifBlank { "H" }
     val dateLabel = displayHaliMeoDate(entry.memoryDate)
@@ -3177,8 +3180,8 @@ private fun SocialMemoryPost(
 
     Column(
         modifier.fillMaxWidth()
-            .animateContentSize(animationSpec = HaliMeoMotion.contentSizeSpring)
-            .shadow(if (isHaliMeoDark()) 13.dp else 5.dp, cardShape)
+            // Keep the feed card's measured height stable while likes/comments update.
+            .shadow(if (isHaliMeoDark()) 9.dp else 4.dp, cardShape)
             .clip(cardShape)
             .background(
                 Brush.linearGradient(
@@ -3191,7 +3194,7 @@ private fun SocialMemoryPost(
             )
             .border(1.dp, accent.copy(alpha = if (isHaliMeoDark()) 0.22f else 0.14f), cardShape)
     ) {
-        if (photo != null) {
+        if (photo != null && photoImage != null) {
             // Immersive editorial cover: original photo stays fully visible in front,
             // while a softened version fills the stage behind it.
             BoxWithConstraints(
@@ -3215,15 +3218,21 @@ private fun SocialMemoryPost(
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                     contentAlignment = Alignment.Center
                 ) {
+                    // A low-cost ambient photo layer avoids a full-resolution GPU blur
+                    // on every visible feed card while preserving the immersive backdrop.
                     Image(
-                        bitmap = photo.asImageBitmap(),
+                        bitmap = photoImage,
                         contentDescription = null,
-                        modifier = Modifier.fillMaxSize().blur(25.dp).graphicsLayer { alpha = 0.34f },
+                        modifier = Modifier.fillMaxSize().graphicsLayer {
+                            alpha = 0.22f
+                            scaleX = 1.045f
+                            scaleY = 1.045f
+                        },
                         contentScale = ContentScale.Crop
                     )
                     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.10f)))
                     Image(
-                        bitmap = photo.asImageBitmap(),
+                        bitmap = photoImage,
                         contentDescription = "Foto del ricordo: \${entry.title}",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Fit
@@ -3257,8 +3266,8 @@ private fun SocialMemoryPost(
                                     .background(Brush.linearGradient(listOf(accent, MaterialTheme.colorScheme.tertiary))),
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (authorAvatar != null) {
-                                    Image(authorAvatar.asImageBitmap(), contentDescription = "Foto profilo di $authorName",
+                                if (avatarImage != null) {
+                                    Image(avatarImage, contentDescription = "Foto profilo di $authorName",
                                         modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
                                 } else {
                                     Text(initials, color = Color.White, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
@@ -3312,6 +3321,7 @@ private fun SocialMemoryPost(
                         if (entry.body.isNotBlank()) {
                             Text(
                                 entry.body,
+                                modifier = Modifier.animateContentSize(animationSpec = HaliMeoMotion.contentSizeSpring),
                                 color = Color.White.copy(alpha = 0.82f),
                                 style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp),
                                 maxLines = if (expanded) 5 else 1,
