@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -362,8 +363,8 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("Canale di aggiornamento", color = onSurface, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                Text("Scegli quale versione ricevere", color = muted, style = MaterialTheme.typography.labelSmall)
+                Text("Controllo automatico all’avvio", color = onSurface, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                Text("Ti avvisiamo quando è disponibile una nuova versione", color = muted, style = MaterialTheme.typography.labelSmall)
             }
             Switch(
                 checked = autoCheck,
