@@ -3154,89 +3154,46 @@ private fun SocialMemoryPost(
     val initials = authorName.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
         .take(2).mapNotNull { it.firstOrNull()?.uppercaseChar() }.joinToString("").ifBlank { "H" }
     val dateLabel = displayHaliMeoDate(entry.memoryDate)
-    val photoAlpha by animateFloatAsState(
-        targetValue = if (photo != null) 1f else 0f,
-        animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
-        label = "diaryPhotoReveal"
-    )
+    val synced = entry.syncState == "SYNCED" && entry.photoSyncState == "SYNCED"
     val likeScale by animateFloatAsState(
-        targetValue = if (likedByMe) 1.10f else 1f,
-        animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.72f, stiffness = 680f),
+        targetValue = if (likedByMe) 1.12f else 1f,
+        animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.68f, stiffness = 620f),
         label = "postLikeScale"
     )
     var showHeartBurst by remember(entry.id) { mutableStateOf(false) }
     val heartBurstScale by animateFloatAsState(
-        targetValue = if (showHeartBurst) 1f else 0.45f,
-        animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.58f, stiffness = 360f),
+        targetValue = if (showHeartBurst) 1f else 0.42f,
+        animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.55f, stiffness = 340f),
         label = "socialHeartBurstScale"
     )
     LaunchedEffect(showHeartBurst) {
         if (showHeartBurst) {
-            delay(620)
+            delay(650)
             showHeartBurst = false
         }
     }
-    val cardShape = RoundedCornerShape(26.dp)
+    val cardShape = RoundedCornerShape(30.dp)
+    val actionSurface = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isHaliMeoDark()) 0.48f else 0.72f)
+
     Column(
         modifier.fillMaxWidth()
             .animateContentSize(animationSpec = HaliMeoMotion.contentSizeSpring)
+            .shadow(if (isHaliMeoDark()) 13.dp else 5.dp, cardShape)
             .clip(cardShape)
             .background(
                 Brush.linearGradient(
                     listOf(
-                        frostedSurfaceStrongColor().copy(alpha = 0.96f),
-                        frostedSurfaceColor().copy(alpha = 0.94f),
-                        frostedSurfaceStrongColor().copy(alpha = 0.98f)
+                        frostedSurfaceStrongColor().copy(alpha = 0.98f),
+                        frostedSurfaceColor().copy(alpha = 0.96f),
+                        frostedSurfaceStrongColor().copy(alpha = 0.99f)
                     )
                 )
             )
-            .border(1.dp, frostedEdgeColor(), cardShape)
+            .border(1.dp, accent.copy(alpha = if (isHaliMeoDark()) 0.22f else 0.14f), cardShape)
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                Modifier.size(40.dp).clip(CircleShape)
-                    .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.30f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.24f))))
-                    .border(1.dp, accent.copy(alpha = 0.42f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                if (authorAvatar != null) {
-                    Image(
-                        bitmap = authorAvatar.asImageBitmap(),
-                        contentDescription = "Foto profilo di $authorName",
-                        modifier = Modifier.fillMaxSize().clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Text(initials, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                }
-            }
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(authorName.ifBlank { "HaliMeo" }, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(dateLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
-                    Text("·", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
-                    Text(entry.category.ifBlank { "Ricordo" }, color = accent, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-            Surface(
-                shape = CircleShape,
-                color = if (entry.syncState == "SYNCED" && entry.photoSyncState == "SYNCED") accent.copy(alpha = 0.13f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
-            ) {
-                Icon(
-                    if (entry.syncState == "SYNCED" && entry.photoSyncState == "SYNCED") Icons.Default.CloudDone else Icons.Default.CloudUpload,
-                    contentDescription = if (entry.syncState == "SYNCED" && entry.photoSyncState == "SYNCED") "Ricordo sincronizzato" else "In attesa di sincronizzazione",
-                    tint = accent,
-                    modifier = Modifier.padding(7.dp).size(16.dp)
-                )
-            }
-        }
-
-        // Let the photograph lead the post: no inset card inside another card.
         if (photo != null) {
+            // Immersive editorial cover: original photo stays fully visible in front,
+            // while a softened version fills the stage behind it.
             BoxWithConstraints(
                 Modifier.fillMaxWidth()
                     .pointerInput(entry.id) {
@@ -3251,236 +3208,242 @@ private fun SocialMemoryPost(
                         )
                     }
             ) {
-                // Preserve the original photograph ratio. Very tall images are fitted
-                // inside a bounded frame instead of being cropped or stretching the feed.
                 val naturalHeight = maxWidth * (photo.height.toFloat() / photo.width.toFloat())
-                val frameHeight = naturalHeight.coerceAtMost(520.dp)
+                val frameHeight = naturalHeight.coerceIn(270.dp, 520.dp)
                 Box(
                     Modifier.fillMaxWidth().height(frameHeight)
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
                         bitmap = photo.asImageBitmap(),
-                        contentDescription = "Foto del ricordo: ${entry.title}",
-                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = photoAlpha },
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize().blur(25.dp).graphicsLayer { alpha = 0.34f },
+                        contentScale = ContentScale.Crop
+                    )
+                    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.10f)))
+                    Image(
+                        bitmap = photo.asImageBitmap(),
+                        contentDescription = "Foto del ricordo: \${entry.title}",
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Fit
                     )
-                }
-                if (showHeartBurst) {
-                    Icon(
-                        Icons.Default.Favorite,
-                        contentDescription = "Mi piace",
-                        tint = Color.White,
-                        modifier = Modifier.align(Alignment.Center)
-                            .graphicsLayer {
+                    Box(
+                        Modifier.fillMaxSize().background(
+                            Brush.verticalGradient(
+                                0f to Color.Black.copy(alpha = 0.34f),
+                                0.22f to Color.Transparent,
+                                0.58f to Color.Transparent,
+                                1f to Color.Black.copy(alpha = 0.72f)
+                            )
+                        )
+                    )
+                    Row(
+                        Modifier.align(Alignment.TopStart).fillMaxWidth()
+                            .padding(start = 13.dp, top = 13.dp, end = 13.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            Modifier.weight(1f, fill = false)
+                                .clip(RoundedCornerShape(50))
+                                .background(Color.Black.copy(alpha = 0.36f))
+                                .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(50))
+                                .padding(start = 5.dp, end = 11.dp, top = 5.dp, bottom = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                Modifier.size(31.dp).clip(CircleShape)
+                                    .background(Brush.linearGradient(listOf(accent, MaterialTheme.colorScheme.tertiary))),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (authorAvatar != null) {
+                                    Image(authorAvatar.asImageBitmap(), contentDescription = "Foto profilo di $authorName",
+                                        modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
+                                } else {
+                                    Text(initials, color = Color.White, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                Text(authorName.ifBlank { "HaliMeo" }, color = Color.White,
+                                    style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+                                Text(dateLabel, color = Color.White.copy(alpha = 0.76f),
+                                    style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                            }
+                        }
+                        Spacer(Modifier.weight(1f))
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.Black.copy(alpha = 0.36f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.16f))
+                        ) {
+                            Icon(
+                                if (synced) Icons.Default.CloudDone else Icons.Default.CloudUpload,
+                                contentDescription = if (synced) "Ricordo sincronizzato" else "In attesa di sincronizzazione",
+                                tint = if (synced) Color.White else Color(0xFFFFD18A),
+                                modifier = Modifier.padding(9.dp).size(17.dp)
+                            )
+                        }
+                    }
+                    Column(
+                        Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(horizontal = 18.dp, vertical = 17.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                            Box(Modifier.width(22.dp).height(2.dp).clip(CircleShape).background(accent))
+                            Text(
+                                entry.category.ifBlank { "UN MOMENTO DA RICORDARE" }.uppercase(),
+                                color = Color.White.copy(alpha = 0.88f),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.25.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        Text(
+                            entry.title,
+                            color = Color.White,
+                            style = MaterialTheme.typography.headlineSmall.copy(letterSpacing = (-0.65).sp, lineHeight = 31.sp),
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (entry.body.isNotBlank()) {
+                            Text(
+                                entry.body,
+                                color = Color.White.copy(alpha = 0.82f),
+                                style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp),
+                                maxLines = if (expanded) 5 else 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    if (showHeartBurst) {
+                        Icon(
+                            Icons.Default.Favorite,
+                            contentDescription = "Mi piace",
+                            tint = Color.White,
+                            modifier = Modifier.align(Alignment.Center).graphicsLayer {
                                 scaleX = heartBurstScale
                                 scaleY = heartBurstScale
-                                alpha = (1f - ((heartBurstScale - 0.45f) / 0.55f)).coerceIn(0.25f, 1f)
+                                alpha = (1f - ((heartBurstScale - 0.42f) / 0.58f)).coerceIn(0.25f, 1f)
                                 shadowElevation = 22.dp.toPx()
-                            }
-                            .size(92.dp)
-                    )
-                }
-                if (likedByMe) {
-                    Surface(
-                        modifier = Modifier.align(Alignment.BottomEnd).padding(14.dp),
-                        shape = CircleShape,
-                        color = Color.Black.copy(alpha = 0.48f)
-                    ) {
-                        Icon(Icons.Default.Favorite, contentDescription = "Ti piace", tint = Color.White, modifier = Modifier.padding(9.dp).size(18.dp))
+                            }.size(88.dp)
+                        )
+                    }
+                    if (likedByMe) {
+                        Surface(
+                            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 13.dp),
+                            shape = CircleShape,
+                            color = Color.Black.copy(alpha = 0.40f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.18f))
+                        ) {
+                            Icon(Icons.Default.Favorite, contentDescription = "Ti piace", tint = Color(0xFFFF8CA6),
+                                modifier = Modifier.padding(9.dp).size(18.dp))
+                        }
                     }
                 }
             }
         } else {
             Box(
-                Modifier.fillMaxWidth().heightIn(min = 190.dp)
-                    .clip(RoundedCornerShape(26.dp))
+                Modifier.fillMaxWidth().heightIn(min = 230.dp)
                     .background(
                         Brush.linearGradient(
-                            listOf(
-                                accent.copy(alpha = if (isHaliMeoDark()) 0.30f else 0.17f),
-                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.20f),
-                                frostedSurfaceColor()
-                            )
+                            listOf(accent.copy(alpha = 0.42f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.26f), frostedSurfaceStrongColor())
                         )
-                    )
-                    .clickable(onClick = onOpen)
+                    ).clickable(onClick = onOpen)
             ) {
-                Icon(
-                    Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    tint = accent.copy(alpha = 0.13f),
-                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 10.dp).size(112.dp)
-                )
-                Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Box(
-                            Modifier.size(30.dp).clip(CircleShape).background(accent.copy(alpha = 0.18f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.EditNote, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
-                        }
-                        Text("RICORDO IN PAROLE", color = accent, style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold, letterSpacing = 1.25.sp)
-                        Spacer(Modifier.weight(1f))
-                        Text(dateLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
-                    }
-                    Text(
-                        entry.title,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.headlineSmall.copy(letterSpacing = (-0.45).sp),
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (entry.body.isNotBlank()) {
-                        Text(entry.body, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 21.sp),
-                            maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    }
+                Icon(Icons.Default.AutoAwesome, contentDescription = null,
+                    tint = accent.copy(alpha = 0.16f), modifier = Modifier.align(Alignment.TopEnd).padding(16.dp).size(140.dp))
+                Column(Modifier.fillMaxWidth().align(Alignment.BottomStart).padding(22.dp),
+                    verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text("UNA STORIA DA RICORDARE", color = accent, style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                    Text(entry.title, color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.headlineMedium.copy(letterSpacing = (-0.7).sp),
+                        fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    if (entry.body.isNotBlank()) Text(entry.body, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    Text("$dateLabel  ·  \${entry.category.ifBlank { "Ricordo" }}",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
 
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(9.dp)
         ) {
-            // Compact expressive action chips replace the old row of isolated Material icons.
             Row(
                 Modifier.clip(RoundedCornerShape(50))
-                    .background(if (likedByMe) Color(0xFFE66F8B).copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f))
+                    .background(if (likedByMe) Color(0xFFE66F8B).copy(alpha = 0.15f) else actionSurface)
                     .clickable(enabled = socialEnabled) { showHeartBurst = true; onToggleLike() }
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = 13.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(7.dp)
             ) {
-                Icon(
-                    if (likedByMe) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                Icon(if (likedByMe) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = if (likedByMe) "Rimuovi mi piace" else "Mi piace",
                     tint = if (likedByMe) Color(0xFFE66F8B) else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(19.dp).graphicsLayer { scaleX = likeScale; scaleY = likeScale }
-                )
-                Text(likeCount.toString(), color = if (likedByMe) Color(0xFFE66F8B) else MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                    modifier = Modifier.size(19.dp).graphicsLayer { scaleX = likeScale; scaleY = likeScale })
+                Text(likeCount.toString(), color = if (likedByMe) Color(0xFFE66F8B) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
             }
             Row(
-                Modifier.clip(RoundedCornerShape(50))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f))
+                Modifier.clip(RoundedCornerShape(50)).background(actionSurface)
                     .clickable(enabled = socialEnabled, onClick = onComments)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = 13.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(7.dp)
             ) {
-                Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Commenti", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(19.dp))
-                Text(commentCount.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                Icon(Icons.Default.ModeComment, contentDescription = "Commenti",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                Text(commentCount.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.weight(1f))
             Box(
-                Modifier.size(38.dp).clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.20f), CircleShape)
+                Modifier.size(38.dp).clip(CircleShape).background(accent.copy(alpha = 0.13f))
+                    .border(1.dp, accent.copy(alpha = 0.22f), CircleShape)
                     .clickable(enabled = socialEnabled, onClick = onAddToAlbum),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.CollectionsBookmark, contentDescription = "Aggiungi a un album", tint = accent, modifier = Modifier.size(19.dp))
+                Icon(Icons.Default.BookmarkAdd, contentDescription = "Aggiungi a un album",
+                    tint = accent, modifier = Modifier.size(19.dp))
+            }
+            Box(
+                Modifier.size(38.dp).clip(CircleShape).background(actionSurface)
+                    .clickable(onClick = onOpen),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Apri ricordo",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             }
         }
 
         if (latestComments.isNotEmpty()) {
             Column(
-                Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 2.dp),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
+                Modifier.fillMaxWidth().padding(start = 17.dp, end = 17.dp, bottom = 13.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f))
                 latestComments.takeLast(2).forEach { comment ->
                     Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        Text(
-                            comment.authorName,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            comment.body,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Text(comment.authorName, color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        Text(comment.body, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall, maxLines = 2,
+                            overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     }
                 }
-                Text(
-                    "Visualizza tutti i commenti",
-                    color = accent,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clickable(onClick = onComments)
-                )
+                Text("Visualizza tutti i commenti", color = accent, style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(onClick = onComments))
             }
-        }
-
-        if (photo != null) {
-            Column(
-                Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 5.dp),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
-            ) {
-                Text(
-                    entry.title,
-                    Modifier.fillMaxWidth().clickable(onClick = onOpen),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleLarge.copy(letterSpacing = (-0.45).sp),
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (entry.body.isNotBlank()) {
-                    Text(
-                        entry.body,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
-                        maxLines = if (expanded) Int.MAX_VALUE else 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (entry.body.length > 110) {
-                        Text(
-                            if (expanded) "Mostra meno" else "Continua a leggere",
-                            color = accent,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.clickable(onClick = onToggleCaption)
-                        )
-                    }
-                }
-            }
-        }
-        Row(
-            Modifier.fillMaxWidth().padding(start = 15.dp, end = 14.dp, bottom = 11.dp, top = if (photo == null) 0.dp else 1.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                if (photo == null) "RICORDO" else "NEL VOSTRO DIARIO",
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.68f),
-                style = MaterialTheme.typography.labelSmall,
-                letterSpacing = 0.75.sp
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                "Apri",
-                color = accent,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onOpen).padding(horizontal = 8.dp, vertical = 5.dp)
-            )
-            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = accent, modifier = Modifier.size(15.dp))
         }
     }
 }
-
 @Composable
 private fun MemoryDetailScreen(
     entry: DiaryEntry,
