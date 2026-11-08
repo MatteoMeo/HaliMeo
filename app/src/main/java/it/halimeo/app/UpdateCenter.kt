@@ -104,7 +104,7 @@ private fun updateApkFile(context: Context, name: String) =
  */
 internal fun cleanupInstalledUpdateApks(context: Context) {
     val directory = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir
-    val releaseApk = Regex("""HaliMeo-.*-build(\\d+)-debug\\.apk""", RegexOption.IGNORE_CASE)
+    val releaseApk = Regex("""HaliMeo-.*-build(\d+)-debug\.apk""", RegexOption.IGNORE_CASE)
     val installedCode = BuildConfig.VERSION_CODE.toLong()
     runCatching {
         directory.listFiles()?.forEach { file ->
