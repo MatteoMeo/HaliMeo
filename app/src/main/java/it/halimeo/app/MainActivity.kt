@@ -121,6 +121,7 @@ import it.halimeo.app.data.*
 import it.halimeo.app.network.*
 import it.halimeo.app.sync.SyncScheduler
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.flow.first
@@ -1036,32 +1037,38 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
                 )
             )
         }
+        // Stronger but still soft ambient bloom. The slider now has a clearly
+        // perceptible full-range response instead of topping out at a faint tint.
+        val glow = ambientIntensity.coerceIn(0f, 1f)
         Box(
-            Modifier.align(Alignment.TopCenter).offset(x = driftX.dp, y = (-140).dp + driftY.dp).size(460.dp)
+            Modifier.align(Alignment.TopCenter).offset(x = driftX.dp, y = (-140).dp + driftY.dp).size(520.dp)
                 .background(
                     Brush.radialGradient(
-                        0.0f to palette.primary.copy(alpha = 0.36f * ambientIntensity),
-                        0.42f to palette.secondary.copy(alpha = 0.17f * ambientIntensity),
+                        0.0f to palette.primary.copy(alpha = 0.72f * glow),
+                        0.38f to palette.secondary.copy(alpha = 0.38f * glow),
+                        0.72f to palette.primary.copy(alpha = 0.12f * glow),
                         1.0f to Color.Transparent
                     ), RoundedCornerShape(50)
                 )
         )
         Box(
-            Modifier.align(Alignment.CenterStart).offset(x = (-210).dp - driftX.dp * 0.55f, y = 40.dp + driftY.dp).size(380.dp)
+            Modifier.align(Alignment.CenterStart).offset(x = (-195).dp - driftX.dp * 0.55f, y = 40.dp + driftY.dp).size(440.dp)
                 .background(
                     Brush.radialGradient(
-                        0.0f to palette.tertiary.copy(alpha = 0.20f * ambientIntensity),
-                        0.48f to palette.tertiary.copy(alpha = 0.085f * ambientIntensity),
+                        0.0f to palette.tertiary.copy(alpha = 0.48f * glow),
+                        0.46f to palette.primary.copy(alpha = 0.22f * glow),
+                        0.78f to palette.tertiary.copy(alpha = 0.08f * glow),
                         1.0f to Color.Transparent
                     ), RoundedCornerShape(50)
                 )
         )
         Box(
-            Modifier.align(Alignment.BottomEnd).offset(x = 190.dp - driftX.dp * 0.45f, y = 150.dp - driftY.dp).size(400.dp)
+            Modifier.align(Alignment.BottomEnd).offset(x = 180.dp - driftX.dp * 0.45f, y = 150.dp - driftY.dp).size(460.dp)
                 .background(
                     Brush.radialGradient(
-                        0.0f to palette.secondary.copy(alpha = 0.19f * ambientIntensity),
-                        0.45f to palette.primary.copy(alpha = 0.05f * ambientIntensity),
+                        0.0f to palette.secondary.copy(alpha = 0.46f * glow),
+                        0.42f to palette.primary.copy(alpha = 0.24f * glow),
+                        0.78f to palette.secondary.copy(alpha = 0.08f * glow),
                         1.0f to Color.Transparent
                     ), RoundedCornerShape(50)
                 )
@@ -1600,7 +1607,7 @@ private fun SettingsScreen(
                 Text("Luce ambientale", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Text("Regola quanto risaltano i riflessi e le sfumature dello sfondo.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 var ambientIntensity by remember { mutableFloatStateOf(ambientLightState.floatValue) }
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text("Discreta", color = secondaryText, style = MaterialTheme.typography.labelSmall)
                     Slider(
                         value = ambientIntensity,
@@ -1610,8 +1617,15 @@ private fun SettingsScreen(
                             ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
                                 .edit().putFloat("ambient_light_intensity", it).apply()
                         },
-                        valueRange = 0.2f..1f,
-                        modifier = Modifier.weight(1f)
+                        valueRange = 0f..1f,
+                        modifier = Modifier.weight(1f).height(34.dp),
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = secondaryText.copy(alpha = 0.28f),
+                            activeTickColor = Color.Transparent,
+                            inactiveTickColor = Color.Transparent
+                        )
                     )
                     Text("Intensa", color = secondaryText, style = MaterialTheme.typography.labelSmall)
                 }
