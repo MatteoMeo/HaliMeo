@@ -445,6 +445,9 @@ class MainActivity:ComponentActivity() {
         // versions automatically retain the source-backed fallback.
         HazeFeatureFlags.isPlatformBackdropEnabled = true
         ApiClient.initialize(applicationContext)
+        // Reclaim only APKs from updater releases already installed; do not wipe
+        // the app cache on every launch or disturb a pending newer download.
+        cleanupInstalledUpdateApks(applicationContext)
         SyncScheduler.schedule(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
