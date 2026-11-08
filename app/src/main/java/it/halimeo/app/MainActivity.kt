@@ -2303,6 +2303,43 @@ private fun DiaryScreen(
     val highlightsTitle = "Highlights"
     val feedbackView = LocalView.current
     val listState = rememberLazyListState()
+
+    // Keep the complete photo set outside LazyColumn item composition. Lazy items are
+    // disposed when scrolled off-screen; decoding inside each item caused repeated
+    // downloads and visible image/card height changes on every scroll.
+    var diaryPhotoSet by remember { mutableStateOf<Map<String, android.graphics.Bitmap>>(emptyMap()) }
+    val photoBatchKey = remember(entries) { entries.map { it.id to it.photoUri } }
+    LaunchedEffect(photoBatchKey) {
+        val wanted = entries.filter { !it.photoUri.isNullOrBlank() }
+        val wantedIds = wanted.mapTo(mutableSetOf()) { it.id }
+        val nextPhotos = diaryPhotoSet.filterKeys { it in wantedIds }.toMutableMap()
+        val missing = wanted.filter { entry ->
+            val cached = nextPhotos[entry.id]
+            cached == null
+        }
+        if (missing.isNotEmpty()) {
+            val semaphore = kotlinx.coroutines.sync.Semaphore(permits = 3)
+            val decoded = kotlinx.coroutines.coroutineScope {
+                missing.map { entry ->
+                    kotlinx.coroutines.async {
+                        semaphore.withPermit {
+                            entry.id to decodeDiaryPhoto(
+                                diaryContext,
+                                entry.id,
+                                entry.photoUri,
+                                maxDimension = 1280,
+                                repo = repo
+                            )
+                        }
+                    }
+                }.awaitAll()
+            }
+            decoded.forEach { (id, bitmap) -> if (bitmap != null) nextPhotos[id] = bitmap }
+        }
+        // Publish one completed batch, not one card at a time. Existing images stay
+        // visible while newly added/changed photos are being fetched.
+        diaryPhotoSet = nextPhotos
+    }
     // Cache diary header data and parsed special dates instead of recomputing them
     // whenever Compose recomposes the LazyColumn.
     val memoriesToday = remember(entries) {
@@ -2591,9 +2628,7 @@ private fun DiaryScreen(
                                     ) {
                                         items(photoHighlights, key = { it.id }) { highlight ->
                                             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
-                                                val storyBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, highlight.photoUri) {
-                                                    value = decodeDiaryPhoto(diaryContext, highlight.id, highlight.photoUri, maxDimension = 480, repo = repo)
-                                                }
+                                                val storyBitmap = diaryPhotoSet[highlight.id]
                                                 Surface(
                                                     modifier = Modifier.size(62.dp).clip(CircleShape).clickable { onOpenMemory(highlight) },
                                                     shape = CircleShape,
@@ -2641,12 +2676,7 @@ private fun DiaryScreen(
                     itemsIndexed(filtered, key = { _, entry -> entry.id }, contentType = { _, _ -> "diary_entry" }) { _, entry ->
                         val expanded = entry.id in expandedEntryIds
                         val accent = MaterialTheme.colorScheme.primary
-                        val photoContext = LocalContext.current
-                        val entryPhoto by produceState<android.graphics.Bitmap?>(initialValue = null, entry.photoUri, photoContext) {
-                            // The social feed is image-first: decode only items composed by the lazy list,
-                            // at a bounded resolution suitable for the post preview.
-                            value = decodeDiaryPhoto(photoContext, entry.id, entry.photoUri, maxDimension = 1280, repo = repo)
-                        }
+                        val entryPhoto = diaryPhotoSet[entry.id]
                         val social = socialEntries[entry.id]
                         val authorId = social?.authorId?.takeIf { it.isNotBlank() } ?: currentUserId
                         val authorAvatar by produceState<android.graphics.Bitmap?>(
