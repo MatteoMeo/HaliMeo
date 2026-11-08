@@ -703,7 +703,15 @@ class MainActivity:ComponentActivity() {
                         }
                     }
                 )
-                else LaunchedEffect(entryId) { nav.popBackStack() }
+                else LaunchedEffect(entryId, currentRoute) {
+                    // A deleted row can disappear from the Room Flow while its
+                    // outgoing NavHost entry is still composed. Only pop when this
+                    // detail is still the active destination; never pop the diary
+                    // page a second time during the exit transition.
+                    if (nav.currentDestination?.route == "memory/{entryId}") {
+                        nav.popBackStack()
+                    }
+                }
             }
             composable(
                 route = "tripMonaco",
