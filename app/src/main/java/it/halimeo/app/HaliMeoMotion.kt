@@ -24,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 
 /**
@@ -72,7 +73,7 @@ internal object HaliMeoMotion {
      */
     // Enter and exit share the same spring and travel distance. Popping a detail
     // reverses the exact horizontal path used to open it.
-    private val detailSpring = spring<Int>(
+    private val detailSpring = spring<IntOffset>(
         dampingRatio = 0.90f,
         stiffness = 680f
     )
