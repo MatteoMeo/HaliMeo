@@ -2290,9 +2290,10 @@ private fun DiaryScreen(
     var albumDetailBusy by remember { mutableStateOf(false) }
     var storyIndex by remember { mutableIntStateOf(-1) }
     var coverPickerTarget by remember { mutableStateOf<String?>(null) }
+    val coverPrefsContext = LocalContext.current
     val highlightCoverOverrides = remember {
         androidx.compose.runtime.mutableStateMapOf<String, String>().apply {
-            LocalContext.current.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+            coverPrefsContext.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
                 .getStringSet("halimeo_highlight_covers", emptySet()).orEmpty().forEach { value ->
                     val parts = value.split("|", limit = 2)
                     if (parts.size == 2) put(parts[0], parts[1])
@@ -3020,6 +3021,131 @@ private fun DiaryScreen(
                 }) { Text("Invia") }
             },
             dismissButton = { TextButton(onClick = { commentsEntry = null }) { Text("Chiudi") } }
+        )
+    }
+
+    // Full-screen private story viewer. Tap either side of the photo to move between memories.
+    if (storyIndex in photoHighlights.indices) {
+        val story = photoHighlights[storyIndex]
+        val storyBitmap = diaryPhotoSet[highlightCoverOverrides[story.id] ?: story.id] ?: diaryPhotoSet[story.id]
+        Dialog(
+            onDismissRequest = { storyIndex = -1 },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(Modifier.fillMaxSize().background(Color(0xFF080A10))) {
+                if (storyBitmap != null) {
+                    Image(
+                        bitmap = storyBitmap.asImageBitmap(),
+                        contentDescription = story.title,
+                        modifier = Modifier.fillMaxSize().pointerInput(storyIndex, photoHighlights.size) {
+                            detectTapGestures { tap ->
+                                if (tap.x < size.width * 0.34f) storyIndex = (storyIndex - 1).coerceAtLeast(0)
+                                else storyIndex = (storyIndex + 1).coerceAtMost(photoHighlights.lastIndex)
+                            }
+                        },
+                        contentScale = ContentScale.Fit
+                    )
+                }
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0f to Color.Black.copy(alpha = 0.58f),
+                                0.18f to Color.Transparent,
+                                0.72f to Color.Transparent,
+                                1f to Color.Black.copy(alpha = 0.72f)
+                            )
+                        )
+                    )
+                )
+                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        photoHighlights.forEachIndexed { index, _ ->
+                            Box(Modifier.weight(1f).height(3.dp).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = if (index <= storyIndex) 0.96f else 0.34f)))
+                        }
+                    }
+                    Spacer(Modifier.height(15.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(38.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp))
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("I vostri Highlights", color = Color.White, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text(displayHaliMeoDate(story.memoryDate), color = Color.White.copy(alpha = 0.76f), style = MaterialTheme.typography.labelSmall)
+                        }
+                        IconButton(onClick = { storyIndex = -1 }) {
+                            Icon(Icons.Default.Close, contentDescription = "Chiudi Highlights", tint = Color.White)
+                        }
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text(story.title, color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    if (story.body.isNotBlank()) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(story.body, color = Color.White.copy(alpha = 0.86f), style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    }
+                    Spacer(Modifier.height(14.dp))
+                    Button(
+                        onClick = { storyIndex = -1; onOpenMemory(story) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
+                    ) {
+                        Text("Apri ricordo")
+                        Spacer(Modifier.width(7.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(17.dp))
+                    }
+                }
+            }
+        }
+    }
+
+    // Long-press a Highlight to choose a different cover from the photos already in the diary.
+    if (coverPickerTarget != null) {
+        val targetId = coverPickerTarget!!
+        val target = photoHighlights.firstOrNull { it.id == targetId }
+        AlertDialog(
+            onDismissRequest = { coverPickerTarget = null },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = haliMeoPopupSurfaceColor(),
+            title = { Text("Copertina Highlight") },
+            text = {
+                Column(Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("Scegli una foto del vostro diario come copertina. La fotografia originale del ricordo non verrà modificata.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = {
+                        highlightCoverOverrides.remove(targetId)
+                        val prefs = coverPrefsContext.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+                        prefs.edit().putStringSet("halimeo_highlight_covers", highlightCoverOverrides.entries.map { "${it.key}|${it.value}" }.toSet()).apply()
+                        coverPickerTarget = null
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Ripristina copertina originale", modifier = Modifier.fillMaxWidth())
+                    }
+                    entries.filter { !it.photoUri.isNullOrBlank() && it.id != targetId }.forEach { candidate ->
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable {
+                                highlightCoverOverrides[targetId] = candidate.id
+                                val prefs = coverPrefsContext.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+                                prefs.edit().putStringSet("halimeo_highlight_covers", highlightCoverOverrides.entries.map { "${it.key}|${it.value}" }.toSet()).apply()
+                                coverPickerTarget = null
+                            }.padding(7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            val coverBitmap = diaryPhotoSet[candidate.id]
+                            if (coverBitmap != null) Image(coverBitmap.asImageBitmap(), contentDescription = null, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(11.dp)), contentScale = ContentScale.Crop)
+                            else Box(Modifier.size(48.dp).clip(RoundedCornerShape(11.dp)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Photo, contentDescription = null)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text(candidate.title, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(displayHaliMeoDate(candidate.memoryDate), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                            }
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { coverPickerTarget = null }) { Text("Fine") } }
         )
     }
 }
