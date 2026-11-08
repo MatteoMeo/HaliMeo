@@ -24,11 +24,11 @@ Send JSON to `POST /v1/auth/social/google` or `POST /v1/auth/social/facebook`:
 }
 ```
 
-A previously linked provider identity can sign in without another invite. A new identity must redeem an unused, unexpired invite. If the email already belongs to a password account, the server deliberately refuses automatic linking; this avoids account takeover through email collisions. Linking existing accounts must be performed through an authenticated, explicit account-linking flow.
+A previously linked provider identity can sign in without another invite. A new identity must redeem an unused, unexpired invite. If the email already belongs to a password account, the server deliberately refuses automatic linking; this avoids account takeover through email collisions. An existing password account can explicitly link a provider after signing in with its password by calling `POST /v1/auth/social/{provider}/link`; the provider's verified email must match the account email. An identity already linked to a different HaliMeo account is rejected.
 
 ## Important client setup still required
 
-The server and Retrofit contract are in place, but provider-specific Android SDK sign-in buttons must not be enabled until the app's Google OAuth client ID, Facebook app ID, package/signing fingerprints and provider console settings are configured. These values are deployment-specific and are intentionally not guessed or committed. The social endpoint rejects unconfigured providers with HTTP 503 rather than silently weakening authentication.
+The server and Retrofit contracts (social login and authenticated linking) are in place, but provider-specific Android SDK sign-in buttons are not yet wired. They must not be enabled until the app's Google OAuth client ID, Facebook app ID, package/signing fingerprints and provider console settings are configured. These values are deployment-specific and are intentionally not guessed or committed. The social endpoint rejects unconfigured providers with HTTP 503 rather than silently weakening authentication.
 
 ## Database
 
