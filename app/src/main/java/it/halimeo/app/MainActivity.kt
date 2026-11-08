@@ -92,7 +92,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
@@ -735,7 +734,7 @@ class MainActivity:ComponentActivity() {
         modifier = Modifier.align(Alignment.BottomCenter)
             .zIndex(1f)
             // Reserve the right-side slot for the create action; both controls share the same bottom baseline.
-            .fillMaxWidth(0.64f)
+            .fillMaxWidth(0.60f)
             .navigationBarsPadding()
             // A little taller and raised: its visual center now lines up with the + button.
             .padding(vertical = 8.dp)
@@ -905,12 +904,13 @@ class MainActivity:ComponentActivity() {
                 nav.navigate("edit")
             },
             modifier = Modifier
-                 .align(Alignment.BottomCenter)
+                .align(Alignment.BottomEnd)
                 .zIndex(30f)
-                .offset(x = LocalConfiguration.current.screenWidthDp.dp * 0.32f + 34.dp)
+                .padding(end = 20.dp)
                 .navigationBarsPadding()
                 .padding(bottom = 8.dp)
-                .size(56.dp)
+                .requiredSize(56.dp)
+                .clip(CircleShape)
                 .haliMeoPressScale(
                     createFabInteraction,
                     reduceMotion = reduceAnimationsState.value,
@@ -931,6 +931,7 @@ class MainActivity:ComponentActivity() {
                 Icon(
                     Icons.Default.Add,
                     contentDescription = "Nuovo ricordo",
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(29.dp)
                 )
             }
