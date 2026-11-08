@@ -2263,11 +2263,11 @@ private fun SettingsScreen(
                     scope.launch {
                         try {
                             if (!resetCodeSent) {
-                                val result = ApiClient.api.requestPasswordReset(it.halimeo.app.network.PasswordResetRequest(email))
+                                val result = ApiClient.api.requestPasswordReset(PasswordResetRequest(email))
                                 resetCodeSent = true
                                 info = result.message
                             } else {
-                                val result = ApiClient.api.confirmPasswordReset(it.halimeo.app.network.PasswordResetConfirmRequest(email, code, newPassword))
+                                val result = ApiClient.api.confirmPasswordReset(PasswordResetConfirmRequest(email, code, newPassword))
                                 info = result.message
                                 recovery = false; resetCodeSent = false; code = ""; newPassword = ""; pass = ""
                             }
