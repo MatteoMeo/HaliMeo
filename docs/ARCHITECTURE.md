@@ -12,6 +12,8 @@ Le modifiche locali entrano in Room prima della chiamata di rete. In assenza di 
 ## Dati e sicurezza
 - HTTPS obbligatorio per il traffico esterno.
 - Password hashate con bcrypt; token JWT con scadenza.
+- Recupero password tramite codice email monouso, hashato nel DB, valido 10 minuti e con massimo 5 tentativi.
+- Configurare SMTP nel file server/.env (variabili HALIMEO_SMTP_*) prima di abilitare il recupero password.
 - Codici invito monouso memorizzati sul server solo come hash.
 - Nessuna registrazione pubblica.
 - Backup server cifrati e conservati anche fuori dal PC.
