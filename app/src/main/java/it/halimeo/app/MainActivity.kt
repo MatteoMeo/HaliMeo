@@ -95,6 +95,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import android.view.HapticFeedbackConstants
@@ -2286,6 +2288,17 @@ private fun DiaryScreen(
     var selectedAlbum by remember { mutableStateOf<it.halimeo.app.network.SocialAlbum?>(null) }
     var albumDetail by remember { mutableStateOf<it.halimeo.app.network.SocialAlbumDetail?>(null) }
     var albumDetailBusy by remember { mutableStateOf(false) }
+    var storyIndex by remember { mutableIntStateOf(-1) }
+    var coverPickerTarget by remember { mutableStateOf<String?>(null) }
+    val highlightCoverOverrides = remember {
+        androidx.compose.runtime.mutableStateMapOf<String, String>().apply {
+            LocalContext.current.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+                .getStringSet("halimeo_highlight_covers", emptySet()).orEmpty().forEach { value ->
+                    val parts = value.split("|", limit = 2)
+                    if (parts.size == 2) put(parts[0], parts[1])
+                }
+        }
+    }
     val socialScope = rememberCoroutineScope()
     LaunchedEffect(Unit) { currentUserId = repo.currentUserId() }
     LaunchedEffect(entries.map { it.updatedAt }) {
@@ -2630,28 +2643,49 @@ private fun DiaryScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                                     ) {
-                                        items(photoHighlights, key = { it.id }) { highlight ->
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
-                                                val storyBitmap = diaryPhotoSet[highlight.id]
-                                                Surface(
-                                                    modifier = Modifier.size(62.dp).clip(CircleShape).clickable { onOpenMemory(highlight) },
-                                                    shape = CircleShape,
-                                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                                                    border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.8f))
+                                        itemsIndexed(photoHighlights, key = { _, item -> item.id }) { index, highlight ->
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(76.dp)) {
+                                                val coverId = highlightCoverOverrides[highlight.id] ?: highlight.id
+                                                val storyBitmap = diaryPhotoSet[coverId] ?: diaryPhotoSet[highlight.id]
+                                                Box(
+                                                    Modifier.size(66.dp).pointerInput(highlight.id) {
+                                                        detectTapGestures(
+                                                            onTap = { storyIndex = index },
+                                                            onLongPress = { coverPickerTarget = highlight.id }
+                                                        )
+                                                    },
+                                                    contentAlignment = Alignment.Center
                                                 ) {
-                                                    Box(contentAlignment = Alignment.Center) {
-                                                        if (storyBitmap != null) Image(
-                                                            bitmap = storyBitmap!!.asImageBitmap(),
-                                                            contentDescription = "Apri ${highlight.title}",
-                                                            modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                                            contentScale = ContentScale.Crop
-                                                        ) else Icon(Icons.Default.Photo, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
+                                                    Box(
+                                                        Modifier.fillMaxSize().clip(CircleShape)
+                                                            .background(Brush.sweepGradient(listOf(
+                                                                MaterialTheme.colorScheme.primary,
+                                                                MaterialTheme.colorScheme.tertiary,
+                                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
+                                                                MaterialTheme.colorScheme.primary
+                                                            )))
+                                                            .padding(3.dp)
+                                                    ) {
+                                                        Box(Modifier.fillMaxSize().clip(CircleShape).background(MaterialTheme.colorScheme.surface)) {
+                                                            if (storyBitmap != null) Image(
+                                                                bitmap = storyBitmap.asImageBitmap(),
+                                                                contentDescription = "Apri ${highlight.title}",
+                                                                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                                                contentScale = ContentScale.Crop
+                                                            ) else Icon(Icons.Default.Photo, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp).align(Alignment.Center))
+                                                        }
+                                                    }
+                                                    if (highlightCoverOverrides.containsKey(highlight.id)) {
+                                                        Box(Modifier.align(Alignment.BottomEnd).size(19.dp).clip(CircleShape)
+                                                            .background(MaterialTheme.colorScheme.primary).border(1.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                                                            contentAlignment = Alignment.Center) {
+                                                            Icon(Icons.Default.Edit, contentDescription = "Copertina personalizzata", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(10.dp))
+                                                        }
                                                     }
                                                 }
                                                 Text(highlight.title, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                             }
-                                        }
-                                    }
+                                        }                                   }
                                 }
                             }
                         }
@@ -3015,6 +3049,18 @@ private fun SocialMemoryPost(
         animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.72f, stiffness = 680f),
         label = "postLikeScale"
     )
+    var showHeartBurst by remember(entry.id) { mutableStateOf(false) }
+    val heartBurstScale by animateFloatAsState(
+        targetValue = if (showHeartBurst) 1f else 0.45f,
+        animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.58f, stiffness = 360f),
+        label = "socialHeartBurstScale"
+    )
+    LaunchedEffect(showHeartBurst) {
+        if (showHeartBurst) {
+            delay(620)
+            showHeartBurst = false
+        }
+    }
     val cardShape = RoundedCornerShape(26.dp)
     Column(
         modifier.fillMaxWidth()
@@ -3066,7 +3112,15 @@ private fun SocialMemoryPost(
             BoxWithConstraints(
                 Modifier.fillMaxWidth()
                     .pointerInput(entry.id) {
-                        detectTapGestures(onTap = { onOpen() }, onDoubleTap = { if (socialEnabled) onToggleLike() })
+                        detectTapGestures(
+                            onTap = { onOpen() },
+                            onDoubleTap = {
+                                if (socialEnabled) {
+                                    showHeartBurst = true
+                                    if (!likedByMe) onToggleLike()
+                                }
+                            }
+                        )
                     }
             ) {
                 // Preserve the original photograph ratio. Very tall images are fitted
@@ -3081,8 +3135,23 @@ private fun SocialMemoryPost(
                     Image(
                         bitmap = photo.asImageBitmap(),
                         contentDescription = "Foto del ricordo: ${entry.title}",
-                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = photoAlpha },
+                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = photoAlpha; scaleX = detailPhotoScale; scaleY = detailPhotoScale },
                         contentScale = ContentScale.Fit
+                    )
+                }
+                if (showHeartBurst) {
+                    Icon(
+                        Icons.Default.Favorite,
+                        contentDescription = "Mi piace",
+                        tint = Color.White,
+                        modifier = Modifier.align(Alignment.Center)
+                            .graphicsLayer {
+                                scaleX = heartBurstScale
+                                scaleY = heartBurstScale
+                                alpha = (1f - ((heartBurstScale - 0.45f) / 0.55f)).coerceIn(0.25f, 1f)
+                                shadowElevation = 22.dp.toPx()
+                            }
+                            .size(92.dp)
                     )
                 }
                 if (likedByMe) {
@@ -3153,7 +3222,7 @@ private fun SocialMemoryPost(
             Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 1.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onToggleLike, enabled = socialEnabled, modifier = Modifier.size(38.dp)) {
+            IconButton(onClick = { showHeartBurst = true; onToggleLike() }, enabled = socialEnabled, modifier = Modifier.size(38.dp)) {
                 Icon(
                     if (likedByMe) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = if (likedByMe) "Rimuovi mi piace" else "Mi piace",
@@ -3269,6 +3338,11 @@ private fun MemoryDetailScreen(
         targetValue = if (bitmap != null) 1f else 0f,
         animationSpec = if (reduceAnimationsState.value) tween(0) else tween(100, easing = OneUiMotionEasing),
         label = "detailPhotoReveal"
+    )
+    val detailPhotoScale by animateFloatAsState(
+        targetValue = if (bitmap != null) 1f else 0.965f,
+        animationSpec = if (reduceAnimationsState.value) tween(0) else spring(dampingRatio = 0.84f, stiffness = 420f),
+        label = "detailPhotoSharedMotion"
     )
 
     Box(Modifier.fillMaxSize()) {
@@ -3577,7 +3651,7 @@ private fun EditScreen(
                             bitmap = photoBitmap!!.asImageBitmap(),
                             contentDescription = "Anteprima della foto del ricordo",
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Fit
                         )
                         Box(
                             Modifier.align(Alignment.BottomStart).fillMaxWidth().height(84.dp)
