@@ -733,7 +733,7 @@ class MainActivity:ComponentActivity() {
     })
     // Navigation dock and create action are independent siblings in one horizontal
     // layout. The FAB owns its own 56dp slot to the right; it can never cover the dock.
-    if (currentRoute != "edit" && currentRoute != "tripMonaco") {
+    if (currentRoute != "edit" && currentRoute != "tripMonaco" && currentRoute != "memory/{entryId}") {
         Row(
             Modifier.align(Alignment.BottomCenter)
                 .fillMaxWidth()
@@ -3365,7 +3365,7 @@ private fun SocialMemoryPost(
                         fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     if (entry.body.isNotBlank()) Text(entry.body, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                    Text("$dateLabel  ·  \${entry.category.ifBlank { "Ricordo" }}",
+                    Text("$dateLabel  ·  ${entry.category.ifBlank { "Ricordo" }}",
                         color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
                 }
             }
