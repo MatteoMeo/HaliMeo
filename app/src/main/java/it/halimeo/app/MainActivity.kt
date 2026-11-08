@@ -685,10 +685,21 @@ class MainActivity:ComponentActivity() {
                     onBack = { nav.popBackStack() },
                     onEdit = { editing = memory; nav.navigate("edit") },
                     onDelete = {
+                        // Leave the detail destination before the Room Flow emits the
+                        // soft-deleted row. Otherwise the memory == null fallback below
+                        // can pop the back stack a second time and remove "main" as well.
+                        nav.popBackStack()
                         activity.lifecycleScope.launch {
-                            repo.delete(memory.id)
-                            nav.popBackStack()
-                            runCatching { repo.syncNow() }
+                            runCatching {
+                                repo.delete(memory.id)
+                                repo.syncNow()
+                            }.onFailure { error ->
+                                Toast.makeText(
+                                    ctx,
+                                    "Impossibile eliminare il ricordo: ${error.localizedMessage ?: "errore"}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
                         }
                     }
                 )
@@ -867,46 +878,43 @@ class MainActivity:ComponentActivity() {
         }
     }
 
-    if (pagerState.currentPage == 0 && currentRoute == "main") {
-        val fabInteraction = remember { MutableInteractionSource() }
-        Surface(
+    // Keep the create action in the root overlay, above the pager, posts and glass navbar.
+    // Material 3 FAB colors follow the active dynamic app palette (including custom accents).
+    if (primaryTab == 0 && currentRoute == "main") {
+        FloatingActionButton(
+            onClick = {
+                navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                editing = null
+                nav.navigate("edit")
+            },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .zIndex(10f)
-                .padding(end = 18.dp)
+                .zIndex(20f)
+                .padding(end = 20.dp)
                 .navigationBarsPadding()
-                .padding(bottom = 82.dp)
+                .padding(bottom = 88.dp)
                 .size(56.dp)
-                .haliMeoPressScale(fabInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.94f, label = "newMemoryFabPress")
-                .clip(RoundedCornerShape(18.dp))
-                .hazeBlur(
-                    input = HazeInput.Backdrop(navigationHaze),
-                    style = navigationGlassStyle,
-                    performanceMode = HazePerformanceMode.Performance,
-                    expandLayerBounds = false
-                )
-                .graphicsLayer { shape = RoundedCornerShape(18.dp); clip = true }
-                .clip(RoundedCornerShape(18.dp))
-                .clickable(
-                    interactionSource = fabInteraction,
-                    indication = LocalIndication.current,
-                    role = androidx.compose.ui.semantics.Role.Button,
-                    onClickLabel = "Nuovo ricordo"
-                ) {
-                    navigationFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                    editing = null
-                    nav.navigate("edit")
-                },
+                .haliMeoPressScale(
+                    remember { MutableInteractionSource() },
+                    reduceMotion = reduceAnimationsState.value,
+                    pressedScale = 0.94f,
+                    label = "newMemoryFabPress"
+                ),
             shape = RoundedCornerShape(18.dp),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.94f),
+            containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.18f)),
-            shadowElevation = 8.dp,
-            tonalElevation = 0.dp
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 7.dp,
+                pressedElevation = 3.dp,
+                focusedElevation = 7.dp,
+                hoveredElevation = 7.dp
+            )
         ) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(27.dp))
-            }
+            Icon(
+                Icons.Default.Add,
+                contentDescription = "Nuovo ricordo",
+                modifier = Modifier.size(27.dp)
+            )
         }
     }
     if (showUpdatePrompt) {
