@@ -1,6 +1,7 @@
-import os, sqlite3, secrets, hashlib, time, uuid, mimetypes
+import os, sqlite3, secrets, hashlib, time, uuid, mimetypes, smtplib, logging
 from pathlib import Path
 from io import BytesIO
+from email.message import EmailMessage
 from dotenv import load_dotenv
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Depends, Header, UploadFile, File, Query
@@ -26,6 +27,7 @@ JWT_SECRET = os.getenv("HALIMEO_JWT_SECRET", "")
 OWNER_ID = os.getenv("HALIMEO_OWNER_USER_ID", "")
 pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 app = FastAPI(title="HaliMeo API", version="1.0.0")
+logger = logging.getLogger("halimeo.auth")
 
 def db():
     c = sqlite3.connect(DB_PATH)
@@ -42,6 +44,10 @@ with db() as c:
     CREATE TABLE IF NOT EXISTS invites(
       code_hash TEXT PRIMARY KEY, created_by TEXT NOT NULL, created_at INTEGER NOT NULL,
       expires_at INTEGER NOT NULL, used_at INTEGER, used_by TEXT
+    );
+    CREATE TABLE IF NOT EXISTS password_resets(
+      email TEXT PRIMARY KEY, token_hash TEXT NOT NULL, created_at INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS entries(
       id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL,
@@ -112,6 +118,12 @@ class LoginIn(BaseModel):
 class RedeemIn(LoginIn):
     inviteCode: str = Field(min_length=16, max_length=128)
     displayName: str = Field(min_length=1, max_length=60)
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+class PasswordResetConfirm(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=8, max_length=8, pattern=r"^\\d{8}$")
+    newPassword: str = Field(min_length=10, max_length=128)
 class InviteIn(BaseModel):
     expiresInDays: int = Field(default=7, ge=1, le=30)
 class Entry(BaseModel):
@@ -154,7 +166,81 @@ def login(data: LoginIn):
         row = c.execute("SELECT * FROM users WHERE email=? AND disabled=0", (data.email.lower(),)).fetchone()
     if not row or not pwd.verify(data.password, row["password_hash"]):
         raise HTTPException(401, "Email o password non corretti")
-    return {"accessToken":make_token(dict(row)),"tokenType":"Bearer",**public_user(dict(row))}
+    return {"accessToken":make_token(dict(row)),"tokenType":"Bearer",**public_user(dict(row))}\n
+def send_password_reset_email(destination: str, code: str):
+    host = os.getenv("HALIMEO_SMTP_HOST", "").strip()
+    sender = os.getenv("HALIMEO_SMTP_FROM", "").strip()
+    if not host or not sender:
+        raise HTTPException(503, "Recupero password non configurato sul server: imposta HALIMEO_SMTP_HOST e HALIMEO_SMTP_FROM")
+    port = int(os.getenv("HALIMEO_SMTP_PORT", "587"))
+    username = os.getenv("HALIMEO_SMTP_USER", "").strip()
+    password = os.getenv("HALIMEO_SMTP_PASSWORD", "")
+    use_ssl = os.getenv("HALIMEO_SMTP_SSL", "false").lower() == "true"
+    use_tls = os.getenv("HALIMEO_SMTP_STARTTLS", "true").lower() == "true"
+    message = EmailMessage()
+    message["Subject"] = "Codice per reimpostare la password HaliMeo"
+    message["From"] = sender
+    message["To"] = destination
+    message.set_content(
+        f"Ciao!\\n\\nHai richiesto di reimpostare la password del tuo account HaliMeo.\\n"
+        f"Il tuo codice è: {code}\\n\\nScade tra 10 minuti. Se non hai richiesto tu questa operazione, ignora questa email.\\n"
+        "Per sicurezza non condividere questo codice con nessuno."
+    )
+    try:
+        smtp_class = smtplib.SMTP_SSL if use_ssl else smtplib.SMTP
+        with smtp_class(host, port, timeout=15) as server:
+            if not use_ssl and use_tls:
+                server.starttls()
+            if username:
+                server.login(username, password)
+            server.send_message(message)
+    except Exception:
+        logger.exception("Invio email di recupero password non riuscito")
+        raise HTTPException(503, "Non è stato possibile inviare l'email di recupero. Riprova più tardi.")
+
+@app.post("/v1/auth/password-reset/request")
+def request_password_reset(data: PasswordResetRequest):
+    email = data.email.lower()
+    now = int(time.time())
+    with db() as c:
+        user = c.execute("SELECT id FROM users WHERE email=? AND disabled=0", (email,)).fetchone()
+        if not user:
+            # Same response for unknown accounts: do not disclose registered addresses.
+            return {"message": "Se l'indirizzo è associato a un account, riceverai un codice."}
+        previous = c.execute("SELECT created_at FROM password_resets WHERE email=?", (email,)).fetchone()
+        if previous and now - previous["created_at"] < 60:
+            return {"message": "Se l'indirizzo è associato a un account, riceverai un codice."}
+        raw_code = f"{secrets.randbelow(100_000_000):08d}"
+        digest = hashlib.sha256(raw_code.encode()).hexdigest()
+        c.execute(
+            "INSERT INTO password_resets(email,token_hash,created_at,expires_at,attempts) VALUES(?,?,?,?,0) "
+            "ON CONFLICT(email) DO UPDATE SET token_hash=excluded.token_hash,created_at=excluded.created_at,expires_at=excluded.expires_at,attempts=0",
+            (email, digest, now, now + 600)
+        )
+    send_password_reset_email(email, raw_code)
+    return {"message": "Se l'indirizzo è associato a un account, riceverai un codice."}
+
+@app.post("/v1/auth/password-reset/confirm")
+def confirm_password_reset(data: PasswordResetConfirm):
+    email = data.email.lower()
+    now = int(time.time())
+    digest = hashlib.sha256(data.code.encode()).hexdigest()
+    with db() as c:
+        reset = c.execute("SELECT * FROM password_resets WHERE email=?", (email,)).fetchone()
+        if not reset or reset["expires_at"] < now or reset["attempts"] >= 5:
+            raise HTTPException(400, "Codice non valido o scaduto. Richiedine uno nuovo.")
+        if not secrets.compare_digest(reset["token_hash"], digest):
+            c.execute("UPDATE password_resets SET attempts=attempts+1 WHERE email=?", (email,))
+            raise HTTPException(400, "Codice non valido o scaduto. Richiedine uno nuovo.")
+        user = c.execute("SELECT id FROM users WHERE email=? AND disabled=0", (email,)).fetchone()
+        if not user:
+            c.execute("DELETE FROM password_resets WHERE email=?", (email,))
+            raise HTTPException(400, "Codice non valido o scaduto. Richiedine uno nuovo.")
+        c.execute("UPDATE users SET password_hash=? WHERE id=?", (pwd.hash(data.newPassword), user["id"]))
+        c.execute("DELETE FROM password_resets WHERE email=?", (email,))
+        c.execute("INSERT INTO audit_log(user_id,action,at) VALUES(?,?,?)", (user["id"], "password_reset", now))
+    return {"reset": True, "message": "Password aggiornata. Ora puoi accedere con la nuova password."}
+
 
 @app.get("/v1/auth/me")
 def me(user=Depends(current_user)):
