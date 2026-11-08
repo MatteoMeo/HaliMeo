@@ -53,6 +53,7 @@ data class SocialAlbumDetail(
 interface HaliMeoApi {
     @POST("v1/auth/login") suspend fun login(@Body request: LoginRequest): TokenResponse
     @POST("v1/auth/social/{provider}") suspend fun socialLogin(@Path("provider") provider: String, @Body request: SocialLoginRequest): TokenResponse
+    @POST("v1/auth/social/{provider}/link") suspend fun linkSocialIdentity(@Header("Authorization") auth: String, @Path("provider") provider: String, @Body request: SocialLoginRequest): Map<String, Any>
     @POST("v1/auth/password-reset/request") suspend fun requestPasswordReset(@Body request: PasswordResetRequest): PasswordResetResponse
     @POST("v1/auth/password-reset/confirm") suspend fun confirmPasswordReset(@Body request: PasswordResetConfirmRequest): PasswordResetResponse
     @POST("v1/auth/redeem-invite") suspend fun redeem(@Body request: RedeemInviteRequest): TokenResponse
