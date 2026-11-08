@@ -2505,7 +2505,7 @@ private fun AuthScreen(
                             value = pass,
                             onValueChange = { pass = it },
                             label = { Text("Password") },
-                            leadingIcon = { Icon(Icons.Default.LockOutline, null) },
+                            leadingIcon = { Icon(Icons.Default.Lock, null) },
                             modifier = Modifier.fillMaxWidth().semantics {
                                 contentType = androidx.compose.ui.autofill.ContentType.Password
                             },
