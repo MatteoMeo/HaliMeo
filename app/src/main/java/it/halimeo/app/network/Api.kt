@@ -6,6 +6,9 @@ import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 
 data class LoginRequest(val email: String, val password: String)
+data class PasswordResetRequest(val email: String)
+data class PasswordResetConfirmRequest(val email: String, val code: String, val newPassword: String)
+data class PasswordResetResponse(val message: String, val reset: Boolean = false)
 data class RedeemInviteRequest(val inviteCode: String, val displayName: String, val email: String, val password: String)
 data class InviteRequest(val expiresInDays: Int = 7)
 data class InviteResponse(val inviteCode: String, val expiresAt: Long, val uses: Int)
@@ -48,6 +51,8 @@ data class SocialAlbumDetail(
 
 interface HaliMeoApi {
     @POST("v1/auth/login") suspend fun login(@Body request: LoginRequest): TokenResponse
+    @POST("v1/auth/password-reset/request") suspend fun requestPasswordReset(@Body request: PasswordResetRequest): PasswordResetResponse
+    @POST("v1/auth/password-reset/confirm") suspend fun confirmPasswordReset(@Body request: PasswordResetConfirmRequest): PasswordResetResponse
     @POST("v1/auth/redeem-invite") suspend fun redeem(@Body request: RedeemInviteRequest): TokenResponse
     @GET("v1/auth/me") suspend fun me(@Header("Authorization") auth: String): AccountInfo
     @Multipart @POST("v1/profile/photo") suspend fun uploadProfilePhoto(@Header("Authorization") auth: String, @Part photo: MultipartBody.Part): Map<String, Any>
