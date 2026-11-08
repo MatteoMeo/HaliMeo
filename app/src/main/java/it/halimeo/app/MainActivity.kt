@@ -3764,7 +3764,16 @@ private fun EditScreen(
             shape = cardShape,
             colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
         ) {
-            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("ANTEPRIMA DEL POST", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.05.sp)
+                        Text("Così apparirà nel vostro diario", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                    }
+                    Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)) {
+                        Text("BOZZA", modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    }
+                }
                 Box(
                     Modifier.fillMaxWidth().height(238.dp)
                         .clip(RoundedCornerShape(22.dp))
@@ -3783,13 +3792,31 @@ private fun EditScreen(
                             Modifier.align(Alignment.BottomStart).fillMaxWidth().height(84.dp)
                                 .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.62f))))
                         )
-                        Row(
-                            Modifier.align(Alignment.BottomStart).padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(7.dp)
+                        Column(
+                            Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
-                            Icon(Icons.Default.PhotoCamera, contentDescription = null, tint = Color.White, modifier = Modifier.size(17.dp))
-                            Text("Foto del vostro ricordo", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(Icons.Default.PhotoCamera, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(15.dp))
+                                Text("IL VOSTRO RICORDO", color = Color.White.copy(alpha = 0.88f), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, letterSpacing = 0.9.sp)
+                                Spacer(Modifier.weight(1f))
+                                Text(date, color = Color.White.copy(alpha = 0.86f), style = MaterialTheme.typography.labelSmall)
+                            }
+                            Text(
+                                title.ifBlank { "Il titolo del vostro momento" },
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (body.isNotBlank()) Text(
+                                body,
+                                color = Color.White.copy(alpha = 0.84f),
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     } else {
                         Column(
