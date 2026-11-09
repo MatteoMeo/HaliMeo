@@ -14,6 +14,8 @@ data class RedeemInviteRequest(val inviteCode: String, val displayName: String, 
 data class InviteRequest(val expiresInDays: Int = 7)
 data class InviteResponse(val inviteCode: String, val expiresAt: Long, val uses: Int)
 data class AccountInfo(val userId: String, val displayName: String, val isOwner: Boolean)
+data class SocialIdentity(val provider: String, val email: String, val linkedAt: Long)
+data class SocialIdentitiesResponse(val identities: List<SocialIdentity> = emptyList())
 data class TokenResponse(val accessToken: String, val tokenType: String = "Bearer", val userId: String, val displayName: String)
 data class SyncRequest(val changes: List<DiaryEntryDto>, val lastSyncAt: Long? = null)
 data class SyncResponse(val changes: List<DiaryEntryDto>, val serverTime: Long)
@@ -54,6 +56,7 @@ interface HaliMeoApi {
     @POST("v1/auth/login") suspend fun login(@Body request: LoginRequest): TokenResponse
     @POST("v1/auth/social/{provider}") suspend fun socialLogin(@Path("provider") provider: String, @Body request: SocialLoginRequest): TokenResponse
     @POST("v1/auth/social/{provider}/link") suspend fun linkSocialIdentity(@Header("Authorization") auth: String, @Path("provider") provider: String, @Body request: SocialLoginRequest): Map<String, Any>
+    @GET("v1/auth/social/identities") suspend fun socialIdentities(@Header("Authorization") auth: String): SocialIdentitiesResponse
     @POST("v1/auth/password-reset/request") suspend fun requestPasswordReset(@Body request: PasswordResetRequest): PasswordResetResponse
     @POST("v1/auth/password-reset/confirm") suspend fun confirmPasswordReset(@Body request: PasswordResetConfirmRequest): PasswordResetResponse
     @POST("v1/auth/redeem-invite") suspend fun redeem(@Body request: RedeemInviteRequest): TokenResponse
