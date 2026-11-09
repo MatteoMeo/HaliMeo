@@ -285,6 +285,20 @@ def link_social_identity(provider: str, data: SocialLoginIn, user=Depends(curren
     return {"linked": True, "provider": provider}
 
 
+@app.get("/v1/auth/social/identities")
+def list_social_identities(user=Depends(current_user)):
+    """Return only the social identities linked to the authenticated account."""
+    with db() as c:
+        rows = c.execute(
+            "SELECT provider, email, created_at FROM social_identities WHERE user_id=? ORDER BY provider",
+            (user["id"],)
+        ).fetchall()
+    return {"identities": [
+        {"provider": row["provider"], "email": row["email"], "linkedAt": row["created_at"]}
+        for row in rows
+    ]}
+
+
 @app.post("/v1/auth/login")
 def login(data: LoginIn):
     with db() as c:
