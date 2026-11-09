@@ -2867,7 +2867,6 @@ private fun AuthScreen(
             tint(Color.White.copy(alpha = 0.075f))
             optics(
                 GlassOptics.regular.copy(
-                    blurRadius = OpticalSizeValue.Fixed(10.dp),
                     blurRadius = OpticalSizeValue.Fixed(12.dp),
                     refractionStrength = 0.72f,
                     refractionHeightFraction = 0.27f,
