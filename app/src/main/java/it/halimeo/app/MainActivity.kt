@@ -3056,24 +3056,21 @@ private fun AuthScreen(
             }
             Spacer(Modifier.height(9.dp))
 
-            if (redeem || recovery) {
+            if (recovery) {
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        if (redeem) "Cominciamo insieme." else "Ritroviamo il tuo accesso.",
+                        "Ritroviamo il tuo accesso.",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        if (redeem) "Crea il tuo account. L'invito verrà richiesto per attivarlo."
-                        else "Ti aiutiamo a rientrare nel tuo spazio condiviso.",
+                        "Ti aiutiamo a rientrare nel tuo spazio condiviso.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Spacer(Modifier.height(12.dp))
-            } else {
-                Spacer(Modifier.height(0.dp))
             }
 
             Card(
