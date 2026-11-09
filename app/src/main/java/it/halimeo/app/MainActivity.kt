@@ -2875,7 +2875,7 @@ private fun AuthScreen(
                                                 ) { message -> error = message; socialBusy = false }
                                             },
                                             onFacebookCancel = { socialBusy = false },
-                                            onError = { message -> error = message; socialBusy = false }
+                                            onFacebookError = { message -> error = message; socialBusy = false }
                                         )
                                     }
                                 },
