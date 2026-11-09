@@ -3170,7 +3170,11 @@ private fun AuthScreen(
                                     Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.055f), Color.Black.copy(alpha = 0.07f))),
                                     fieldShape
                                 )
-                                .hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle),
+                                .drawPrismalGlass(
+                                    backdrop = prismalBackdrop,
+                                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
+                                    effects = prismalGlassEffects(prismalDensity)
+                                ),
                                 shape = fieldShape,
                                 singleLine = true,
                                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
@@ -3190,7 +3194,11 @@ private fun AuthScreen(
                                     Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.055f), Color.Black.copy(alpha = 0.07f))),
                                     fieldShape
                                 )
-                                .hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle),
+                                .drawPrismalGlass(
+                                    backdrop = prismalBackdrop,
+                                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
+                                    effects = prismalGlassEffects(prismalDensity)
+                                ),
                                 shape = fieldShape,
                                 singleLine = true,
                                 visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
@@ -3265,7 +3273,11 @@ private fun AuthScreen(
                                     Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.055f), Color.Black.copy(alpha = 0.07f))),
                                     fieldShape
                                 )
-                                .hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle),
+                                .drawPrismalGlass(
+                                    backdrop = prismalBackdrop,
+                                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
+                                    effects = prismalGlassEffects(prismalDensity)
+                                ),
                                 shape = fieldShape,
                                 singleLine = true,
                                 colors = haliMeoTextFieldColors()
@@ -3284,7 +3296,11 @@ private fun AuthScreen(
                                     Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.055f), Color.Black.copy(alpha = 0.07f))),
                                     fieldShape
                                 )
-                                .hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).semantics {
+                                .drawPrismalGlass(
+                                    backdrop = prismalBackdrop,
+                                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
+                                    effects = prismalGlassEffects(prismalDensity)
+                                ).semantics {
                                 contentType = androidx.compose.ui.autofill.ContentType.Username
                             },
                             shape = fieldShape,
@@ -3306,7 +3322,11 @@ private fun AuthScreen(
                                     Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.055f), Color.Black.copy(alpha = 0.07f))),
                                     fieldShape
                                 )
-                                .hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).semantics {
+                                .drawPrismalGlass(
+                                    backdrop = prismalBackdrop,
+                                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
+                                    effects = prismalGlassEffects(prismalDensity)
+                                ).semantics {
                                 contentType = androidx.compose.ui.autofill.ContentType.Password
                             },
                             shape = fieldShape,
