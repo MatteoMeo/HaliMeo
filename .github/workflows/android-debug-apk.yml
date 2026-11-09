@@ -88,6 +88,23 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-halimeo-gradle-build-cache-
 
+      - name: Diagnostica pubblicazione PrismalAGSL su JitPack
+        shell: bash
+        run: |
+          set +e
+          echo "=== JitPack build API: repository/tag ==="
+          curl -sS -L --max-time 45 -w '\nHTTP_STATUS=%{http_code}\n' \
+            "https://jitpack.io/api/builds/com.github.styropyr0/PrismalAGSL/v1.0.7"
+          echo "=== JitPack build log ==="
+          curl -sS -L --max-time 45 -w '\nHTTP_STATUS=%{http_code}\n' \
+            "https://jitpack.io/com/github/styropyr0/PrismalAGSL/v1.0.7/build.log"
+          echo "=== JitPack module POM ==="
+          curl -sS -L --max-time 45 -w '\nHTTP_STATUS=%{http_code}\n' \
+            "https://jitpack.io/com/github/styropyr0/PrismalAGSL/Prismal/v1.0.7/Prismal-v1.0.7.pom"
+          echo "=== JitPack root POM ==="
+          curl -sS -L --max-time 45 -w '\nHTTP_STATUS=%{http_code}\n' \
+            "https://jitpack.io/com/github/styropyr0/PrismalAGSL/v1.0.7/PrismalAGSL-v1.0.7.pom"
+
       - name: Esegue i test del design system
         run: chmod +x gradlew && ./gradlew --build-cache testDebugUnitTest
 
