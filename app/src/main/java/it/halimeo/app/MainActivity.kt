@@ -117,6 +117,12 @@ import dev.chrisbanes.haze.blur.HazeColorEffect
 import dev.chrisbanes.haze.HazePerformanceMode
 import dev.chrisbanes.haze.blur.hazeBlur
 import androidx.compose.ui.graphics.compositeOver
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.CustomCredential
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import androidx.lifecycle.lifecycleScope
 import androidx.metrics.performance.JankStats
 import androidx.navigation.compose.*
@@ -528,7 +534,12 @@ class MainActivity:ComponentActivity() {
     if(signed==null){Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA)),contentAlignment=Alignment.Center){LoadingIndicator(modifier=Modifier.size(64.dp), color=MaterialTheme.colorScheme.primary)};return}
     if(signed==false){AuthScreen(
         onLogin={e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.login(LoginRequest(e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Accesso non riuscito")}}},
-        onRedeem={code,n,e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.redeem(RedeemInviteRequest(code,n,e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Invito non valido")}}}
+        onRedeem={code,n,e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.redeem(RedeemInviteRequest(code,n,e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Invito non valido")}}},
+        onSocialLogin={provider,token,invite,name,fail->activity.lifecycleScope.launch{
+            runCatching { ApiClient.api.socialLogin(provider, SocialLoginRequest(token, invite, name)) }
+                .onSuccess { session.save(it.accessToken,it.userId,it.displayName); displayName=it.displayName; signed=true }
+                .onFailure { error -> fail(error.message?.substringAfter(": ")?.takeIf { it.isNotBlank() } ?: "Accesso $provider non riuscito. Controlla l'invito e riprova.") }
+        }}
     );return}
     val entries by repo.entries.collectAsState(initial= emptyList()); var editing by remember{mutableStateOf<DiaryEntry?>(null)}
     var syncInProgress by remember { mutableStateOf(false) }
@@ -2276,7 +2287,8 @@ private fun SettingsScreen(
 @Composable
 private fun AuthScreen(
     onLogin: (String, String, (String) -> Unit) -> Unit,
-    onRedeem: (String, String, String, String, (String) -> Unit) -> Unit
+    onRedeem: (String, String, String, String, (String) -> Unit) -> Unit,
+    onSocialLogin: (String, String, String?, String?, (String) -> Unit) -> Unit
 ) {
     val authHaze = rememberHazeState()
     val glassTint = frostedSurfaceStrongColor()
@@ -2302,6 +2314,9 @@ private fun AuthScreen(
     var info by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val authActivity = LocalContext.current as ComponentActivity
+    val credentialManager = remember(authActivity) { CredentialManager.create(authActivity) }
+    var socialBusy by remember { mutableStateOf(false) }
     var serverOnline by remember { mutableStateOf<Boolean?>(null) }
     var serverMessage by remember { mutableStateOf("Verifica connessione…") }
 
@@ -2679,6 +2694,68 @@ private fun AuthScreen(
                             else Icon(if (redeem) Icons.Default.MarkEmailRead else Icons.Default.ArrowForward, null)
                             Spacer(Modifier.width(9.dp))
                             Text(if (redeem) "CREA ACCOUNT CON INVITO" else "ACCEDI")
+                        }
+
+                        if (!recovery) {
+                            OutlinedButton(
+                                enabled = !busy && !socialBusy && (!redeem || (inviteCode.isNotBlank() && name.isNotBlank())),
+                                onClick = {
+                                    socialBusy = true
+                                    error = ""
+                                    info = ""
+                                    scope.launch {
+                                        try {
+                                            val googleOption = GetGoogleIdOption.Builder()
+                                                .setFilterByAuthorizedAccounts(false)
+                                                .setServerClientId(BuildConfig.GOOGLE_WEB_CLIENT_ID)
+                                                .build()
+                                            val request = GetCredentialRequest.Builder()
+                                                .addCredentialOption(googleOption)
+                                                .build()
+                                            val result = credentialManager.getCredential(
+                                                context = authActivity,
+                                                request = request
+                                            )
+                                            val credential = result.credential
+                                            if (credential is CustomCredential &&
+                                                credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                                            ) {
+                                                val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                                                onSocialLogin(
+                                                    "google",
+                                                    googleCredential.idToken,
+                                                    if (redeem) inviteCode.trim() else null,
+                                                    if (redeem) name.trim().ifBlank { googleCredential.displayName } else googleCredential.displayName
+                                                ) { message -> error = message; socialBusy = false }
+                                            } else {
+                                                error = "Google non ha restituito una credenziale valida."
+                                                socialBusy = false
+                                            }
+                                        } catch (e: GetCredentialException) {
+                                            error = e.message?.takeIf { it.isNotBlank() } ?: "Impossibile accedere con Google."
+                                            socialBusy = false
+                                        } catch (e: Exception) {
+                                            error = e.message?.takeIf { it.isNotBlank() } ?: "Impossibile accedere con Google."
+                                            socialBusy = false
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth().height(52.dp),
+                                shape = RoundedCornerShape(18.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+                            ) {
+                                if (socialBusy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                                else Text("G", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
+                                Spacer(Modifier.width(10.dp))
+                                Text(if (redeem) "CONTINUA CON GOOGLE" else "ACCEDI CON GOOGLE")
+                            }
+                            Text(
+                                "Oppure continua con email e password",
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.labelSmall
+                            )
                         }
 
                         if (!redeem) {
