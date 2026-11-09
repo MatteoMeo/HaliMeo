@@ -3142,7 +3142,7 @@ private fun AuthScreen(
                         OutlinedTextField(
                             value = email,
                             onValueChange = { email = it.trim() },
-                            label = { Text("Email") },
+                            placeholder = { Text("Email") },
                             leadingIcon = { Icon(Icons.Default.MailOutline, null) },
                             modifier = Modifier.fillMaxWidth().semantics {
                                 contentType = androidx.compose.ui.autofill.ContentType.Username
@@ -3157,7 +3157,7 @@ private fun AuthScreen(
                         OutlinedTextField(
                             value = pass,
                             onValueChange = { pass = it },
-                            label = { Text("Password") },
+                            placeholder = { Text("Password") },
                             leadingIcon = { Icon(Icons.Default.Lock, null) },
                             modifier = Modifier.fillMaxWidth().semantics {
                                 contentType = androidx.compose.ui.autofill.ContentType.Password
