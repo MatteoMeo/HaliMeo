@@ -2852,12 +2852,26 @@ private fun AuthScreen(
     val prismalBackdrop = com.styropyr0.prismal.sources.rememberPrismalGlassLayer()
     val prismalDensity = LocalDensity.current
     val accent = MaterialTheme.colorScheme.primary
-    val authViolet = Color(0xFF8D5CFF)
     val fieldShape = RoundedCornerShape(50.dp)
+
+    // Shared flat-satin glass treatment: tinted body, defined rim and restrained top sheen.
+    val authFieldModifier = Modifier.fillMaxWidth()
+        .shadow(10.dp, fieldShape, ambientColor = accent.copy(alpha = 0.12f), spotColor = Color.Black.copy(alpha = 0.30f))
+        .clip(fieldShape)
+        .background(Brush.verticalGradient(listOf(Color(0xFF7C88A5).copy(alpha = 0.25f), Color(0xFF46536F).copy(alpha = 0.34f), Color(0xFF222D45).copy(alpha = 0.46f))), fieldShape)
+        .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.24f), fieldShape)
+        .drawPrismalGlass(
+            backdrop = prismalBackdrop,
+            shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
+            effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.34f),
+            onDrawSurface = {
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.13f), accent.copy(alpha = 0.045f), Color(0xFF202B43).copy(alpha = 0.13f), Color(0xFF101827).copy(alpha = 0.19f))))
+            }
+        )
     val glassStyle = remember {
         GlassStyle {
-            backgroundColor(Color.White.copy(alpha = 0.135f))
-            tint(Color.White.copy(alpha = 0.095f))
+            backgroundColor(Color(0xFF34415D).copy(alpha = 0.42f))
+            tint(Color(0xFF687895).copy(alpha = 0.16f))
             optics(
                 GlassOptics.regular.copy(
                     blurRadius = OpticalSizeValue.Fixed(30.dp),
@@ -2877,8 +2891,8 @@ private fun AuthScreen(
     }
     val fieldGlassStyle = remember {
         GlassStyle {
-            backgroundColor(Color.White.copy(alpha = 0.17f))
-            tint(Color.White.copy(alpha = 0.12f))
+            backgroundColor(Color(0xFF43516D).copy(alpha = 0.34f))
+            tint(Color(0xFF7786A4).copy(alpha = 0.13f))
             optics(
                 GlassOptics.regular.copy(
                     blurRadius = OpticalSizeValue.Fixed(24.dp),
@@ -3001,7 +3015,7 @@ private fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(30.dp))
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(
@@ -3061,7 +3075,7 @@ private fun AuthScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(86.dp))
+            Spacer(Modifier.height(112.dp))
 
             if (recovery) {
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -3081,33 +3095,9 @@ private fun AuthScreen(
             }
 
             Card(
-                modifier = Modifier.fillMaxWidth()
-                    .shadow(
-                        26.dp,
-                        RoundedCornerShape(36.dp),
-                        ambientColor = Color.Black.copy(alpha = 0.20f),
-                        spotColor = Color.Black.copy(alpha = 0.30f)
-                    )
-                    .drawPrismalGlass(
-                        backdrop = prismalBackdrop,
-                        shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
-                        effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.46f),
-                        onDrawSurface = {
-                            drawRect(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        Color.White.copy(alpha = 0.34f),
-                                        accent.copy(alpha = 0.22f),
-                                        Color(0xFFB9C5D8).copy(alpha = 0.16f),
-                                        Color(0xFF101827).copy(alpha = 0.30f)
-                                    )
-                                )
-                            )
-                        }
-                    )
-                    .clip(RoundedCornerShape(36.dp)),
+                modifier = authFieldModifier,
                 shape = RoundedCornerShape(36.dp),
-                colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor().copy(alpha = 0.78f))
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF26324B).copy(alpha = 0.62f))
             ) {
                 Column(
                     Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
@@ -3149,20 +3139,7 @@ private fun AuthScreen(
                             onValueChange = { email = it.trim() },
                             label = { Text("Indirizzo email") },
                             leadingIcon = { Icon(Icons.Default.MailOutline, null) },
-                            modifier = Modifier.fillMaxWidth()
-                                .shadow(9.dp, fieldShape, ambientColor = Color.White.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.24f))
-                                .clip(fieldShape)
-                                .background(
-                                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.25f), accent.copy(alpha = 0.10f), Color.White.copy(alpha = 0.14f), Color.Black.copy(alpha = 0.16f))),
-                                    fieldShape
-                                )
-                                .drawPrismalGlass(
-                                    backdrop = prismalBackdrop,
-                                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
-                                    effects = com.styropyr0.prismal.prismalGlassEffects(prismalDensity)
-                                ).semantics {
-                                contentType = androidx.compose.ui.autofill.ContentType.EmailAddress
-                            },
+                            modifier = authFieldModifier,
                             shape = fieldShape,
                             singleLine = true,
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
@@ -3176,18 +3153,7 @@ private fun AuthScreen(
                                 onValueChange = { code = it.filter(Char::isDigit).take(8) },
                                 label = { Text("Codice di verifica") },
                                 leadingIcon = { Icon(Icons.Default.Pin, null) },
-                                modifier = Modifier.fillMaxWidth()
-                                .shadow(9.dp, fieldShape, ambientColor = Color.White.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.24f))
-                                .clip(fieldShape)
-                                .background(
-                                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.055f), Color.Black.copy(alpha = 0.07f))),
-                                    fieldShape
-                                )
-                                .drawPrismalGlass(
-                                    backdrop = prismalBackdrop,
-                                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
-                                    effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.42f)
-                                ),
+                                modifier = authFieldModifier,
                                 shape = fieldShape,
                                 singleLine = true,
                                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
@@ -3200,30 +3166,7 @@ private fun AuthScreen(
                                 onValueChange = { newPassword = it },
                                 label = { Text("Nuova password") },
                                 leadingIcon = { Icon(Icons.Default.Lock, null) },
-                                modifier = Modifier.fillMaxWidth()
-                                .shadow(9.dp, fieldShape, ambientColor = Color.White.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.24f))
-                                .clip(fieldShape)
-                                .background(
-                                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.055f), Color.Black.copy(alpha = 0.07f))),
-                                    fieldShape
-                                )
-                                .drawPrismalGlass(
-                                    backdrop = prismalBackdrop,
-                                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
-                                    effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.52f),
-                                    onDrawSurface = {
-                                        drawRect(
-                                            Brush.verticalGradient(
-                                                listOf(
-                                                    Color.White.copy(alpha = 0.30f),
-                                                    accent.copy(alpha = 0.13f),
-                                                    Color(0xFFBFC9D8).copy(alpha = 0.13f),
-                                                    Color.Black.copy(alpha = 0.19f)
-                                                )
-                                            )
-                                        )
-                                    }
-                                ),
+                                modifier = authFieldModifier,
                                 shape = fieldShape,
                                 singleLine = true,
                                 visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
@@ -3267,8 +3210,13 @@ private fun AuthScreen(
                                     }
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth().height(54.dp),
-                            shape = RoundedCornerShape(18.dp)
+                            modifier = Modifier.fillMaxWidth().height(54.dp)
+                                .shadow(8.dp, RoundedCornerShape(50.dp), ambientColor = accent.copy(alpha = 0.10f))
+                                .clip(RoundedCornerShape(50.dp))
+                                .background(Brush.verticalGradient(listOf(Color(0xFF66738F).copy(alpha = 0.30f), Color(0xFF2B3852).copy(alpha = 0.58f))))
+                                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.22f), RoundedCornerShape(50.dp)),
+                            shape = RoundedCornerShape(50.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface)
                         ) {
                             if (busy) CircularProgressIndicator(Modifier.size(19.dp), strokeWidth = 2.dp)
                             else Icon(if (resetCodeSent) Icons.Default.LockReset else Icons.Default.MarkEmailRead, null)
@@ -3282,76 +3230,11 @@ private fun AuthScreen(
                                 error = ""
                                 info = ""
                             },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Torna all'accesso") }
-                    } else {
-                        if (redeem) {
-                            OutlinedTextField(
-                                value = name,
-                                onValueChange = { name = it },
-                                label = { Text("Come vuoi essere chiamato?") },
-                                leadingIcon = { Icon(Icons.Default.PersonOutline, null) },
-                                modifier = Modifier.fillMaxWidth()
-                                .shadow(9.dp, fieldShape, ambientColor = Color.White.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.24f))
-                                .clip(fieldShape)
-                                .background(
-                                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.055f), Color.Black.copy(alpha = 0.07f))),
-                                    fieldShape
-                                )
-                                .drawPrismalGlass(
-                                    backdrop = prismalBackdrop,
-                                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
-                                    effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.52f),
-                                    onDrawSurface = {
-                                        drawRect(
-                                            Brush.verticalGradient(
-                                                listOf(
-                                                    Color.White.copy(alpha = 0.19f),
-                                                    Color.White.copy(alpha = 0.085f),
-                                                    Color(0xFFBFC9D8).copy(alpha = 0.035f),
-                                                    Color.Black.copy(alpha = 0.095f)
-                                                )
-                                            )
-                                        )
-                                    }
-                                ),
-                                shape = fieldShape,
-                                singleLine = true,
-                                colors = haliMeoTextFieldColors()
-                            )
-                        }
-
-                        OutlinedTextField(
-                            value = email,
+                            modifier = authFieldModifier,
                             onValueChange = { email = it.trim() },
                             placeholder = { Text("Email") },
                             leadingIcon = { Icon(Icons.Default.MailOutline, null) },
-                            modifier = Modifier.fillMaxWidth()
-                                .shadow(9.dp, fieldShape, ambientColor = Color.White.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.24f))
-                                .clip(fieldShape)
-                                .background(
-                                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.055f), Color.Black.copy(alpha = 0.07f))),
-                                    fieldShape
-                                )
-                                .drawPrismalGlass(
-                                    backdrop = prismalBackdrop,
-                                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
-                                    effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.52f),
-                                    onDrawSurface = {
-                                        drawRect(
-                                            Brush.verticalGradient(
-                                                listOf(
-                                                    Color.White.copy(alpha = 0.19f),
-                                                    Color.White.copy(alpha = 0.085f),
-                                                    Color(0xFFBFC9D8).copy(alpha = 0.035f),
-                                                    Color.Black.copy(alpha = 0.095f)
-                                                )
-                                            )
-                                        )
-                                    }
-                                ).semantics {
-                                contentType = androidx.compose.ui.autofill.ContentType.Username
-                            },
+                            modifier = authFieldModifier,
                             shape = fieldShape,
                             singleLine = true,
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
@@ -3364,32 +3247,7 @@ private fun AuthScreen(
                             onValueChange = { pass = it },
                             placeholder = { Text("Password") },
                             leadingIcon = { Icon(Icons.Default.Lock, null) },
-                            modifier = Modifier.fillMaxWidth()
-                                .shadow(9.dp, fieldShape, ambientColor = Color.White.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.24f))
-                                .clip(fieldShape)
-                                .background(
-                                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.055f), Color.Black.copy(alpha = 0.07f))),
-                                    fieldShape
-                                )
-                                .drawPrismalGlass(
-                                    backdrop = prismalBackdrop,
-                                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
-                                    effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.52f),
-                                    onDrawSurface = {
-                                        drawRect(
-                                            Brush.verticalGradient(
-                                                listOf(
-                                                    Color.White.copy(alpha = 0.19f),
-                                                    Color.White.copy(alpha = 0.085f),
-                                                    Color(0xFFBFC9D8).copy(alpha = 0.035f),
-                                                    Color.Black.copy(alpha = 0.095f)
-                                                )
-                                            )
-                                        )
-                                    }
-                                ).semantics {
-                                contentType = androidx.compose.ui.autofill.ContentType.Password
-                            },
+                            modifier = authFieldModifier,
                             shape = fieldShape,
                             singleLine = true,
                             visualTransformation = if (passwordVisible)
@@ -3415,8 +3273,11 @@ private fun AuthScreen(
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                                 TextButton(
                                     onClick = { recovery = true; error = ""; info = "" },
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
-                                ) { Text("Hai dimenticato la password?", color = accent) }
+                                    modifier = Modifier.clip(RoundedCornerShape(50.dp))
+                                        .background(Color(0xFF53617E).copy(alpha = 0.22f))
+                                        .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.16f), RoundedCornerShape(50.dp)),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 7.dp)
+                                ) { Text("Hai dimenticato la password?", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                             }
                         }
 
@@ -3557,8 +3418,8 @@ private fun AuthScreen(
                         }
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(50.dp))
-                                .background(Color(0xFF8E82B8).copy(alpha = 0.14f))
-                                .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(50.dp))
+                                .background(Brush.verticalGradient(listOf(Color(0xFF65728F).copy(alpha = 0.26f), Color(0xFF26324B).copy(alpha = 0.48f))))
+                                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.20f), RoundedCornerShape(50.dp))
                                 .padding(horizontal = 14.dp, vertical = 12.dp),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
