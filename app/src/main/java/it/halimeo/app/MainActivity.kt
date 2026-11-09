@@ -2365,7 +2365,6 @@ private fun AuthScreen(
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val authActivity = LocalContext.current as ComponentActivity
-    val credentialManager = remember(authActivity) { CredentialManager.create(authActivity) }
     var socialBusy by remember { mutableStateOf(false) }
     var serverOnline by remember { mutableStateOf<Boolean?>(null) }
     var serverMessage by remember { mutableStateOf("Verifica connessione…") }
