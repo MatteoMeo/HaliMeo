@@ -308,6 +308,23 @@ private fun haliMeoVisualTokens(): HaliMeoVisualTokens = HaliMeoVisualTokens.cre
 private fun frostedEdgeColor(): Color = haliMeoVisualTokens().outline
 
 @Composable
+@Composable
+private fun authTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = Color(0xFFD5C8FF).copy(alpha = 0.72f),
+    unfocusedBorderColor = Color(0xFFB9C9DF).copy(alpha = 0.34f),
+    focusedContainerColor = Color(0xFFB7C9E8).copy(alpha = 0.12f),
+    unfocusedContainerColor = Color(0xFFB7C9E8).copy(alpha = 0.075f),
+    focusedTextColor = Color(0xFFF5F6FC),
+    unfocusedTextColor = Color(0xFFF0F2FA),
+    focusedLabelColor = Color(0xFFD5C8FF),
+    unfocusedLabelColor = Color(0xFFC5CCDA),
+    cursorColor = Color(0xFFD5C8FF),
+    focusedPlaceholderColor = Color(0xFFC5CCDA),
+    unfocusedPlaceholderColor = Color(0xFFC5CCDA),
+    focusedLeadingIconColor = Color(0xFFE0D8FF),
+    unfocusedLeadingIconColor = Color(0xFFD0D7E5)
+)
+
 private fun haliMeoTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.78f),
     unfocusedBorderColor = haliMeoVisualTokens().outline.copy(alpha = 0.72f),
@@ -2761,13 +2778,13 @@ private fun AuthScreen(
     onSocialLogin: (String, String, String?, String?, (String) -> Unit) -> Unit
 ) {
     val authHaze = rememberHazeState()
-    val glassTint = frostedSurfaceStrongColor()
-    val glassBackground = MaterialTheme.colorScheme.surface
-    val glassStyle = remember(glassTint, glassBackground) {
+    val glassStyle = remember {
         HazeBlurStyle {
-            backgroundColor(glassBackground.copy(alpha = 0.46f))
-            colorEffects(listOf(HazeColorEffect.tint(glassTint.copy(alpha = 0.13f))))
-            fallbackColorEffect(HazeColorEffect.tint(glassTint.copy(alpha = 0.24f)))
+            blurRadius(30.dp)
+            backgroundColor(Color(0x421A2638))
+            colorEffects(listOf(HazeColorEffect.tint(Color(0xFF9C8CFF).copy(alpha = 0.075f))))
+            fallbackColorEffect(HazeColorEffect.tint(Color(0xFF9EABC4).copy(alpha = 0.18f)))
+            noiseFactor(0.035f)
         }
     }
     var redeem by remember { mutableStateOf(false) }
@@ -2802,7 +2819,7 @@ private fun AuthScreen(
         }
     }
 
-    val fieldShape = RoundedCornerShape(18.dp)
+    val fieldShape = RoundedCornerShape(50.dp)
     val accent = MaterialTheme.colorScheme.primary
     val dark = isHaliMeoDark()
 
@@ -2933,10 +2950,15 @@ private fun AuthScreen(
 
             Card(
                 modifier = Modifier.fillMaxWidth()
-                    .hazeBlur(HazeInput.Sources(authHaze), glassStyle)
-                    .border(1.dp, frostedEdgeColor().copy(alpha = 0.82f), RoundedCornerShape(28.dp)),
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
+                    .hazeBlur(
+                        input = HazeInput.Backdrop(authHaze),
+                        style = glassStyle,
+                        performanceMode = HazePerformanceMode.Default,
+                        expandLayerBounds = true
+                    )
+                    .border(1.dp, Color(0xFFB9C9DF).copy(alpha = 0.34f), RoundedCornerShape(36.dp)),
+                shape = RoundedCornerShape(36.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
                 Column(
                     Modifier.padding(horizontal = 21.dp, vertical = 23.dp),
@@ -2984,7 +3006,7 @@ private fun AuthScreen(
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
                             ),
-                            colors = haliMeoTextFieldColors()
+                            colors = authTextFieldColors()
                         )
                         if (resetCodeSent) {
                             OutlinedTextField(
@@ -3138,12 +3160,9 @@ private fun AuthScreen(
                         Row(
                             Modifier.fillMaxWidth()
                                 .height(56.dp)
+                                .shadow(22.dp, RoundedCornerShape(50), ambientColor = Color(0xFF8D65FF).copy(alpha = 0.34f), spotColor = Color(0xFF5B6DFF).copy(alpha = 0.28f))
                                 .clip(RoundedCornerShape(50))
-                                .background(
-                                    Brush.horizontalGradient(
-                                        listOf(accent, MaterialTheme.colorScheme.tertiary, accent.copy(alpha = 0.82f))
-                                    )
-                                )
+                                .background(Brush.horizontalGradient(listOf(Color(0xFF9B70FF), Color(0xFF695FE8), Color(0xFFB06CFF))))
                                 .clickable(enabled = canSubmit) {
                                     busy = true
                                     val fail: (String) -> Unit = { error = it; busy = false }
