@@ -2346,52 +2346,72 @@ private fun AuthScreen(
                 .imePadding()
                 .padding(horizontal = 22.dp, vertical = 26.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Top
         ) {
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(22.dp))
             Box(
-                Modifier.size(76.dp)
+                Modifier.size(72.dp)
                     .background(
                         Brush.linearGradient(
-                            listOf(accent.copy(alpha = 0.30f), accent.copy(alpha = 0.10f))
+                            listOf(accent.copy(alpha = 0.28f), accent.copy(alpha = 0.08f))
                         ),
-                        RoundedCornerShape(26.dp)
+                        RoundedCornerShape(25.dp)
                     )
-                    .border(1.dp, accent.copy(alpha = 0.30f), RoundedCornerShape(26.dp)),
+                    .border(1.dp, accent.copy(alpha = 0.34f), RoundedCornerShape(25.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.AutoAwesome,
                     contentDescription = null,
                     tint = accent,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(34.dp)
                 )
             }
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(15.dp))
+            Surface(
+                color = accent.copy(alpha = 0.11f),
+                shape = RoundedCornerShape(50)
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(Icons.Default.Shield, contentDescription = null, tint = accent, modifier = Modifier.size(13.dp))
+                    Text(
+                        "SPAZIO PRIVATO",
+                        color = accent,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.1.sp
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
             Text(
                 "HaliMeo",
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.displaySmall.copy(letterSpacing = (-1.1).sp),
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(Modifier.height(5.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
-                "I vostri momenti, il vostro spazio.",
+                "I vostri ricordi, custoditi insieme.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(22.dp))
 
             Card(
                 modifier = Modifier.fillMaxWidth()
                     .hazeBlur(HazeInput.Sources(authHaze), glassStyle)
-                    .border(1.dp, frostedEdgeColor(), RoundedCornerShape(30.dp)),
-                shape = RoundedCornerShape(30.dp),
+                    .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
+                shape = RoundedCornerShape(32.dp),
                 colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
             ) {
                 Column(
-                    Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    Modifier.padding(horizontal = 20.dp, vertical = 22.dp),
+                    verticalArrangement = Arrangement.spacedBy(15.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
