@@ -308,19 +308,19 @@ private fun haliMeoVisualTokens(): HaliMeoVisualTokens = HaliMeoVisualTokens.cre
 private fun frostedEdgeColor(): Color = haliMeoVisualTokens().outline
 
 @Composable
-private fun authTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = Color(0xFFD5C8FF).copy(alpha = 0.72f),
-    unfocusedBorderColor = Color(0xFFB9C9DF).copy(alpha = 0.34f),
-    focusedContainerColor = Color(0xFFB7C9E8).copy(alpha = 0.12f),
-    unfocusedContainerColor = Color(0xFFB7C9E8).copy(alpha = 0.075f),
+private fun authTextFieldColors(accent: Color) = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = accent.copy(alpha = 0.82f),
+    unfocusedBorderColor = Color(0xFFD0D9E8).copy(alpha = 0.30f),
+    focusedContainerColor = Color(0xFFB7C9E8).copy(alpha = 0.10f),
+    unfocusedContainerColor = Color(0xFFB7C9E8).copy(alpha = 0.045f),
     focusedTextColor = Color(0xFFF5F6FC),
     unfocusedTextColor = Color(0xFFF0F2FA),
-    focusedLabelColor = Color(0xFFD5C8FF),
+    focusedLabelColor = accent,
     unfocusedLabelColor = Color(0xFFC5CCDA),
-    cursorColor = Color(0xFFD5C8FF),
+    cursorColor = accent,
     focusedPlaceholderColor = Color(0xFFC5CCDA),
     unfocusedPlaceholderColor = Color(0xFFC5CCDA),
-    focusedLeadingIconColor = Color(0xFFE0D8FF),
+    focusedLeadingIconColor = accent,
     unfocusedLeadingIconColor = Color(0xFFD0D7E5)
 )
 
@@ -2780,8 +2780,8 @@ private fun AuthScreen(
     val authHaze = rememberHazeState()
     val glassStyle = remember {
         HazeBlurStyle {
-            blurRadius(30.dp)
-            backgroundColor(Color(0x421A2638))
+            blurRadius(42.dp)
+            backgroundColor(Color(0x501A2638))
             colorEffects(listOf(HazeColorEffect.tint(Color(0xFF9C8CFF).copy(alpha = 0.075f))))
             fallbackColorEffect(HazeColorEffect.tint(Color(0xFF9EABC4).copy(alpha = 0.18f)))
             noiseFactor(0.035f)
@@ -2956,7 +2956,27 @@ private fun AuthScreen(
                         performanceMode = HazePerformanceMode.Default,
                         expandLayerBounds = true
                     )
-                    .border(1.dp, Color(0xFFB9C9DF).copy(alpha = 0.34f), RoundedCornerShape(36.dp)),
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                Color(0xFFB9C9DF).copy(alpha = 0.13f),
+                                Color(0xFF7186A8).copy(alpha = 0.075f),
+                                Color(0xFF9A8BCA).copy(alpha = 0.11f)
+                            )
+                        ),
+                        RoundedCornerShape(36.dp)
+                    )
+                    .border(
+                        1.dp,
+                        Brush.linearGradient(
+                            listOf(
+                                Color(0xFFE2E9F7).copy(alpha = 0.52f),
+                                Color(0xFF9FB5D7).copy(alpha = 0.20f),
+                                Color(0xFFE2D9FF).copy(alpha = 0.42f)
+                            )
+                        ),
+                        RoundedCornerShape(36.dp)
+                    ),
                 shape = RoundedCornerShape(36.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
@@ -3006,7 +3026,7 @@ private fun AuthScreen(
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
                             ),
-                            colors = authTextFieldColors()
+                            colors = authTextFieldColors(accent)
                         )
                         if (resetCodeSent) {
                             OutlinedTextField(
@@ -3020,7 +3040,7 @@ private fun AuthScreen(
                                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                                     keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
                                 ),
-                                colors = haliMeoTextFieldColors()
+                                colors = authTextFieldColors(accent)
                             )
                             OutlinedTextField(
                                 value = newPassword,
@@ -3160,9 +3180,9 @@ private fun AuthScreen(
                         Row(
                             Modifier.fillMaxWidth()
                                 .height(56.dp)
-                                .shadow(22.dp, RoundedCornerShape(50), ambientColor = Color(0xFF8D65FF).copy(alpha = 0.34f), spotColor = Color(0xFF5B6DFF).copy(alpha = 0.28f))
+                                .shadow(18.dp, RoundedCornerShape(50), ambientColor = accent.copy(alpha = 0.28f), spotColor = accent.copy(alpha = 0.22f))
                                 .clip(RoundedCornerShape(50))
-                                .background(Brush.horizontalGradient(listOf(Color(0xFF9B70FF), Color(0xFF695FE8), Color(0xFFB06CFF))))
+                                .background(Brush.horizontalGradient(listOf(accent, MaterialTheme.colorScheme.tertiary, accent.copy(alpha = 0.82f))))
                                 .clickable(enabled = canSubmit) {
                                     busy = true
                                     val fail: (String) -> Unit = { error = it; busy = false }
