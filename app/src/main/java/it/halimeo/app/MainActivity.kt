@@ -2791,7 +2791,7 @@ private fun AuthScreen(
         }
     }
 
-    val fieldShape = RoundedCornerShape(18.dp)
+    val fieldShape = RoundedCornerShape(22.dp)
     val accent = MaterialTheme.colorScheme.primary
     val dark = isHaliMeoDark()
 
@@ -3053,22 +3053,49 @@ private fun AuthScreen(
                         if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
                         if (info.isNotBlank()) Text(info, color = accent)
 
-                        Button(
-                            enabled = !busy && email.contains("@") && pass.length >= 10 &&
-                                (!redeem || name.isNotBlank()),
-                            onClick = {
-                                busy = true
-                                val fail: (String) -> Unit = { error = it; busy = false }
-                                if (redeem) onRegister(name, email, pass, fail)
-                                else onLogin(email, pass, fail)
-                            },
-                            modifier = Modifier.fillMaxWidth().height(56.dp),
-                            shape = RoundedCornerShape(18.dp)
+                        if (!redeem) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                TextButton(
+                                    onClick = { recovery = true; error = ""; info = "" },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                ) { Text("Hai dimenticato la password?", color = Color(0xFFB994FF)) }
+                            }
+                        }
+
+                        val canSubmit = !busy && email.contains("@") && pass.length >= 10 &&
+                            (!redeem || name.isNotBlank())
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .height(56.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(Color(0xFF8D62F4), Color(0xFF713BD7), Color(0xFF8745D8))
+                                    )
+                                )
+                                .graphicsLayer { alpha = if (canSubmit) 1f else 0.52f }
+                                .clickable(enabled = canSubmit) {
+                                    busy = true
+                                    val fail: (String) -> Unit = { error = it; busy = false }
+                                    if (redeem) onRegister(name, email, pass, fail)
+                                    else onLogin(email, pass, fail)
+                                }
+                                .padding(horizontal = 22.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (busy) CircularProgressIndicator(Modifier.size(19.dp), strokeWidth = 2.dp)
-                            else Icon(if (redeem) Icons.Default.PersonAddAlt1 else Icons.Default.ArrowForward, null)
-                            Spacer(Modifier.width(9.dp))
-                            Text(if (redeem) "CREA ACCOUNT" else "ACCEDI")
+                            Spacer(Modifier.weight(1f))
+                            if (busy) {
+                                CircularProgressIndicator(Modifier.size(19.dp), color = Color.White, strokeWidth = 2.dp)
+                            } else {
+                                Text(
+                                    if (redeem) "Crea account" else "Accedi",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                            }
+                            Spacer(Modifier.weight(1f))
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color.White)
                         }
 
                         if (!recovery) {
@@ -3144,13 +3171,6 @@ private fun AuthScreen(
                             }
                         }
 
-                        if (!redeem) {
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                                TextButton(
-                                    onClick = { recovery = true; error = ""; info = "" },
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
-                                ) { Text("Hai dimenticato la password?", color = Color(0xFFB994FF)) }
-                            }
                         } else {
                             Row(
                                 Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
