@@ -50,7 +50,7 @@ internal data class HaliMeoVisualTokens(
                 surface = if (reduceEffects) Color(0xA9161C27) else Color(0xB81A202B),
                 strongSurface = if (reduceEffects) Color(0xC5161D2A) else Color(0xD91B2433),
                 elevatedSurface = Color(0xF21A1D2C),
-                outline = Color(0xFF9BA9BE).copy(alpha = if (reduceEffects) 0.13f else 0.22f),
+                outline = Color(0xFFB6C5D9).copy(alpha = if (reduceEffects) 0.16f else 0.27f),
                 ambientAccent = accent.copy(alpha = if (reduceEffects) 0.20f else 0.42f),
                 ambientSecondary = accent.copy(alpha = if (reduceEffects) 0.08f else 0.18f),
                 onSurface = Color(0xFFF4F3FA),
