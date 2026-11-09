@@ -478,7 +478,7 @@ private val TextPrimary = Color(0xFFF5F7FA)
 class MainActivity:ComponentActivity() {
     private val facebookCallbackManager = CallbackManager.Factory.create()
 
-    fun startFacebookLogin(onToken: (String) -> Unit, onCancel: () -> Unit, onError: (String) -> Unit) {
+    fun startFacebookLogin(onToken: (String) -> Unit, onFacebookCancel: () -> Unit, onFacebookError: (String) -> Unit) {
         LoginManager.getInstance().registerCallback(facebookCallbackManager, object : FacebookCallback<LoginResult> {
             override fun onSuccess(result: LoginResult) {
                 LoginManager.getInstance().unregisterCallback(facebookCallbackManager)
@@ -486,11 +486,11 @@ class MainActivity:ComponentActivity() {
             }
             override fun onCancel() {
                 LoginManager.getInstance().unregisterCallback(facebookCallbackManager)
-                onCancel()
+                onFacebookCancel()
             }
             override fun onError(error: FacebookException) {
                 LoginManager.getInstance().unregisterCallback(facebookCallbackManager)
-                onError(error.localizedMessage ?: "Accesso Facebook non riuscito.")
+                onFacebookError(error.localizedMessage ?: "Accesso Facebook non riuscito.")
             }
         })
         LoginManager.getInstance().logInWithReadPermissions(this, listOf("email", "public_profile"))
@@ -1536,8 +1536,8 @@ private fun SettingsScreen(
                                                 accountSecurityBusy = false
                                             }
                                         },
-                                        onCancel = { accountSecurityBusy = false },
-                                        onError = { message ->
+                                        onFacebookCancel = { accountSecurityBusy = false },
+                                        onFacebookError = { message ->
                                             accountSecurityBusy = false
                                             Toast.makeText(ctx, message, Toast.LENGTH_LONG).show()
                                         }
@@ -2874,7 +2874,7 @@ private fun AuthScreen(
                                                     if (redeem) name.trim().ifBlank { email.substringBefore("@") } else null
                                                 ) { message -> error = message; socialBusy = false }
                                             },
-                                            onCancel = { socialBusy = false },
+                                            onFacebookCancel = { socialBusy = false },
                                             onError = { message -> error = message; socialBusy = false }
                                         )
                                     }
