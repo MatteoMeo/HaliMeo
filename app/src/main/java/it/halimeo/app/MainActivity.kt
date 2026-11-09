@@ -3452,7 +3452,7 @@ private fun AuthScreen(
                             } else {
                                 Text(
                                     if (redeem) "Crea account" else "Accedi",
-                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    color = Color.White,
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.titleMedium,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
