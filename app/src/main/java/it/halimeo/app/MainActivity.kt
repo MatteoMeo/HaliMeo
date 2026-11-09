@@ -2845,12 +2845,13 @@ private fun AuthScreen(
     onSocialLogin: (String, String, String?, String?, (String) -> Unit) -> Unit
 ) {
     val authHaze = rememberHazeState()
-    val accent = Color(0xFF9B6BFF)
+    val accent = MaterialTheme.colorScheme.primary
     val authViolet = Color(0xFF8D5CFF)
-    val authDeepViolet = Color(0xFF5424C7)
-    val glassStyle = remember(accent) {
+    val fieldShape = RoundedCornerShape(50.dp)
+    val glassStyle = remember {
         GlassStyle {
-            tint(accent.copy(alpha = 0.105f))
+            backgroundColor(Color(0xFF171A32).copy(alpha = 0.28f))
+            tint(Color(0xFFD9D5F5).copy(alpha = 0.075f))
             optics(
                 GlassOptics.regular.copy(
                     blurRadius = OpticalSizeValue.Fixed(24.dp),
@@ -2859,8 +2860,6 @@ private fun AuthScreen(
                     depth = OpticalSizeValue.Fixed(0.54f)
                 )
             )
-            specularIntensity(0.76f)
-            ambientResponse(0.62f)
             edgeSoftness(11.dp)
             shape(RoundedCornerShape(36.dp))
             surfaceProfile(SurfaceProfile.Squircle)
@@ -2870,7 +2869,7 @@ private fun AuthScreen(
             ambientResponse(0.68f)
         }
     }
-    val fieldGlassStyle = remember(accent) {
+    val fieldGlassStyle = remember {
         GlassStyle {
             backgroundColor(Color(0xFF171A32).copy(alpha = 0.34f))
             tint(Color(0xFFDCD7FF).copy(alpha = 0.14f))
@@ -2923,7 +2922,6 @@ private fun AuthScreen(
         }
     }
 
-    val fieldShape = RoundedCornerShape(50.dp)
     val dark = isHaliMeoDark()
 
     Box(
@@ -3095,7 +3093,7 @@ private fun AuthScreen(
                             listOf(
                                 Color.White.copy(alpha = 0.16f),
                                 Color.White.copy(alpha = 0.055f),
-                                accent.copy(alpha = 0.075f),
+                                Color(0xFF77729E).copy(alpha = 0.075f),
                                 Color.Black.copy(alpha = 0.16f)
                             )
                         ),
@@ -3106,7 +3104,7 @@ private fun AuthScreen(
                         Brush.linearGradient(
                             listOf(
                                 Color.White.copy(alpha = 0.38f),
-                                accent.copy(alpha = 0.16f),
+                                Color(0xFFB8B3D8).copy(alpha = 0.14f),
                                 Color.White.copy(alpha = 0.08f)
                             )
                         ),
@@ -3322,10 +3320,10 @@ private fun AuthScreen(
                                 .background(
                                     Brush.verticalGradient(
                                         listOf(
-                                            Color(0xFFB99AFF),
-                                            Color(0xFF8D5CFF),
-                                            Color(0xFF7138E8),
-                                            Color(0xFF5424C7)
+                                            Color.White.copy(alpha = 0.30f),
+                                            accent.copy(alpha = 0.98f),
+                                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.96f),
+                                            accent.copy(alpha = 0.92f)
                                         )
                                     )
                                 )
