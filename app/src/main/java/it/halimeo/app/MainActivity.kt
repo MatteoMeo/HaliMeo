@@ -2950,6 +2950,7 @@ private fun AuthScreen(
 
             Card(
                 modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(36.dp))
                     .hazeBlur(
                         input = HazeInput.Backdrop(authHaze),
                         style = glassStyle,
@@ -3054,7 +3055,7 @@ private fun AuthScreen(
                                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                                     keyboardType = androidx.compose.ui.text.input.KeyboardType.Password
                                 ),
-                                colors = haliMeoTextFieldColors()
+                                colors = authTextFieldColors(accent)
                             )
                         }
                         if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
