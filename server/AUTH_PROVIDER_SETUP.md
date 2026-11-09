@@ -28,7 +28,7 @@ A previously linked provider identity can sign in without another invite. A new 
 
 ## Android client status
 
-Google sign-in is now wired with Android Credential Manager and Google ID tokens. The OAuth Web client ID above is configured in the app build. New-account Google registration still requires an invite code and display name; linked Google identities can sign in without a new invite. Classic email/password login and invite registration remain available.
+Google sign-in is now wired with Android Credential Manager and Google ID tokens. The OAuth Web client ID above is configured in the app build. New-account Google registration still requires an invite code and display name; linked Google identities can sign in without a new invite. Classic email/password login and invite registration remain available. Existing password users can explicitly link a Google identity from Impostazioni → Profilo e account → Accesso e sicurezza; the app verifies the token and the backend requires the provider's verified email to match the current HaliMeo account.
 
 Facebook Android sign-in is not yet wired. The Facebook App ID is configured, but the Facebook SDK also needs the app's **Client Token** in Android manifest metadata. The Facebook App Secret remains server-only. Before enabling Facebook, configure the package `it.halimeo.app` (debug builds use `it.halimeo.app.debug`), the release/debug signing fingerprints and the Android OAuth/Login settings in the provider consoles. Do not commit the Facebook App Secret or signing keystore. The social endpoint rejects unconfigured providers with HTTP 503 rather than weakening authentication.
 
