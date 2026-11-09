@@ -2691,13 +2691,14 @@ private fun SocialAuthButton(
     onClick: () -> Unit
 ) {
     val isGoogle = provider == "google"
-    val background = if (isGoogle) Color(0xFFFFFFFF) else Color(0xFF1877F2)
+    val background = if (isGoogle) Color.White else Color(0xFF1877F2)
     val foreground = if (isGoogle) Color(0xFF202124) else Color.White
     Row(
         Modifier.fillMaxWidth()
             .height(52.dp)
-            .clip(RoundedCornerShape(17.dp))
+            .clip(RoundedCornerShape(50))
             .background(background)
+            .graphicsLayer { alpha = if (enabled) 1f else 0.58f }
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 17.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -2705,21 +2706,27 @@ private fun SocialAuthButton(
         Box(
             Modifier.size(29.dp)
                 .clip(CircleShape)
-                .background(if (isGoogle) Color.Transparent else Color.White.copy(alpha = 0.14f)),
+                .background(if (isGoogle) Color.Transparent else Color.White),
             contentAlignment = Alignment.Center
         ) {
             if (loading) {
                 CircularProgressIndicator(
                     Modifier.size(17.dp),
-                    color = if (isGoogle) Color(0xFF4285F4) else Color.White,
+                    color = if (isGoogle) Color(0xFF4285F4) else Color(0xFF1877F2),
                     strokeWidth = 2.dp
+                )
+            } else if (isGoogle) {
+                Image(
+                    painter = androidx.compose.ui.res.painterResource(R.drawable.ic_google_logo),
+                    contentDescription = "Google",
+                    modifier = Modifier.size(22.dp)
                 )
             } else {
                 Text(
-                    if (isGoogle) "G" else "f",
-                    color = if (isGoogle) Color(0xFF4285F4) else Color.White,
+                    "f",
+                    color = Color(0xFF1877F2),
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = if (isGoogle) 21.sp else 24.sp,
+                    fontSize = 23.sp,
                     style = MaterialTheme.typography.titleLarge
                 )
             }
