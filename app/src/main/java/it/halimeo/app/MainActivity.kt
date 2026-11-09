@@ -3081,7 +3081,7 @@ private fun AuthScreen(
                     .shadow(
                         26.dp,
                         RoundedCornerShape(36.dp),
-                        ambientColor = accent.copy(alpha = 0.18f),
+                        ambientColor = Color(0xFF77729E).copy(alpha = 0.16f),
                         spotColor = Color.Black.copy(alpha = 0.30f)
                     )
                     .hazeGlass(
