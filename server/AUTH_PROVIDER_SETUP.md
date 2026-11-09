@@ -6,8 +6,8 @@ The password + invite registration flow remains available. Social sign-in is imp
 
 Set these values in the server's private `.env` (never commit secrets):
 
-- `HALIMEO_GOOGLE_CLIENT_ID`: the OAuth **Web application** client ID used as the audience for Google ID tokens.
-- `HALIMEO_FACEBOOK_APP_ID`: Facebook app ID.
+- `HALIMEO_GOOGLE_CLIENT_ID`: `609968712989-909cckera569ft2g5ivrp79obp7ij4hn.apps.googleusercontent.com` (OAuth **Web application** client ID; also configured in the Android build).
+- `HALIMEO_FACEBOOK_APP_ID`: `2135436027084791` (also configured in the Android build).
 - `HALIMEO_FACEBOOK_APP_SECRET`: Facebook app secret. Server-side only; never put it in the APK.
 
 Restart the API after changing environment variables. Google verification uses Google's ID-token verifier and checks issuer, audience and `email_verified`. Facebook verification checks the token with Graph API's `debug_token`, checks that it belongs to the configured app, then retrieves the provider account's ID, name and email.
@@ -26,9 +26,11 @@ Send JSON to `POST /v1/auth/social/google` or `POST /v1/auth/social/facebook`:
 
 A previously linked provider identity can sign in without another invite. A new identity must redeem an unused, unexpired invite. If the email already belongs to a password account, the server deliberately refuses automatic linking; this avoids account takeover through email collisions. An existing password account can explicitly link a provider after signing in with its password by calling `POST /v1/auth/social/{provider}/link`; the provider's verified email must match the account email. An identity already linked to a different HaliMeo account is rejected.
 
-## Important client setup still required
+## Android client status
 
-The server and Retrofit contracts (social login and authenticated linking) are in place, but provider-specific Android SDK sign-in buttons are not yet wired. They must not be enabled until the app's Google OAuth client ID, Facebook app ID, package/signing fingerprints and provider console settings are configured. These values are deployment-specific and are intentionally not guessed or committed. The social endpoint rejects unconfigured providers with HTTP 503 rather than silently weakening authentication.
+Google sign-in is now wired with Android Credential Manager and Google ID tokens. The OAuth Web client ID above is configured in the app build. New-account Google registration still requires an invite code and display name; linked Google identities can sign in without a new invite. Classic email/password login and invite registration remain available.
+
+Facebook Android sign-in is not yet wired. The Facebook App ID is configured, but the Facebook SDK also needs the app's **Client Token** in Android manifest metadata. The Facebook App Secret remains server-only. Before enabling Facebook, configure the package `it.halimeo.app` (debug builds use `it.halimeo.app.debug`), the release/debug signing fingerprints and the Android OAuth/Login settings in the provider consoles. Do not commit the Facebook App Secret or signing keystore. The social endpoint rejects unconfigured providers with HTTP 503 rather than weakening authentication.
 
 ## Database
 
