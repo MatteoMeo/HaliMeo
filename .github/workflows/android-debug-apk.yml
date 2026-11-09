@@ -88,6 +88,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-halimeo-gradle-build-cache-
 
+      - name: Esegue i test del design system
+        run: chmod +x gradlew && ./gradlew --build-cache testDebugUnitTest
+
       - name: Compila APK debug
         env:
           HALIMEO_VERSION_CODE: ${{ github.run_number }}
