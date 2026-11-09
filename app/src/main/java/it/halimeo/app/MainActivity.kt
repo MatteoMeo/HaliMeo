@@ -365,16 +365,16 @@ private val reduceStaticEffectsState = mutableStateOf(false)
 private val appThemeModeState = mutableStateOf("dark")
 @Composable
 private fun haliMeoAuthBackdrop(): Brush {
-    val accent = MaterialTheme.colorScheme.primary
     return if (isHaliMeoDark()) {
         Brush.verticalGradient(
             listOf(
-                accent.copy(alpha = 0.15f).compositeOver(Color(0xFF0A1019)),
-                Color(0xFF0B111B),
-                Color(0xFF080C13)
+                Color(0xFF11152B),
+                Color(0xFF10172B),
+                Color(0xFF090D1B)
             )
         )
     } else {
+        val accent = MaterialTheme.colorScheme.primary
         Brush.verticalGradient(
             listOf(
                 accent.copy(alpha = 0.09f).compositeOver(Color(0xFFF4F7FB)),
@@ -2800,18 +2800,46 @@ private fun AuthScreen(
             .background(haliMeoAuthBackdrop())
             .hazeSource(authHaze)
     ) {
-        // Quiet ambient light: the login inherits the app accent without adding
-        // expensive animated layers or a second visual language.
-        Box(
-            Modifier.align(Alignment.TopEnd).padding(top = 28.dp, end = 8.dp)
-                .size(230.dp)
-                .background(
-                    Brush.radialGradient(
-                        listOf(accent.copy(alpha = if (dark) 0.19f else 0.13f), Color.Transparent)
-                    ),
-                    CircleShape
-                )
-        )
+        // Static ambient ribbons echo the purple-blue waves in the HaliMeo identity.
+        if (dark) {
+            Box(
+                Modifier.align(Alignment.TopStart)
+                    .offset(x = (-150).dp, y = 58.dp)
+                    .size(470.dp, 245.dp)
+                    .graphicsLayer { rotationZ = -27f }
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(Color(0xFF5A3A9D).copy(alpha = 0.38f), Color(0xFF302C76).copy(alpha = 0.16f), Color.Transparent)
+                        ),
+                        RoundedCornerShape(50)
+                    )
+                    .blur(28.dp)
+            )
+            Box(
+                Modifier.align(Alignment.BottomEnd)
+                    .offset(x = 175.dp, y = (-145).dp)
+                    .size(500.dp, 220.dp)
+                    .graphicsLayer { rotationZ = -25f }
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(Color.Transparent, Color(0xFF365DAD).copy(alpha = 0.20f), Color(0xFF8B55D6).copy(alpha = 0.34f))
+                        ),
+                        RoundedCornerShape(50)
+                    )
+                    .blur(30.dp)
+            )
+        } else {
+            Box(
+                Modifier.align(Alignment.TopEnd).padding(top = 28.dp, end = 8.dp)
+                    .size(230.dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(accent.copy(alpha = 0.13f), Color.Transparent)
+                        ),
+                        CircleShape
+                    )
+            )
+        }
         Column(
             Modifier.fillMaxSize()
                 .verticalScroll(rememberScrollState())
