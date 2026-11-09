@@ -2860,6 +2860,27 @@ private fun AuthScreen(
             ambientResponse(0.68f)
         }
     }
+    val fieldGlassStyle = remember(accent) {
+        GlassStyle {
+            backgroundColor(Color(0xFF171522).copy(alpha = 0.22f))
+            tint(Color.White.copy(alpha = 0.075f))
+            optics(
+                GlassOptics.regular.copy(
+                    blurRadius = OpticalSizeValue.Fixed(10.dp),
+                    refractionStrength = 0.62f,
+                    refractionHeightFraction = 0.24f,
+                    depth = OpticalSizeValue.Fixed(0.28f)
+                )
+            )
+            specularIntensity(0.58f)
+            ambientResponse(0.52f)
+            edgeSoftness(7.dp)
+            shape(RoundedCornerShape(24.dp))
+            surfaceProfile(SurfaceProfile.Squircle)
+            lightPosition(Alignment.TopStart)
+            edgeShadow(Color.Black.copy(alpha = 0.20f))
+        }
+    }
     var redeem by remember { mutableStateOf(false) }
     var recovery by remember { mutableStateOf(false) }
     var resetCodeSent by remember { mutableStateOf(false) }
@@ -3059,6 +3080,17 @@ private fun AuthScreen(
                         input = HazeInput.Backdrop(authHaze),
                         style = glassStyle
                     )
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.105f),
+                                Color.White.copy(alpha = 0.025f),
+                                accent.copy(alpha = 0.045f),
+                                Color.Black.copy(alpha = 0.12f)
+                            )
+                        ),
+                        RoundedCornerShape(36.dp)
+                    )
                     .border(
                         1.dp,
                         Brush.linearGradient(
@@ -3113,7 +3145,7 @@ private fun AuthScreen(
                             onValueChange = { email = it.trim() },
                             label = { Text("Indirizzo email") },
                             leadingIcon = { Icon(Icons.Default.MailOutline, null) },
-                            modifier = Modifier.fillMaxWidth().semantics {
+                            modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).semantics {
                                 contentType = androidx.compose.ui.autofill.ContentType.EmailAddress
                             },
                             shape = fieldShape,
@@ -3129,7 +3161,7 @@ private fun AuthScreen(
                                 onValueChange = { code = it.filter(Char::isDigit).take(8) },
                                 label = { Text("Codice di verifica") },
                                 leadingIcon = { Icon(Icons.Default.Pin, null) },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle),
                                 shape = fieldShape,
                                 singleLine = true,
                                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
@@ -3142,7 +3174,7 @@ private fun AuthScreen(
                                 onValueChange = { newPassword = it },
                                 label = { Text("Nuova password") },
                                 leadingIcon = { Icon(Icons.Default.Lock, null) },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle),
                                 shape = fieldShape,
                                 singleLine = true,
                                 visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
@@ -3210,7 +3242,7 @@ private fun AuthScreen(
                                 onValueChange = { name = it },
                                 label = { Text("Come vuoi essere chiamato?") },
                                 leadingIcon = { Icon(Icons.Default.PersonOutline, null) },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle),
                                 shape = fieldShape,
                                 singleLine = true,
                                 colors = haliMeoTextFieldColors()
@@ -3222,7 +3254,7 @@ private fun AuthScreen(
                             onValueChange = { email = it.trim() },
                             placeholder = { Text("Email") },
                             leadingIcon = { Icon(Icons.Default.MailOutline, null) },
-                            modifier = Modifier.fillMaxWidth().semantics {
+                            modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).semantics {
                                 contentType = androidx.compose.ui.autofill.ContentType.Username
                             },
                             shape = fieldShape,
@@ -3237,7 +3269,7 @@ private fun AuthScreen(
                             onValueChange = { pass = it },
                             placeholder = { Text("Password") },
                             leadingIcon = { Icon(Icons.Default.Lock, null) },
-                            modifier = Modifier.fillMaxWidth().semantics {
+                            modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).semantics {
                                 contentType = androidx.compose.ui.autofill.ContentType.Password
                             },
                             shape = fieldShape,
@@ -3278,13 +3310,22 @@ private fun AuthScreen(
                                 .shadow(18.dp, RoundedCornerShape(50), ambientColor = accent.copy(alpha = 0.30f), spotColor = accent.copy(alpha = 0.24f))
                                 .clip(RoundedCornerShape(50))
                                 .background(
-                                    Brush.horizontalGradient(
+                                    Brush.verticalGradient(
                                         listOf(
+                                            Color.White.copy(alpha = 0.24f),
                                             accent.copy(alpha = 0.98f),
                                             MaterialTheme.colorScheme.tertiary.copy(alpha = 0.96f),
-                                            accent.copy(alpha = 0.78f)
+                                            accent.copy(alpha = 0.88f),
+                                            Color.Black.copy(alpha = 0.12f)
                                         )
                                     )
+                                )
+                                .border(
+                                    1.dp,
+                                    Brush.verticalGradient(
+                                        listOf(Color.White.copy(alpha = 0.48f), Color.White.copy(alpha = 0.04f), Color.Black.copy(alpha = 0.16f))
+                                    ),
+                                    RoundedCornerShape(50)
                                 )
                                 .clickable(enabled = canSubmit) {
                                     busy = true
