@@ -224,7 +224,10 @@ private fun applyLauncherIcon(context: android.content.Context, variant: String)
         "mint" to "it.halimeo.app.LauncherMint",
         "rose" to "it.halimeo.app.LauncherRose",
         "graphite" to "it.halimeo.app.LauncherGraphite",
-        "aurora" to "it.halimeo.app.LauncherAurora"
+        "aurora" to "it.halimeo.app.LauncherAurora",
+        "pearl" to "it.halimeo.app.LauncherPearl",
+        "orchid" to "it.halimeo.app.LauncherOrchid",
+        "starlight" to "it.halimeo.app.LauncherStarlight"
     )
     val selected = if (variant in aliases) variant else "ocean"
     val packageManager = context.packageManager
@@ -2126,14 +2129,17 @@ private fun SettingsScreen(
                 Text("Scegli il colore d'accento dell'app.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
                 val iconChoices = listOf(
-                    Triple("ocean", "Oceano", R.mipmap.ic_launcher),
-                    Triple("rose", "Tramonto", R.mipmap.ic_launcher_rose),
-                    Triple("mint", "Foresta", R.mipmap.ic_launcher_mint),
-                    Triple("lavender", "Ametista", R.mipmap.ic_launcher_lavender),
+                    Triple("ocean", "Ametista", R.mipmap.ic_launcher),
+                    Triple("pearl", "Perla", R.mipmap.ic_launcher_pearl),
                     Triple("graphite", "Grafite", R.mipmap.ic_launcher_graphite),
-                    Triple("aurora", "Aurora", R.mipmap.ic_launcher_aurora)
+                    Triple("aurora", "Blu", R.mipmap.ic_launcher_aurora),
+                    Triple("lavender", "Viola", R.mipmap.ic_launcher_lavender),
+                    Triple("mint", "Laguna", R.mipmap.ic_launcher_mint),
+                    Triple("rose", "Tramonto", R.mipmap.ic_launcher_rose),
+                    Triple("orchid", "Orchidea", R.mipmap.ic_launcher_orchid),
+                    Triple("starlight", "Stellata", R.mipmap.ic_launcher_starlight)
                 )
-                val selectedIconLabel = iconChoices.firstOrNull { it.first == selectedAppIcon }?.second ?: "Oceano"
+                val selectedIconLabel = iconChoices.firstOrNull { it.first == selectedAppIcon }?.second ?: "Ametista"
                 Column(
                     Modifier.fillMaxWidth()
                         .clip(RoundedCornerShape(24.dp))
@@ -2197,7 +2203,7 @@ private fun SettingsScreen(
                                             "Risorsa anteprima icona non disponibile"
                                         }
                                         android.graphics.Bitmap.createBitmap(
-                                            128, 128, android.graphics.Bitmap.Config.ARGB_8888
+                                            192, 192, android.graphics.Bitmap.Config.ARGB_8888
                                         ).also { bitmap ->
                                             val canvas = android.graphics.Canvas(bitmap)
                                             drawable.setBounds(0, 0, canvas.width, canvas.height)
@@ -2205,13 +2211,13 @@ private fun SettingsScreen(
                                         }.asImageBitmap()
                                     }
                                     Box(
-                                        Modifier.size(62.dp),
+                                        Modifier.size(66.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Image(
                                             bitmap = iconPreview,
                                             contentDescription = "Icona HaliMeo $label",
-                                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(17.dp))
+                                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp))
                                         )
                                         if (selected) {
                                             Box(
