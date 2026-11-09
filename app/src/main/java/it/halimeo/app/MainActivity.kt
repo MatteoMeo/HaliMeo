@@ -3300,7 +3300,19 @@ private fun AuthScreen(
                                 .drawPrismalGlass(
                                     backdrop = prismalBackdrop,
                                     shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
-                                    effects = prismalGlassEffects(prismalDensity)
+                                    effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.52f),
+                                    onDrawSurface = {
+                                        drawRect(
+                                            Brush.verticalGradient(
+                                                listOf(
+                                                    Color.White.copy(alpha = 0.19f),
+                                                    Color.White.copy(alpha = 0.085f),
+                                                    Color(0xFFBFC9D8).copy(alpha = 0.035f),
+                                                    Color.Black.copy(alpha = 0.095f)
+                                                )
+                                            )
+                                        )
+                                    }
                                 ),
                                 shape = fieldShape,
                                 singleLine = true,
@@ -3323,7 +3335,19 @@ private fun AuthScreen(
                                 .drawPrismalGlass(
                                     backdrop = prismalBackdrop,
                                     shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
-                                    effects = prismalGlassEffects(prismalDensity)
+                                    effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.52f),
+                                    onDrawSurface = {
+                                        drawRect(
+                                            Brush.verticalGradient(
+                                                listOf(
+                                                    Color.White.copy(alpha = 0.19f),
+                                                    Color.White.copy(alpha = 0.085f),
+                                                    Color(0xFFBFC9D8).copy(alpha = 0.035f),
+                                                    Color.Black.copy(alpha = 0.095f)
+                                                )
+                                            )
+                                        )
+                                    }
                                 ).semantics {
                                 contentType = androidx.compose.ui.autofill.ContentType.Username
                             },
@@ -3349,7 +3373,19 @@ private fun AuthScreen(
                                 .drawPrismalGlass(
                                     backdrop = prismalBackdrop,
                                     shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
-                                    effects = prismalGlassEffects(prismalDensity)
+                                    effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.52f),
+                                    onDrawSurface = {
+                                        drawRect(
+                                            Brush.verticalGradient(
+                                                listOf(
+                                                    Color.White.copy(alpha = 0.19f),
+                                                    Color.White.copy(alpha = 0.085f),
+                                                    Color(0xFFBFC9D8).copy(alpha = 0.035f),
+                                                    Color.Black.copy(alpha = 0.095f)
+                                                )
+                                            )
+                                        )
+                                    }
                                 ).semantics {
                                 contentType = androidx.compose.ui.autofill.ContentType.Password
                             },
