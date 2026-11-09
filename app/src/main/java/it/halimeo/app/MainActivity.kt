@@ -2820,7 +2820,7 @@ private fun AuthScreen(
                     .graphicsLayer { rotationZ = -27f }
                     .background(
                         Brush.horizontalGradient(
-                            listOf(accent.copy(alpha = 0.34f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.18f), Color.Transparent)
+                            listOf(accent.copy(alpha = 0.20f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f), Color.Transparent)
                         ),
                         RoundedCornerShape(50)
                     )
@@ -2833,7 +2833,7 @@ private fun AuthScreen(
                     .graphicsLayer { rotationZ = -25f }
                     .background(
                         Brush.horizontalGradient(
-                            listOf(Color.Transparent, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.20f), accent.copy(alpha = 0.32f))
+                            listOf(Color.Transparent, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.13f), accent.copy(alpha = 0.19f))
                         ),
                         RoundedCornerShape(50)
                     )
@@ -2882,7 +2882,7 @@ private fun AuthScreen(
                         )
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text("HALIMEO", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.2.sp)
+                        Text("HALIMEO", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.2.sp, color = MaterialTheme.colorScheme.onSurface)
                         Text("IL VOSTRO SPAZIO PRIVATO", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.05.sp)
                     }
                 }
