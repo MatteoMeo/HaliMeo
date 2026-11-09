@@ -2802,7 +2802,8 @@ private fun AuthScreen(
             surfaceProfile(SurfaceProfile.Squircle)
             lightPosition(Alignment.TopStart)
             edgeShadow(Color.Black.copy(alpha = 0.22f))
-            rimHighlight(intensity = 0.42f, width = 1.4.dp, sides = 0.68f)
+            specularIntensity(0.82f)
+            ambientResponse(0.68f)
         }
     }
     var redeem by remember { mutableStateOf(false) }
