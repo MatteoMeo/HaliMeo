@@ -57,6 +57,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     // Material 3 Expressive APIs are available in the 1.5 beta line.
     implementation("androidx.compose.material3:material3:1.5.0-rc01")
+    implementation("androidx.compose.material3:material3-adaptive-navigation-suite:1.5.0-rc01")
     // Adaptive layouts for phones, tablets, foldables and resizable windows.
     implementation("androidx.compose.material3.adaptive:adaptive:1.4.0-alpha03")
     implementation("androidx.compose.material3.adaptive:adaptive-layout:1.4.0-alpha03")
