@@ -760,9 +760,12 @@ class MainActivity:ComponentActivity() {
             }
         }
     }
-    Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color(0xFF090B12) else Color(0xFFF5F2FA))) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color(0xFF090B12) else Color(0xFFF5F2FA))) {
+    val useNavigationRail = maxWidth >= 600.dp
     HaliMeoAmbientBackdrop(Modifier.fillMaxSize())
-    Scaffold(containerColor=Color.Transparent,topBar={TopAppBar(
+    Scaffold(
+        modifier = Modifier.fillMaxSize().padding(start = if (useNavigationRail) 88.dp else 0.dp),
+        containerColor=Color.Transparent,topBar={TopAppBar(
         title={
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("HaliMeo", fontWeight=FontWeight.ExtraBold, style=MaterialTheme.typography.headlineSmall.copy(letterSpacing=(-1.1).sp, brush=Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.primary))))
@@ -948,7 +951,58 @@ class MainActivity:ComponentActivity() {
     })
     // Navigation dock and create action are independent siblings in one horizontal
     // layout. The FAB owns its own 56dp slot to the right; it can never cover the dock.
-    if (currentRoute != "edit" && currentRoute != "tripMonaco" && currentRoute != "memory/{entryId}") {
+    if (useNavigationRail) {
+        NavigationRail(
+            modifier = Modifier.align(Alignment.CenterStart).padding(start = 6.dp, top = 72.dp, bottom = 20.dp)
+                .width(76.dp).clip(RoundedCornerShape(30.dp))
+                .hazeBlur(
+                    input = HazeInput.Backdrop(navigationHaze),
+                    style = navigationGlassStyle,
+                    performanceMode = HazePerformanceMode.Performance,
+                    expandLayerBounds = false
+                ),
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ) {
+            NavigationRailItem(
+                selected = primaryTab == 0,
+                onClick = { selectPrimaryTab(0) },
+                icon = { Icon(Icons.Default.Book, contentDescription = null) },
+                label = { Text("Diario") },
+                alwaysShowLabel = false
+            )
+            NavigationRailItem(
+                selected = primaryTab == 1,
+                onClick = { selectPrimaryTab(1) },
+                icon = { Icon(Icons.Default.FlightTakeoff, contentDescription = null) },
+                label = { Text("Viaggi") },
+                alwaysShowLabel = false
+            )
+            NavigationRailItem(
+                selected = primaryTab == 2,
+                onClick = { selectPrimaryTab(2) },
+                icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                label = { Text("Impostazioni") },
+                alwaysShowLabel = false
+            )
+        }
+        if (primaryTab == 0 && currentRoute == "main") {
+            Surface(
+                onClick = { editing = null; nav.navigate("edit") },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 24.dp, bottom = 24.dp)
+                    .size(56.dp).clip(CircleShape),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shadowElevation = 8.dp
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Add, contentDescription = "Nuovo ricordo", modifier = Modifier.size(26.dp))
+                }
+            }
+        }
+    }
+    if (!useNavigationRail && currentRoute != "edit" && currentRoute != "tripMonaco" && currentRoute != "memory/{entryId}") {
         Row(
             Modifier.align(Alignment.BottomCenter)
                 .fillMaxWidth()
