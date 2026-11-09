@@ -2778,7 +2778,8 @@ private fun AuthScreen(
     onSocialLogin: (String, String, String?, String?, (String) -> Unit) -> Unit
 ) {
     val authHaze = rememberHazeState()
-    val glassStyle = remember {
+    val accent = MaterialTheme.colorScheme.primary
+    val glassStyle = remember(accent) {
         HazeBlurStyle {
             blurRadius(58.dp)
             backgroundColor(Color(0x661A2638))
@@ -2823,7 +2824,6 @@ private fun AuthScreen(
     }
 
     val fieldShape = RoundedCornerShape(50.dp)
-    val accent = MaterialTheme.colorScheme.primary
     val dark = isHaliMeoDark()
 
     Box(
