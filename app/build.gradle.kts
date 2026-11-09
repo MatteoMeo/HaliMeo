@@ -25,6 +25,8 @@ android {
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"609968712989-909cckera569ft2g5ivrp79obp7ij4hn.apps.googleusercontent.com\"")
         buildConfigField("String", "FACEBOOK_APP_ID", "\"2135436027084791\"")
+        manifestPlaceholders["facebookAppId"] = "fb2135436027084791"
+        manifestPlaceholders["facebookClientToken"] = "075f78dc18a614e2fa460b99e8796151"
         buildConfigField("int", "APP_VERSION_CODE", alphaVersionCode.toString())
     }
     buildFeatures { compose = true; buildConfig = true }
@@ -66,6 +68,7 @@ dependencies {
     implementation("androidx.credentials:credentials:1.6.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.2.0")
+    implementation("com.facebook.android:facebook-login:19.0.0")
     implementation("com.squareup.retrofit2:retrofit:3.0.0")
     implementation("com.squareup.retrofit2:converter-gson:3.0.0")
     implementation("com.squareup.okhttp3:okhttp:5.4.0")
