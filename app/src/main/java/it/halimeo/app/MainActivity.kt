@@ -139,6 +139,25 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
+private suspend fun requestGoogleCredential(activity: ComponentActivity): GoogleIdTokenCredential {
+    val credentialManager = CredentialManager.create(activity)
+    val googleOption = GetGoogleIdOption.Builder()
+        .setFilterByAuthorizedAccounts(false)
+        .setServerClientId(BuildConfig.GOOGLE_WEB_CLIENT_ID)
+        .build()
+    val request = GetCredentialRequest.Builder()
+        .addCredentialOption(googleOption)
+        .build()
+    val result = credentialManager.getCredential(context = activity, request = request)
+    val credential = result.credential
+    if (credential !is CustomCredential ||
+        credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+    ) {
+        throw IllegalStateException("Google non ha restituito una credenziale valida.")
+    }
+    return GoogleIdTokenCredential.createFrom(credential.data)
+}
+
 private suspend fun decodeMemoryPhoto(context: android.content.Context, uri: String, maxDimension: Int): android.graphics.Bitmap? {
     val decoded = decodeScaledBitmap(context, uri, maxDimension) ?: return null
     val orientation = runCatching {
@@ -1457,6 +1476,37 @@ private fun SettingsScreen(
                             }
                         }
                     }
+                    if (linkedSocialIdentities.none { it.provider.equals("google", ignoreCase = true) }) {
+                        OutlinedButton(
+                            enabled = !accountSecurityBusy,
+                            onClick = {
+                                accountSecurityBusy = true
+                                activity.lifecycleScope.launch {
+                                    runCatching {
+                                        val googleCredential = requestGoogleCredential(activity)
+                                        ApiClient.api.linkSocialIdentity(
+                                            "Bearer ${session.token().orEmpty()}",
+                                            "google",
+                                            SocialLoginRequest(googleCredential.idToken, displayName = googleCredential.displayName)
+                                        )
+                                        ApiClient.api.socialIdentities("Bearer ${session.token().orEmpty()}")
+                                    }.onSuccess {
+                                        accountEmail = it.email
+                                        linkedSocialIdentities = it.identities
+                                        Toast.makeText(ctx, "Account Google collegato", Toast.LENGTH_SHORT).show()
+                                    }.onFailure { error ->
+                                        Toast.makeText(ctx, error.localizedMessage ?: "Impossibile collegare Google", Toast.LENGTH_LONG).show()
+                                    }
+                                    accountSecurityBusy = false
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Link, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Collega account Google")
+                        }
+                    }
                     OutlinedButton(
                         onClick = {
                             accountSecurityBusy = true
@@ -2705,32 +2755,13 @@ private fun AuthScreen(
                                     info = ""
                                     scope.launch {
                                         try {
-                                            val googleOption = GetGoogleIdOption.Builder()
-                                                .setFilterByAuthorizedAccounts(false)
-                                                .setServerClientId(BuildConfig.GOOGLE_WEB_CLIENT_ID)
-                                                .build()
-                                            val request = GetCredentialRequest.Builder()
-                                                .addCredentialOption(googleOption)
-                                                .build()
-                                            val result = credentialManager.getCredential(
-                                                context = authActivity,
-                                                request = request
-                                            )
-                                            val credential = result.credential
-                                            if (credential is CustomCredential &&
-                                                credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-                                            ) {
-                                                val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                                                onSocialLogin(
-                                                    "google",
-                                                    googleCredential.idToken,
-                                                    if (redeem) inviteCode.trim() else null,
-                                                    if (redeem) name.trim().ifBlank { googleCredential.displayName } else googleCredential.displayName
-                                                ) { message -> error = message; socialBusy = false }
-                                            } else {
-                                                error = "Google non ha restituito una credenziale valida."
-                                                socialBusy = false
-                                            }
+                                            val googleCredential = requestGoogleCredential(authActivity)
+                                            onSocialLogin(
+                                                "google",
+                                                googleCredential.idToken,
+                                                if (redeem) inviteCode.trim() else null,
+                                                if (redeem) name.trim().ifBlank { googleCredential.displayName.orEmpty() } else googleCredential.displayName
+                                            ) { message -> error = message; socialBusy = false }
                                         } catch (e: GetCredentialException) {
                                             error = e.message?.takeIf { it.isNotBlank() } ?: "Impossibile accedere con Google."
                                             socialBusy = false
