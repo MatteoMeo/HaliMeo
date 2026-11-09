@@ -2801,8 +2801,8 @@ private fun AuthScreen(
             shape(RoundedCornerShape(36.dp))
             surfaceProfile(SurfaceProfile.Squircle)
             lightPosition(Alignment.TopStart)
-            rimHighlight(intensity = 0.38f, width = 1.3.dp, sides = 0.72f)
-            edgeOutline(Color.White.copy(alpha = 0.19f), width = 1.dp)
+            edgeShadow(Color.Black.copy(alpha = 0.22f))
+            rimHighlight(intensity = 0.42f, width = 1.4.dp, sides = 0.68f)
         }
     }
     var redeem by remember { mutableStateOf(false) }
