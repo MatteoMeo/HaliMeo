@@ -2838,7 +2838,9 @@ private fun AuthScreen(
     onSocialLogin: (String, String, String?, String?, (String) -> Unit) -> Unit
 ) {
     val authHaze = rememberHazeState()
-    val accent = MaterialTheme.colorScheme.primary
+    val accent = Color(0xFF9B6BFF)
+    val authViolet = Color(0xFF8D5CFF)
+    val authDeepViolet = Color(0xFF5424C7)
     val glassStyle = remember(accent) {
         GlassStyle {
             tint(accent.copy(alpha = 0.105f))
@@ -2863,20 +2865,20 @@ private fun AuthScreen(
     }
     val fieldGlassStyle = remember(accent) {
         GlassStyle {
-            backgroundColor(Color(0xFF171522).copy(alpha = 0.22f))
-            tint(Color.White.copy(alpha = 0.075f))
+            backgroundColor(Color(0xFF171A32).copy(alpha = 0.34f))
+            tint(Color(0xFFDCD7FF).copy(alpha = 0.14f))
             optics(
                 GlassOptics.regular.copy(
-                    blurRadius = OpticalSizeValue.Fixed(12.dp),
-                    refractionStrength = 0.72f,
-                    refractionHeightFraction = 0.27f,
-                    depth = OpticalSizeValue.Fixed(0.34f)
+                    blurRadius = OpticalSizeValue.Fixed(18.dp),
+                    refractionStrength = 0.82f,
+                    refractionHeightFraction = 0.30f,
+                    depth = OpticalSizeValue.Fixed(0.46f)
                 )
             )
-            specularIntensity(0.58f)
-            ambientResponse(0.52f)
-            edgeSoftness(7.dp)
-            shape(RoundedCornerShape(24.dp))
+            specularIntensity(0.68f)
+            ambientResponse(0.62f)
+            edgeSoftness(10.dp)
+            shape(fieldShape)
             surfaceProfile(SurfaceProfile.Squircle)
             lightPosition(Alignment.TopStart)
             edgeShadow(Color.Black.copy(alpha = 0.20f))
@@ -2924,8 +2926,8 @@ private fun AuthScreen(
     ) {
         // Layered, theme-aware ambient waves inspired by the concept artwork.
         val atmosphere = haliMeoAtmosphere(customBackgroundColorState.value)
-        val waveA = atmosphere?.primary ?: accent
-        val waveB = atmosphere?.secondary ?: MaterialTheme.colorScheme.secondary
+        val waveA = authViolet
+        val waveB = Color(0xFF354B83)
         if (dark) {
             Box(
                 Modifier.align(Alignment.TopStart)
@@ -2983,15 +2985,15 @@ private fun AuthScreen(
                 .verticalScroll(rememberScrollState())
                 .imePadding()
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+                .padding(horizontal = 8.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(62.dp))
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(
-                        Modifier.size(88.dp)
+                        Modifier.size(108.dp)
                             .clip(RoundedCornerShape(27.dp))
                             .background(
                                 Brush.linearGradient(
@@ -3107,8 +3109,8 @@ private fun AuthScreen(
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
                 Column(
-                    Modifier.padding(horizontal = 19.dp, vertical = 19.dp),
-                    verticalArrangement = Arrangement.spacedBy(11.dp)
+                    Modifier.padding(horizontal = 22.dp, vertical = 23.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     if (recovery || redeem) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -3146,7 +3148,7 @@ private fun AuthScreen(
                             onValueChange = { email = it.trim() },
                             label = { Text("Indirizzo email") },
                             leadingIcon = { Icon(Icons.Default.MailOutline, null) },
-                            modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).clip(fieldShape).semantics {
+                            modifier = Modifier.fillMaxWidth().clip(fieldShape).hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).semantics {
                                 contentType = androidx.compose.ui.autofill.ContentType.EmailAddress
                             },
                             shape = fieldShape,
@@ -3255,7 +3257,7 @@ private fun AuthScreen(
                             onValueChange = { email = it.trim() },
                             placeholder = { Text("Email") },
                             leadingIcon = { Icon(Icons.Default.MailOutline, null) },
-                            modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).clip(fieldShape).semantics {
+                            modifier = Modifier.fillMaxWidth().clip(fieldShape).hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).semantics {
                                 contentType = androidx.compose.ui.autofill.ContentType.Username
                             },
                             shape = fieldShape,
@@ -3313,10 +3315,10 @@ private fun AuthScreen(
                                 .background(
                                     Brush.verticalGradient(
                                         listOf(
-                                            Color.White.copy(alpha = 0.20f),
-                                            accent.copy(alpha = 0.98f),
-                                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.92f),
-                                            accent.copy(alpha = 0.94f)
+                                            Color(0xFFB99AFF),
+                                            Color(0xFF8D5CFF),
+                                            Color(0xFF7138E8),
+                                            Color(0xFF5424C7)
                                         )
                                     )
                                 )
@@ -3337,7 +3339,7 @@ private fun AuthScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             if (busy) {
-                                CircularProgressIndicator(Modifier.size(19.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                                CircularProgressIndicator(Modifier.size(19.dp), color = Color.White, strokeWidth = 2.dp)
                             } else {
                                 Text(
                                     if (redeem) "Crea account" else "Accedi",
@@ -3350,7 +3352,7 @@ private fun AuthScreen(
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimary,
+                                tint = Color.White,
                                 modifier = Modifier.align(Alignment.CenterEnd)
                             )
                         }
@@ -3445,13 +3447,16 @@ private fun AuthScreen(
                             }
                         }
                         Row(
-                            Modifier.fillMaxWidth().padding(top = 2.dp),
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(50.dp))
+                                .background(Color(0xFF8E82B8).copy(alpha = 0.14f))
+                                .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(50.dp))
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 if (redeem) "Hai già un account? " else "Non hai un account? ",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = Color(0xFFD6D2E8),
                                 style = MaterialTheme.typography.bodySmall
                             )
                             Text(
@@ -3471,7 +3476,7 @@ private fun AuthScreen(
                 }
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(28.dp))
         }
     }
 }
