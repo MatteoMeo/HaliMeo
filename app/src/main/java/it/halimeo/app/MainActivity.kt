@@ -121,6 +121,8 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.CustomCredential
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.facebook.CallbackManager
@@ -153,7 +155,21 @@ private suspend fun requestGoogleCredential(activity: ComponentActivity): Google
     val request = GetCredentialRequest.Builder()
         .addCredentialOption(googleOption)
         .build()
-    val result = credentialManager.getCredential(context = activity, request = request)
+
+    val result = try {
+        credentialManager.getCredential(context = activity, request = request)
+    } catch (_: NoCredentialException) {
+        // The account may exist on the device without a prior authorization for HaliMeo.
+        // Fall back to the explicit Google sign-in sheet instead of failing with
+        // "No credential available".
+        val signInOption = GetSignInWithGoogleOption.Builder(BuildConfig.GOOGLE_WEB_CLIENT_ID)
+            .build()
+        val signInRequest = GetCredentialRequest.Builder()
+            .addCredentialOption(signInOption)
+            .build()
+        credentialManager.getCredential(context = activity, request = signInRequest)
+    }
+
     val credential = result.credential
     if (credential !is CustomCredential ||
         credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
