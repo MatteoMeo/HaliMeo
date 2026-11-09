@@ -397,9 +397,9 @@ private fun haliMeoAuthBackdrop(): Brush {
     return if (isHaliMeoDark()) {
         Brush.verticalGradient(
             listOf(
-                colors.primary.copy(alpha = 0.13f).compositeOver(Color(0xFF11151D)),
-                colors.tertiary.copy(alpha = 0.09f).compositeOver(Color(0xFF10141C)),
-                Color(0xFF090C12)
+                Color(0xFF17152B),
+                Color(0xFF101B30),
+                Color(0xFF080D17)
             )
         )
     } else {
@@ -2837,7 +2837,7 @@ private fun AuthScreen(
                     .graphicsLayer { rotationZ = -27f }
                     .background(
                         Brush.horizontalGradient(
-                            listOf(accent.copy(alpha = 0.20f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f), Color.Transparent)
+                            listOf(Color(0xFF8B5CF6).copy(alpha = 0.30f), Color(0xFF4E70D8).copy(alpha = 0.18f), Color.Transparent)
                         ),
                         RoundedCornerShape(50)
                     )
@@ -2850,7 +2850,7 @@ private fun AuthScreen(
                     .graphicsLayer { rotationZ = -25f }
                     .background(
                         Brush.horizontalGradient(
-                            listOf(Color.Transparent, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.13f), accent.copy(alpha = 0.19f))
+                            listOf(Color.Transparent, Color(0xFF315DAB).copy(alpha = 0.22f), Color(0xFF8B5CF6).copy(alpha = 0.24f))
                         ),
                         RoundedCornerShape(50)
                     )
