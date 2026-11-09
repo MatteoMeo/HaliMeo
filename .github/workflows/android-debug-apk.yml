@@ -6,6 +6,7 @@ on:
       - feature/ui-ux-refresh
     paths:
       - 'app/**'
+      - 'server/**'
       - '*.gradle.kts'
       - 'gradle/**'
       - 'gradle.properties'
@@ -34,6 +35,9 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+
+      - name: Verifica la sintassi del backend FastAPI
+        run: python3 -m compileall -q server/app
 
       - name: Configura Java 25 LTS
         uses: actions/setup-java@v4

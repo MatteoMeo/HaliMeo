@@ -6,17 +6,20 @@ import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 
 data class LoginRequest(val email: String, val password: String)
+data class RegisterRequest(val email: String, val password: String, val displayName: String)
 data class SocialLoginRequest(val providerToken: String, val inviteCode: String? = null, val displayName: String? = null)
+data class ProfileUpdateRequest(val nickname: String, val about: String)
+data class ProfileResponse(val nickname: String, val about: String = "")
 data class PasswordResetRequest(val email: String)
 data class PasswordResetConfirmRequest(val email: String, val code: String, val newPassword: String)
 data class PasswordResetResponse(val message: String, val reset: Boolean = false)
-data class RedeemInviteRequest(val inviteCode: String, val displayName: String, val email: String, val password: String)
+data class RedeemInviteRequest(val inviteCode: String)
 data class InviteRequest(val expiresInDays: Int = 7)
 data class InviteResponse(val inviteCode: String, val expiresAt: Long, val uses: Int)
 data class AccountInfo(val userId: String, val displayName: String, val isOwner: Boolean)
 data class SocialIdentity(val provider: String, val email: String, val linkedAt: Long)
 data class SocialIdentitiesResponse(val email: String = "", val identities: List<SocialIdentity> = emptyList())
-data class TokenResponse(val accessToken: String, val tokenType: String = "Bearer", val userId: String, val displayName: String)
+data class TokenResponse(val accessToken: String, val tokenType: String = "Bearer", val userId: String, val displayName: String, val activated: Boolean = true)
 data class SyncRequest(val changes: List<DiaryEntryDto>, val lastSyncAt: Long? = null)
 data class SyncResponse(val changes: List<DiaryEntryDto>, val serverTime: Long)
 
@@ -54,13 +57,16 @@ data class SocialAlbumDetail(
 
 interface HaliMeoApi {
     @POST("v1/auth/login") suspend fun login(@Body request: LoginRequest): TokenResponse
+    @POST("v1/auth/register") suspend fun register(@Body request: RegisterRequest): TokenResponse
     @POST("v1/auth/social/{provider}") suspend fun socialLogin(@Path("provider") provider: String, @Body request: SocialLoginRequest): TokenResponse
     @POST("v1/auth/social/{provider}/link") suspend fun linkSocialIdentity(@Header("Authorization") auth: String, @Path("provider") provider: String, @Body request: SocialLoginRequest): Map<String, Any>
     @GET("v1/auth/social/identities") suspend fun socialIdentities(@Header("Authorization") auth: String): SocialIdentitiesResponse
     @POST("v1/auth/password-reset/request") suspend fun requestPasswordReset(@Body request: PasswordResetRequest): PasswordResetResponse
     @POST("v1/auth/password-reset/confirm") suspend fun confirmPasswordReset(@Body request: PasswordResetConfirmRequest): PasswordResetResponse
-    @POST("v1/auth/redeem-invite") suspend fun redeem(@Body request: RedeemInviteRequest): TokenResponse
+    @POST("v1/auth/redeem-invite") suspend fun redeem(@Header("Authorization") auth: String, @Body request: RedeemInviteRequest): TokenResponse
     @GET("v1/auth/me") suspend fun me(@Header("Authorization") auth: String): AccountInfo
+    @GET("v1/profile") suspend fun profile(@Header("Authorization") auth: String): ProfileResponse
+    @PUT("v1/profile") suspend fun updateProfile(@Header("Authorization") auth: String, @Body request: ProfileUpdateRequest): ProfileResponse
     @Multipart @POST("v1/profile/photo") suspend fun uploadProfilePhoto(@Header("Authorization") auth: String, @Part photo: MultipartBody.Part): Map<String, Any>
     @Streaming @GET("v1/users/{userId}/profile-photo") suspend fun downloadProfilePhoto(@Header("Authorization") auth: String, @Path("userId") userId: String): ResponseBody
     @POST("v1/admin/invites") suspend fun createInvite(@Header("Authorization") auth: String, @Body request: InviteRequest): InviteResponse

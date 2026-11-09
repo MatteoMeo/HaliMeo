@@ -39,7 +39,9 @@ with db() as c:
     c.executescript("""
     CREATE TABLE IF NOT EXISTS users(
       id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, display_name TEXT NOT NULL,
-      password_hash TEXT NOT NULL, created_at INTEGER NOT NULL, disabled INTEGER NOT NULL DEFAULT 0
+      password_hash TEXT NOT NULL, created_at INTEGER NOT NULL, disabled INTEGER NOT NULL DEFAULT 0,
+      activated INTEGER NOT NULL DEFAULT 1, profile_nickname TEXT NOT NULL DEFAULT '',
+      profile_about TEXT NOT NULL DEFAULT ''
     );
     CREATE TABLE IF NOT EXISTS social_identities(
       provider TEXT NOT NULL, provider_user_id TEXT NOT NULL, user_id TEXT NOT NULL,
@@ -90,6 +92,13 @@ with db() as c:
     CREATE INDEX IF NOT EXISTS idx_comments_entry ON entry_comments(entry_id,created_at);
     CREATE INDEX IF NOT EXISTS idx_album_entries_album ON album_entries(album_id,added_at);
     """)
+    user_columns = {row[1] for row in c.execute("PRAGMA table_info(users)").fetchall()}
+    if "activated" not in user_columns:
+        c.execute("ALTER TABLE users ADD COLUMN activated INTEGER NOT NULL DEFAULT 1")
+    if "profile_nickname" not in user_columns:
+        c.execute("ALTER TABLE users ADD COLUMN profile_nickname TEXT NOT NULL DEFAULT ''")
+    if "profile_about" not in user_columns:
+        c.execute("ALTER TABLE users ADD COLUMN profile_about TEXT NOT NULL DEFAULT ''")
     columns = {row[1] for row in c.execute("PRAGMA table_info(entries)").fetchall()}
     if "photo_updated_at" not in columns:
         c.execute("ALTER TABLE entries ADD COLUMN photo_updated_at INTEGER NOT NULL DEFAULT 0")
@@ -115,6 +124,24 @@ def current_user(authorization: Optional[str] = Header(default=None)):
     with db() as c:
         row = c.execute("SELECT * FROM users WHERE id=? AND disabled=0", (claims.get("sub"),)).fetchone()
     if not row: raise HTTPException(401, "Account non disponibile")
+    if not row["activated"]:
+        raise HTTPException(403, "Account non ancora attivato. Inserisci il codice d'invito per continuare.")
+    return dict(row)
+
+def pending_user(authorization: Optional[str] = Header(default=None)):
+    """Authenticate only accounts waiting for their first valid invitation."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(401, "Sessione richiesta")
+    try:
+        claims = jwt.decode(authorization[7:], JWT_SECRET, algorithms=["HS256"], issuer="halimeo")
+    except Exception:
+        raise HTTPException(401, "Sessione non valida o scaduta")
+    with db() as c:
+        row = c.execute("SELECT * FROM users WHERE id=? AND disabled=0", (claims.get("sub"),)).fetchone()
+    if not row:
+        raise HTTPException(401, "Account non disponibile")
+    if row["activated"]:
+        raise HTTPException(409, "Questo account è già attivo.")
     return dict(row)
 
 def public_user(u): return {"userId": u["id"], "displayName": u["display_name"]}
@@ -126,9 +153,15 @@ class SocialLoginIn(BaseModel):
     providerToken: str = Field(min_length=20, max_length=10000)
     inviteCode: Optional[str] = Field(default=None, min_length=16, max_length=128)
     displayName: Optional[str] = Field(default=None, min_length=1, max_length=60)
-class RedeemIn(LoginIn):
-    inviteCode: str = Field(min_length=16, max_length=128)
+class RegisterIn(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=10, max_length=128)
     displayName: str = Field(min_length=1, max_length=60)
+class RedeemIn(BaseModel):
+    inviteCode: str = Field(min_length=16, max_length=128)
+class ProfileUpdateIn(BaseModel):
+    nickname: str = Field(default="", max_length=60)
+    about: str = Field(default="", max_length=300)
 class PasswordResetRequest(BaseModel):
     email: EmailStr
 class PasswordResetConfirm(BaseModel):
@@ -236,32 +269,23 @@ def social_login(provider: str, data: SocialLoginIn):
             # Do not silently link a social identity to an existing password account by email.
             if c.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
                 raise HTTPException(409, "Esiste già un account con questa email. Accedi con la password prima di collegare il provider.")
-            if not data.inviteCode:
-                raise HTTPException(403, "Per creare un account HaliMeo serve un codice invito.")
-            digest = hashlib.sha256(data.inviteCode.encode()).hexdigest()
-            invite = c.execute(
-                "SELECT * FROM invites WHERE code_hash=? AND used_at IS NULL AND expires_at>=?",
-                (digest, now)
-            ).fetchone()
-            if not invite:
-                raise HTTPException(400, "Invito non valido, scaduto o già utilizzato")
             user_id = secrets.token_urlsafe(18)
             display_name = (data.displayName or provider_name or email.split("@", 1)[0]).strip()[:60]
             # A random, undisclosed password hash prevents password login until the user
             # explicitly sets one through a future account-security flow.
             password_hash = pwd.hash(secrets.token_urlsafe(48))
             c.execute(
-                "INSERT INTO users(id,email,display_name,password_hash,created_at) VALUES(?,?,?,?,?)",
+                "INSERT INTO users(id,email,display_name,password_hash,created_at,activated) VALUES(?,?,?,?,?,0)",
                 (user_id, email, display_name, password_hash, now)
             )
             c.execute(
                 "INSERT INTO social_identities(provider,provider_user_id,user_id,email,created_at) VALUES(?,?,?,?,?)",
                 (provider, provider_user_id, user_id, email, now)
             )
-            c.execute("UPDATE invites SET used_at=?,used_by=? WHERE code_hash=?", (now, user_id, digest))
-            c.execute("INSERT INTO audit_log(user_id,action,at) VALUES(?,?,?)", (user_id, "social_invite_redeemed", now))
+            c.execute("INSERT INTO audit_log(user_id,action,at) VALUES(?,?,?)", (user_id, "social_account_created_pending_invite", now))
             user = dict(c.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone())
-    return {"accessToken": make_token(user), "tokenType": "Bearer", **public_user(user)}
+    return {"accessToken": make_token(user), "tokenType": "Bearer",
+            "activated": bool(user["activated"]), **public_user(user)}
 
 @app.post("/v1/auth/social/{provider}/link")
 def link_social_identity(provider: str, data: SocialLoginIn, user=Depends(current_user)):
@@ -308,7 +332,8 @@ def login(data: LoginIn):
         row = c.execute("SELECT * FROM users WHERE email=? AND disabled=0", (data.email.lower(),)).fetchone()
     if not row or not pwd.verify(data.password, row["password_hash"]):
         raise HTTPException(401, "Email o password non corretti")
-    return {"accessToken":make_token(dict(row)),"tokenType":"Bearer",**public_user(dict(row))}
+    return {"accessToken":make_token(dict(row)),"tokenType":"Bearer",
+            "activated":bool(row["activated"]),**public_user(dict(row))}
 def send_password_reset_email(destination: str, code: str):
     host = os.getenv("HALIMEO_SMTP_HOST", "").strip()
     sender = os.getenv("HALIMEO_SMTP_FROM", "").strip()
@@ -390,9 +415,51 @@ def confirm_password_reset(data: PasswordResetConfirm):
     return {"reset": True, "message": "Password aggiornata. Ora puoi accedere con la nuova password."}
 
 
+@app.post("/v1/auth/register")
+def register(data: RegisterIn):
+    email = data.email.lower()
+    now = int(time.time())
+    user_id = secrets.token_urlsafe(18)
+    display_name = data.displayName.strip()
+    if not display_name:
+        raise HTTPException(422, "Inserisci il nome da visualizzare.")
+    with db() as c:
+        if c.execute("SELECT 1 FROM users WHERE lower(email)=?", (email,)).fetchone():
+            raise HTTPException(409, "Esiste già un account con questa email.")
+        try:
+            c.execute(
+                "INSERT INTO users(id,email,display_name,password_hash,created_at,activated) VALUES(?,?,?,?,?,0)",
+                (user_id, email, display_name, pwd.hash(data.password), now)
+            )
+        except sqlite3.IntegrityError:
+            raise HTTPException(409, "Esiste già un account con questa email.")
+        c.execute("INSERT INTO audit_log(user_id,action,at) VALUES(?,?,?)",
+                  (user_id, "account_created_pending_invite", now))
+        user = dict(c.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone())
+    return {"accessToken": make_token(user), "tokenType": "Bearer",
+            "activated": False, **public_user(user)}
+
 @app.get("/v1/auth/me")
 def me(user=Depends(current_user)):
-    return {"userId": user["id"], "displayName": user["display_name"], "isOwner": bool(OWNER_ID and user["id"] == OWNER_ID)}
+    return {"userId": user["id"], "displayName": user["display_name"],
+            "activated": bool(user["activated"]),
+            "isOwner": bool(OWNER_ID and user["id"] == OWNER_ID)}
+
+@app.get("/v1/profile")
+def get_profile(user=Depends(current_user)):
+    return {
+        "nickname": user["profile_nickname"] or user["display_name"],
+        "about": user["profile_about"] or ""
+    }
+
+@app.put("/v1/profile")
+def update_profile(data: ProfileUpdateIn, user=Depends(current_user)):
+    nickname = data.nickname.strip() or user["display_name"]
+    about = data.about.strip()
+    with db() as c:
+        c.execute("UPDATE users SET profile_nickname=?,profile_about=? WHERE id=?",
+                  (nickname, about, user["id"]))
+    return {"nickname": nickname, "about": about}
 
 @app.post("/v1/profile/photo")
 async def upload_profile_photo(photo: UploadFile = File(...), user=Depends(current_user)):
@@ -441,22 +508,33 @@ def download_profile_photo(user_id: str, user=Depends(current_user)):
 
 
 @app.post("/v1/auth/redeem-invite")
-def redeem(data: RedeemIn):
+def redeem(data: RedeemIn, user=Depends(pending_user)):
     now = int(time.time())
     digest = hashlib.sha256(data.inviteCode.encode()).hexdigest()
-    user_id = secrets.token_urlsafe(18)
     with db() as c:
-        inv = c.execute("SELECT * FROM invites WHERE code_hash=?", (digest,)).fetchone()
-        if not inv or inv["used_at"] is not None or inv["expires_at"] < now:
+        invite = c.execute(
+            "SELECT code_hash FROM invites WHERE code_hash=? AND used_at IS NULL AND expires_at>=?",
+            (digest, now)
+        ).fetchone()
+        if not invite:
             raise HTTPException(400, "Invito non valido, scaduto o già utilizzato")
-        if c.execute("SELECT 1 FROM users WHERE email=?", (data.email.lower(),)).fetchone():
-            raise HTTPException(409, "Email già registrata")
-        c.execute("INSERT INTO users(id,email,display_name,password_hash,created_at) VALUES(?,?,?,?,?)",
-                  (user_id,data.email.lower(),data.displayName.strip(),pwd.hash(data.password),now))
-        c.execute("UPDATE invites SET used_at=?,used_by=? WHERE code_hash=?", (now,user_id,digest))
-        c.execute("INSERT INTO audit_log(user_id,action,at) VALUES(?,?,?)", (user_id,"invite_redeemed",now))
-        user = c.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
-    return {"accessToken":make_token(dict(user)),"tokenType":"Bearer",**public_user(dict(user))}
+        updated = c.execute(
+            "UPDATE invites SET used_at=?,used_by=? WHERE code_hash=? AND used_at IS NULL AND expires_at>=?",
+            (now, user["id"], digest, now)
+        )
+        if updated.rowcount != 1:
+            raise HTTPException(409, "Questo invito è stato appena utilizzato. Inseriscine un altro.")
+        activated = c.execute(
+            "UPDATE users SET activated=1 WHERE id=? AND activated=0 AND disabled=0",
+            (user["id"],)
+        )
+        if activated.rowcount != 1:
+            raise HTTPException(409, "L'account non è più in attesa di attivazione.")
+        c.execute("INSERT INTO audit_log(user_id,action,at) VALUES(?,?,?)",
+                  (user["id"], "invite_redeemed", now))
+        active_user = dict(c.execute("SELECT * FROM users WHERE id=?", (user["id"],)).fetchone())
+    return {"accessToken": make_token(active_user), "tokenType": "Bearer",
+            "activated": True, **public_user(active_user)}
 
 @app.post("/v1/admin/invites")
 def create_invite(data: InviteIn, user=Depends(current_user)):
@@ -475,7 +553,9 @@ def sync(data: SyncIn, user=Depends(current_user)):
     now = now_ms()
     with db() as c:
         for e in data.changes:
-            old = c.execute("SELECT updated_at,photo_updated_at,photo_deleted_at,photo_filename FROM entries WHERE id=?", (e.id,)).fetchone()
+            old = c.execute("SELECT owner_id,updated_at,photo_updated_at,photo_deleted_at,photo_filename FROM entries WHERE id=?", (e.id,)).fetchone()
+            if old and old["owner_id"] != user["id"]:
+                raise HTTPException(403, "Non puoi modificare o eliminare un ricordo creato da un altro account.")
             if old and old["updated_at"] > e.updatedAt: continue
             c.execute("""
             INSERT INTO entries(id,owner_id,title,body,category,memory_date,created_at,updated_at,deleted_at)
@@ -487,7 +567,8 @@ def sync(data: SyncIn, user=Depends(current_user)):
         cursor = data.lastSyncAt or 0
         rows = c.execute("SELECT * FROM entries WHERE updated_at > ? ORDER BY updated_at ASC LIMIT 1000", (cursor,)).fetchall()
     return {"changes":[{"id":r["id"],"title":r["title"],"body":r["body"],"category":r["category"],
-      "memoryDate":r["memory_date"],"createdAt":r["created_at"],"updatedAt":r["updated_at"],"deletedAt":r["deleted_at"],"photoUpdatedAt":r["photo_updated_at"],"photoDeletedAt":r["photo_deleted_at"]} for r in rows],
+      "memoryDate":r["memory_date"],"createdAt":r["created_at"],"updatedAt":r["updated_at"],"deletedAt":r["deleted_at"],
+      "photoUpdatedAt":r["photo_updated_at"],"photoDeletedAt":r["photo_deleted_at"],"ownerId":r["owner_id"]} for r in rows],
       "serverTime":now}
 
 
@@ -500,7 +581,7 @@ def require_entry(c, entry_id):
 def social_feed(user=Depends(current_user)):
     with db() as c:
         rows = c.execute("""
-          SELECT e.*, u.display_name AS author_name,
+          SELECT e.*, COALESCE(NULLIF(u.profile_nickname,''),u.display_name) AS author_name,
             (SELECT COUNT(*) FROM entry_likes l WHERE l.entry_id=e.id) AS like_count,
             EXISTS(SELECT 1 FROM entry_likes l WHERE l.entry_id=e.id AND l.user_id=?) AS liked_by_me,
             (SELECT COUNT(*) FROM entry_comments cm WHERE cm.entry_id=e.id AND cm.deleted_at IS NULL) AS comment_count
@@ -511,7 +592,7 @@ def social_feed(user=Depends(current_user)):
         for r in rows:
             comments = c.execute("""
               SELECT cm.id,cm.body,cm.created_at AS createdAt,cm.updated_at AS updatedAt,
-                cm.user_id AS userId,u.display_name AS authorName
+                cm.user_id AS userId,COALESCE(NULLIF(u.profile_nickname,''),u.display_name) AS authorName
               FROM entry_comments cm JOIN users u ON u.id=cm.user_id
               WHERE cm.entry_id=? AND cm.deleted_at IS NULL ORDER BY cm.created_at ASC LIMIT 100
             """, (r["id"],)).fetchall()
@@ -547,7 +628,7 @@ def list_comments(entry_id: str, user=Depends(current_user)):
         require_entry(c, entry_id)
         rows = c.execute("""
           SELECT cm.id,cm.body,cm.created_at AS createdAt,cm.updated_at AS updatedAt,
-            cm.user_id AS userId,u.display_name AS authorName
+            cm.user_id AS userId,COALESCE(NULLIF(u.profile_nickname,''),u.display_name) AS authorName
           FROM entry_comments cm JOIN users u ON u.id=cm.user_id
           WHERE cm.entry_id=? AND cm.deleted_at IS NULL ORDER BY cm.created_at ASC LIMIT 200
         """, (entry_id,)).fetchall()
@@ -567,11 +648,11 @@ def create_comment(entry_id: str, data: CommentIn, user=Depends(current_user)):
         c.execute("INSERT OR IGNORE INTO entry_comments(id,entry_id,user_id,body,created_at,updated_at) VALUES(?,?,?,?,?,?)",
                   (comment_id,entry_id,user["id"],body,now,now))
         row = c.execute("""
-          SELECT cm.id,cm.entry_id,cm.body,cm.user_id,cm.created_at,cm.updated_at,u.display_name
+          SELECT cm.id,cm.entry_id,cm.body,cm.user_id,cm.created_at,cm.updated_at,COALESCE(NULLIF(u.profile_nickname,''),u.display_name) AS author_name
           FROM entry_comments cm JOIN users u ON u.id=cm.user_id WHERE cm.id=?
         """, (comment_id,)).fetchone()
     return {"id":row["id"],"entryId":row["entry_id"],"body":row["body"],"userId":row["user_id"],
-            "authorName":row["display_name"],"createdAt":row["created_at"],"updatedAt":row["updated_at"]}
+            "authorName":row["author_name"],"createdAt":row["created_at"],"updatedAt":row["updated_at"]}
 
 @app.delete("/v1/comments/{comment_id}")
 def delete_comment(comment_id: str, user=Depends(current_user)):
@@ -614,7 +695,7 @@ def get_album(album_id: str, user=Depends(current_user)):
         album=c.execute("SELECT * FROM albums WHERE id=? AND deleted_at IS NULL",(album_id,)).fetchone()
         if not album: raise HTTPException(404,"Album non trovato")
         rows=c.execute("""
-          SELECT e.*,u.display_name AS author_name FROM album_entries ae
+          SELECT e.*,COALESCE(NULLIF(u.profile_nickname,''),u.display_name) AS author_name FROM album_entries ae
           JOIN entries e ON e.id=ae.entry_id LEFT JOIN users u ON u.id=e.owner_id
           WHERE ae.album_id=? AND e.deleted_at IS NULL ORDER BY ae.added_at DESC
         """,(album_id,)).fetchall()
@@ -657,9 +738,11 @@ async def upload_entry_photo(entry_id: str, photoUpdatedAt: int, photo: UploadFi
     if content_type == "image/webp" and not (payload.startswith(b"RIFF") and payload[8:12] == b"WEBP"):
         raise HTTPException(400, "File WebP non valido")
     with db() as c:
-        row = c.execute("SELECT id,photo_filename,photo_updated_at FROM entries WHERE id=?", (entry_id,)).fetchone()
+        row = c.execute("SELECT id,owner_id,photo_filename,photo_updated_at FROM entries WHERE id=?", (entry_id,)).fetchone()
         if not row:
             raise HTTPException(404, "Ricordo non trovato")
+        if row["owner_id"] != user["id"]:
+            raise HTTPException(403, "Solo il creatore del ricordo può modificarne la foto.")
         if photoUpdatedAt < row["photo_updated_at"]:
             return {"ignored": True, "photoUpdatedAt": row["photo_updated_at"]}
         filename = uuid.uuid4().hex + PHOTO_TYPES[content_type]
@@ -716,9 +799,11 @@ def download_entry_photo(
 @app.delete("/v1/entries/{entry_id}/photo")
 def delete_entry_photo(entry_id: str, photoUpdatedAt: int, user=Depends(current_user)):
     with db() as c:
-        row = c.execute("SELECT photo_filename,photo_updated_at FROM entries WHERE id=?", (entry_id,)).fetchone()
+        row = c.execute("SELECT owner_id,photo_filename,photo_updated_at FROM entries WHERE id=?", (entry_id,)).fetchone()
         if not row:
             raise HTTPException(404, "Ricordo non trovato")
+        if row["owner_id"] != user["id"]:
+            raise HTTPException(403, "Solo il creatore del ricordo può rimuoverne la foto.")
         if photoUpdatedAt < row["photo_updated_at"]:
             return {"ignored": True, "photoUpdatedAt": row["photo_updated_at"]}
         stamp = max(photoUpdatedAt, now_ms())

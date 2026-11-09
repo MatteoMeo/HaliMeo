@@ -20,6 +20,7 @@ data class DiaryEntry(
     @ColumnInfo(defaultValue = "0") val photoUpdatedAt: Long = 0L,
     val photoDeletedAt: Long? = null,
     @ColumnInfo(defaultValue = "'SYNCED'") val photoSyncState: String = "SYNCED",
+    @ColumnInfo(defaultValue = "''") val ownerId: String = "",
     // Retained as a legacy Room column so existing databases upgrade without a destructive migration.
     @ColumnInfo(defaultValue = "0") val isFavorite: Boolean = false
 )
@@ -32,11 +33,12 @@ fun remotePhotoUri(entryId: String, revision: Long): String =
 data class DiaryEntryDto(
     val id: String, val title: String, val body: String, val category: String,
     val memoryDate: String, val createdAt: Long, val updatedAt: Long, val deletedAt: Long? = null,
-    val photoUpdatedAt: Long = 0L, val photoDeletedAt: Long? = null
+    val photoUpdatedAt: Long = 0L, val photoDeletedAt: Long? = null,
+    val ownerId: String = ""
 )
 
-fun DiaryEntry.toDto() = DiaryEntryDto(id,title,body,category,memoryDate,createdAt,updatedAt,deletedAt,photoUpdatedAt,photoDeletedAt)
-fun DiaryEntryDto.toEntity() = DiaryEntry(id,title,body,category,memoryDate,createdAt,updatedAt,deletedAt,"SYNCED",null,photoUpdatedAt,photoDeletedAt,"PENDING")
+fun DiaryEntry.toDto() = DiaryEntryDto(id,title,body,category,memoryDate,createdAt,updatedAt,deletedAt,photoUpdatedAt,photoDeletedAt,ownerId)
+fun DiaryEntryDto.toEntity() = DiaryEntry(id,title,body,category,memoryDate,createdAt,updatedAt,deletedAt,"SYNCED",null,photoUpdatedAt,photoDeletedAt,"PENDING",ownerId=ownerId)
 
 @Entity(tableName = "pending_social_actions", indices = [Index(value = ["entryId"]), Index(value = ["createdAt"])])
 data class PendingSocialAction(
@@ -44,7 +46,8 @@ data class PendingSocialAction(
     val entryId: String,
     val type: String,
     @ColumnInfo(defaultValue = "''") val payload: String = "",
-    val createdAt: Long
+    val createdAt: Long,
+    @ColumnInfo(defaultValue = "''") val accountId: String = ""
 )
 
 @Dao
@@ -68,19 +71,21 @@ interface DiaryDao {
     @Query("UPDATE diary_entries SET syncState='SYNCED' WHERE id=:id AND updatedAt=:updatedAt")
     suspend fun markSynced(id: String, updatedAt: Long)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertSocialAction(action: PendingSocialAction)
-    @Query("SELECT * FROM pending_social_actions ORDER BY createdAt ASC")
-    suspend fun pendingSocialActions(): List<PendingSocialAction>
+    @Query("SELECT * FROM pending_social_actions WHERE accountId=:accountId ORDER BY createdAt ASC")
+    suspend fun pendingSocialActions(accountId: String): List<PendingSocialAction>
+    @Query("UPDATE pending_social_actions SET accountId=:accountId WHERE accountId=''")
+    suspend fun assignLegacySocialActions(accountId: String)
     @Query("DELETE FROM pending_social_actions WHERE id=:id")
     suspend fun deleteSocialAction(id: String)
-    @Query("DELETE FROM pending_social_actions WHERE entryId=:entryId AND type IN ('LIKE','UNLIKE')")
-    suspend fun clearPendingLikeActions(entryId: String)
-    @Query("SELECT * FROM pending_social_actions WHERE entryId=:entryId AND type='COMMENT' ORDER BY createdAt ASC")
-    suspend fun pendingComments(entryId: String): List<PendingSocialAction>
+    @Query("DELETE FROM pending_social_actions WHERE entryId=:entryId AND accountId=:accountId AND type IN ('LIKE','UNLIKE')")
+    suspend fun clearPendingLikeActions(entryId: String, accountId: String)
+    @Query("SELECT * FROM pending_social_actions WHERE entryId=:entryId AND accountId=:accountId AND type='COMMENT' ORDER BY createdAt ASC")
+    suspend fun pendingComments(entryId: String, accountId: String): List<PendingSocialAction>
     @Query("SELECT * FROM diary_entries ORDER BY updatedAt DESC")
     suspend fun allForBackup(): List<DiaryEntry>
 }
 
-@Database(entities=[DiaryEntry::class, PendingSocialAction::class], version=5, exportSchema=true)
+@Database(entities=[DiaryEntry::class, PendingSocialAction::class], version=7, exportSchema=true)
 abstract class HaliMeoDatabase : RoomDatabase() {
     abstract fun diaryDao(): DiaryDao
     companion object {
@@ -108,10 +113,20 @@ abstract class HaliMeoDatabase : RoomDatabase() {
                 database.execSQL("CREATE INDEX IF NOT EXISTS index_pending_social_actions_createdAt ON pending_social_actions(createdAt)")
             }
         }
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE diary_entries ADD COLUMN ownerId TEXT NOT NULL DEFAULT ''")
+            }
+        }
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE pending_social_actions ADD COLUMN accountId TEXT NOT NULL DEFAULT ''")
+            }
+        }
         @Volatile private var instance: HaliMeoDatabase? = null
         fun get(context: android.content.Context) = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, HaliMeoDatabase::class.java, "halimeo.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                 .build().also { instance=it }
         }
     }

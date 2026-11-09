@@ -86,7 +86,11 @@ class DiaryRepository(context: Context) {
 
     suspend fun save(title:String, body:String, category:String, date:String, id:String?=null, photoUri:String?=null) {
         val now = System.currentTimeMillis()
+        val accountId = session.userId()
         val old = id?.let { dao.get(it) }
+        if (old != null && (old.ownerId.isBlank() || old.ownerId != accountId)) {
+            throw IllegalStateException("Solo il creatore di questo ricordo può modificarlo.")
+        }
         val entryId = old?.id ?: UUID.randomUUID().toString()
         val photoChanged = photoUri != null && photoUri != old?.photoUri
         val removedPhoto = photoUri == "" && old?.photoUri != null
@@ -103,6 +107,7 @@ class DiaryRepository(context: Context) {
             category=category.trim().ifBlank { "Ricordo" }, memoryDate=date,
             createdAt=old?.createdAt ?: now, updatedAt=now, deletedAt=null,
             syncState="PENDING", photoUri=storedPhoto,
+            ownerId=old?.ownerId?.takeIf { it.isNotBlank() } ?: accountId,
             photoUpdatedAt=if (photoChanged || removedPhoto) now else old?.photoUpdatedAt ?: 0L,
             photoDeletedAt=if (removedPhoto) now else if (photoChanged) null else old?.photoDeletedAt,
             photoSyncState=if (photoChanged || removedPhoto) "PENDING" else old?.photoSyncState ?: "SYNCED"
@@ -111,26 +116,46 @@ class DiaryRepository(context: Context) {
 
     suspend fun delete(id:String) {
         val old=dao.get(id) ?: return
+        val accountId = session.userId()
+        if (old.ownerId.isBlank() || old.ownerId != accountId) {
+            throw IllegalStateException("Solo il creatore di questo ricordo può eliminarlo.")
+        }
         val now=System.currentTimeMillis()
         dao.upsert(old.copy(updatedAt=now,deletedAt=now,syncState="PENDING"))
     }
 
+    suspend fun hasPendingChanges(): Boolean {
+        val accountId = session.userId()
+        dao.assignLegacySocialActions(accountId)
+        return dao.pending().any { it.ownerId.isBlank() || it.ownerId == accountId } ||
+            dao.pendingPhotos().any { it.ownerId.isBlank() || it.ownerId == accountId } ||
+            dao.pendingSocialActions(accountId).isNotEmpty()
+    }
+
     suspend fun syncNow() {
         val token = session.token() ?: return
+        val accountId = session.userId()
         val auth = "Bearer $token"
         val api = ApiClient.api
 
         // Ensure every photo mutation has its parent entry on the server first.
         // A photo can remain pending after its text row was marked SYNCED (for example
         // after a transient upload failure or a server database reset).
-        val pending = dao.pending()
-        val pendingPhotoEntries = dao.pendingPhotos().filter { it.deletedAt == null }
+        val pending = dao.pending().map { entry ->
+            if (entry.ownerId.isBlank()) entry.copy(ownerId = accountId) else entry
+        }.filter { it.ownerId == accountId }
+        if (pending.isNotEmpty()) dao.upsertAll(pending)
+        val pendingPhotoEntries = dao.pendingPhotos().map { entry ->
+            if (entry.ownerId.isBlank()) entry.copy(ownerId = accountId) else entry
+        }.filter { it.ownerId == accountId && it.deletedAt == null }
+        if (pendingPhotoEntries.isNotEmpty()) dao.upsertAll(pendingPhotoEntries)
         val metadataToSync = (pending + pendingPhotoEntries).distinctBy { it.id }
         val response = api.sync(auth, SyncRequest(metadataToSync.map { it.toDto() }))
         val remoteById = response.changes.associateBy { it.id }
         for (dto in response.changes) {
             val local = dao.get(dto.id)
-            val localTextIsNewer = local != null && local.updatedAt > dto.updatedAt
+            val localTextIsNewer = local != null && local.ownerId == accountId &&
+                dto.ownerId == accountId && local.updatedAt > dto.updatedAt
             val remotePhotoIsNewer = dto.photoUpdatedAt > (local?.photoUpdatedAt ?: 0L)
             val serverPhotoUri = if (dto.photoUpdatedAt > 0L && dto.photoDeletedAt == null) {
                 remotePhotoUri(dto.id, dto.photoUpdatedAt)
@@ -148,6 +173,7 @@ class DiaryRepository(context: Context) {
                 ) {
                     deleteManagedPhoto(local.photoUri)
                     dao.upsert(local.copy(
+                        ownerId = dto.ownerId,
                         photoUri = serverPhotoUri,
                         photoUpdatedAt = maxOf(dto.photoUpdatedAt, local.photoUpdatedAt),
                         photoDeletedAt = dto.photoDeletedAt ?: local.photoDeletedAt,
@@ -158,11 +184,13 @@ class DiaryRepository(context: Context) {
             }
 
             val keepPendingLocalPhoto = local != null &&
+                local.ownerId == accountId && dto.ownerId == accountId &&
                 !remotePhotoIsNewer &&
                 local.photoSyncState != "SYNCED" &&
                 !local.photoUri.isNullOrBlank() &&
                 !local.photoUri.startsWith(REMOTE_PHOTO_PREFIX)
             val merged = if (localTextIsNewer && local != null) local.copy(
+                ownerId = dto.ownerId,
                 photoUri = if (keepPendingLocalPhoto) local.photoUri else serverPhotoUri,
                 photoUpdatedAt = maxOf(dto.photoUpdatedAt, local.photoUpdatedAt),
                 photoDeletedAt = if (remotePhotoIsNewer) dto.photoDeletedAt else local.photoDeletedAt,
@@ -183,7 +211,7 @@ class DiaryRepository(context: Context) {
 
         // Upload or propagate a photo deletion only after the sync response confirms
         // that the parent entry is present remotely. Avoid opaque 404s from /photo.
-        for (entry in dao.pendingPhotos()) {
+        for (entry in dao.pendingPhotos().filter { it.ownerId == accountId }) {
             if (entry.deletedAt != null) continue
             if (!remoteById.containsKey(entry.id)) {
                 throw IllegalStateException("Il ricordo non è stato confermato dal server: foto non caricata.")
@@ -236,7 +264,8 @@ class DiaryRepository(context: Context) {
         }
 
         // Replay queued likes and comments only after their diary entry is confirmed on the server.
-        val socialActions = dao.pendingSocialActions()
+        dao.assignLegacySocialActions(accountId)
+        val socialActions = dao.pendingSocialActions(accountId)
         for (action in socialActions) {
             val entry = dao.get(action.entryId)
             if (entry == null || entry.deletedAt != null || entry.syncState != "SYNCED") continue
@@ -274,7 +303,7 @@ class DiaryRepository(context: Context) {
 
     suspend fun loadSocialFeed(): SocialFeedResponse {
         val response = ApiClient.api.socialFeed(authorizedHeader())
-        val actions = dao.pendingSocialActions().groupBy { it.entryId }
+        val actions = dao.pendingSocialActions(session.userId()).groupBy { it.entryId }
         val userId = session.userId()
         val authorName = session.name().ifBlank { "Tu" }
         return response.copy(entries = response.entries.map { entry ->
@@ -297,11 +326,12 @@ class DiaryRepository(context: Context) {
 
     suspend fun setEntryLiked(entryId: String, liked: Boolean): Map<String, Any> {
         val auth = authorizedHeader()
-        dao.clearPendingLikeActions(entryId)
+        val accountId = session.userId()
+        dao.clearPendingLikeActions(entryId, accountId)
         return runCatching {
             if (liked) ApiClient.api.likeEntry(auth, entryId) else ApiClient.api.unlikeEntry(auth, entryId)
         }.getOrElse {
-            dao.upsertSocialAction(PendingSocialAction(UUID.randomUUID().toString(), entryId, if (liked) "LIKE" else "UNLIKE", createdAt = System.currentTimeMillis()))
+            dao.upsertSocialAction(PendingSocialAction(UUID.randomUUID().toString(), entryId, if (liked) "LIKE" else "UNLIKE", createdAt = System.currentTimeMillis(), accountId = accountId))
             SyncScheduler.requestImmediate(appContext)
             mapOf("queued" to true)
         }
@@ -316,7 +346,7 @@ class DiaryRepository(context: Context) {
             ApiClient.api.addComment(auth, entryId, SocialCommentRequest(cleanBody, clientId))
         }.getOrElse {
             val now = System.currentTimeMillis()
-            dao.upsertSocialAction(PendingSocialAction(clientId, entryId, "COMMENT", cleanBody, now))
+            dao.upsertSocialAction(PendingSocialAction(clientId, entryId, "COMMENT", cleanBody, now, session.userId()))
             SyncScheduler.requestImmediate(appContext)
             SocialCommentResponse(clientId, entryId, cleanBody, session.userId(), session.name().ifBlank { "Tu" }, now, now)
         }
@@ -325,7 +355,7 @@ class DiaryRepository(context: Context) {
     suspend fun loadEntryComments(entryId: String): List<SocialComment> {
         val auth = authorizedHeader()
         val remote = runCatching { ApiClient.api.comments(auth, entryId)["comments"].orEmpty() }.getOrDefault(emptyList())
-        val actions = dao.pendingSocialActions().filter { it.entryId == entryId }
+        val actions = dao.pendingSocialActions(session.userId()).filter { it.entryId == entryId }
         val deletedIds = actions.filter { it.type == "DELETE_COMMENT" }.map { it.payload }.toSet()
         val pending = actions.filter { it.type == "COMMENT" }.map { action ->
             SocialComment(action.id, action.payload, session.userId(), session.name().ifBlank { "Tu" }, action.createdAt, action.createdAt)
@@ -336,7 +366,7 @@ class DiaryRepository(context: Context) {
     suspend fun loadLocalSocialFeed(): List<SocialFeedEntry> {
         val userId = session.userId()
         val authorName = session.name().ifBlank { "Tu" }
-        val actions = dao.pendingSocialActions().groupBy { it.entryId }
+        val actions = dao.pendingSocialActions(userId).groupBy { it.entryId }
         return dao.observeAll().first().map { entry ->
             val pending = actions[entry.id].orEmpty()
             val likeAction = pending.lastOrNull { it.type == "LIKE" || it.type == "UNLIKE" }
@@ -357,13 +387,14 @@ class DiaryRepository(context: Context) {
     }
 
     suspend fun deleteEntryComment(entryId: String, commentId: String): Map<String, Boolean> {
-        val pending = dao.pendingComments(entryId).firstOrNull { it.id == commentId }
+        val accountId = session.userId()
+        val pending = dao.pendingComments(entryId, accountId).firstOrNull { it.id == commentId }
         if (pending != null) {
             dao.deleteSocialAction(commentId)
             return mapOf("deleted" to true)
         }
         return runCatching { ApiClient.api.deleteComment(authorizedHeader(), commentId) }.getOrElse {
-            dao.upsertSocialAction(PendingSocialAction(UUID.randomUUID().toString(), entryId, "DELETE_COMMENT", commentId, System.currentTimeMillis()))
+            dao.upsertSocialAction(PendingSocialAction(UUID.randomUUID().toString(), entryId, "DELETE_COMMENT", commentId, System.currentTimeMillis(), accountId))
             SyncScheduler.requestImmediate(appContext)
             mapOf("deleted" to true)
         }

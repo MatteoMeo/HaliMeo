@@ -595,18 +595,71 @@ class MainActivity:ComponentActivity() {
     val ctx= LocalContext.current; val activity=ctx as ComponentActivity
     val session=remember{SessionStore(ctx)}; val repo=remember{DiaryRepository(ctx)}
     var signed by remember{mutableStateOf<Boolean?>(null)}; var displayName by remember{mutableStateOf("")}
+    var pendingActivation by remember { mutableStateOf(false) }
+    var currentUserId by remember { mutableStateOf("") }
     var focusUpdater by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit){signed=!session.token().isNullOrBlank();displayName=session.name()}
+    LaunchedEffect(Unit) {
+        val token = session.token()
+        signed = !token.isNullOrBlank()
+        displayName = session.name()
+        currentUserId = session.userId()
+        pendingActivation = !token.isNullOrBlank() && !session.activated()
+    }
     if(signed==null){Box(Modifier.fillMaxSize().background(if (isHaliMeoDark()) Color.Black else Color(0xFFF3F6FA)),contentAlignment=Alignment.Center){LoadingIndicator(modifier=Modifier.size(64.dp), color=MaterialTheme.colorScheme.primary)};return}
     if(signed==false){AuthScreen(
-        onLogin={e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.login(LoginRequest(e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Accesso non riuscito")}}},
-        onRedeem={code,n,e,p,fail->activity.lifecycleScope.launch{runCatching{ApiClient.api.redeem(RedeemInviteRequest(code,n,e,p))}.onSuccess{session.save(it.accessToken,it.userId,it.displayName);displayName=it.displayName;signed=true}.onFailure{fail(it.message?: "Invito non valido")}}},
-        onSocialLogin={provider,token,invite,name,fail->activity.lifecycleScope.launch{
-            runCatching { ApiClient.api.socialLogin(provider, SocialLoginRequest(token, invite, name)) }
-                .onSuccess { session.save(it.accessToken,it.userId,it.displayName); displayName=it.displayName; signed=true }
-                .onFailure { error -> fail(error.message?.substringAfter(": ")?.takeIf { it.isNotBlank() } ?: "Accesso $provider non riuscito. Controlla l'invito e riprova.") }
+        onLogin={e,p,fail->activity.lifecycleScope.launch{
+            runCatching{ApiClient.api.login(LoginRequest(e,p))}
+                .onSuccess{
+                    session.save(it.accessToken,it.userId,it.displayName,it.activated)
+                    displayName=it.displayName; currentUserId=it.userId
+                    pendingActivation=!it.activated; signed=true
+                }.onFailure{fail(it.message?: "Accesso non riuscito")}
+        }},
+        onRegister={n,e,p,fail->activity.lifecycleScope.launch{
+            runCatching{ApiClient.api.register(RegisterRequest(e,p,n))}
+                .onSuccess{
+                    session.save(it.accessToken,it.userId,it.displayName,it.activated)
+                    displayName=it.displayName; currentUserId=it.userId
+                    pendingActivation=!it.activated; signed=true
+                }.onFailure{fail(it.message?: "Registrazione non riuscita")}
+        }},
+        onSocialLogin={provider,token,_,name,fail->activity.lifecycleScope.launch{
+            runCatching { ApiClient.api.socialLogin(provider, SocialLoginRequest(token, null, name)) }
+                .onSuccess {
+                    session.save(it.accessToken,it.userId,it.displayName,it.activated)
+                    displayName=it.displayName; currentUserId=it.userId
+                    pendingActivation=!it.activated; signed=true
+                }
+                .onFailure { error -> fail(error.message?.substringAfter(": ")?.takeIf { it.isNotBlank() } ?: "Accesso $provider non riuscito. Riprova.") }
         }}
     );return}
+    if (pendingActivation) {
+        InviteActivationScreen(
+            onRedeem = { code, fail ->
+                activity.lifecycleScope.launch {
+                    val token = session.token()
+                    if (token.isNullOrBlank()) {
+                        fail("Sessione non disponibile. Accedi nuovamente.")
+                    } else {
+                        runCatching { ApiClient.api.redeem("Bearer $token", RedeemInviteRequest(code)) }
+                            .onSuccess {
+                                session.save(it.accessToken,it.userId,it.displayName,true)
+                                displayName=it.displayName; currentUserId=it.userId
+                                pendingActivation=false
+                            }
+                            .onFailure { error -> fail(error.message?.substringAfter(": ")?.takeIf { it.isNotBlank() } ?: "Codice invito non valido.") }
+                    }
+                }
+            },
+            onLogout = {
+                activity.lifecycleScope.launch {
+                    session.clear()
+                    signed=false; pendingActivation=false; currentUserId=""; displayName=""
+                }
+            }
+        )
+        return
+    }
     val entries by repo.entries.collectAsState(initial= emptyList()); var editing by remember{mutableStateOf<DiaryEntry?>(null)}
     var syncInProgress by remember { mutableStateOf(false) }
     var syncFailed by remember { mutableStateOf(false) }
@@ -628,6 +681,13 @@ class MainActivity:ComponentActivity() {
                     val reason = error.localizedMessage?.takeIf { it.isNotBlank() } ?: "errore sconosciuto"
                     Toast.makeText(ctx, "Sincronizzazione non riuscita: $reason", Toast.LENGTH_LONG).show()
                 }
+            syncInProgress = false
+        }
+    }
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isNotBlank()) {
+            syncInProgress = true
+            runCatching { repo.syncNow() }.onFailure { syncFailed = true }
             syncInProgress = false
         }
     }
@@ -706,7 +766,26 @@ class MainActivity:ComponentActivity() {
                 contentAlignment = Alignment.Center
             ) {
                 IconButton(
-                    onClick = { activity.lifecycleScope.launch { session.clear(); signed = false } },
+                    onClick = {
+                        activity.lifecycleScope.launch {
+                            val result = runCatching {
+                                if (repo.hasPendingChanges()) repo.syncNow()
+                            }
+                            result.onSuccess {
+                                session.clear()
+                                signed = false
+                                pendingActivation = false
+                                currentUserId = ""
+                                displayName = ""
+                            }.onFailure { error ->
+                                Toast.makeText(
+                                    ctx,
+                                    "Prima di uscire sincronizza i ricordi in sospeso: ${error.localizedMessage ?: "server non raggiungibile"}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxSize()
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Esci",
@@ -789,6 +868,7 @@ class MainActivity:ComponentActivity() {
                 if (memory != null) MemoryDetailScreen(
                     memory,
                     repo = repo,
+                    canManage = memory.ownerId.isNotBlank() && memory.ownerId == currentUserId,
                     onBack = { nav.popBackStack() },
                     onEdit = { editing = memory; nav.navigate("edit") },
                     onDelete = {
@@ -1218,8 +1298,10 @@ private fun SettingsScreen(
     var serverDraft by remember { mutableStateOf(ApiClient.baseUrl()) }
     var serverBusy by remember { mutableStateOf(false) }
     var developerStatus by remember { mutableStateOf("") }
+    var profileAccountId by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
+        profileAccountId = session.userId()
         val token = session.token()
         if (token.isNullOrBlank()) {
             isOwner = false
@@ -1249,19 +1331,68 @@ private fun SettingsScreen(
     val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
     val accentText = MaterialTheme.colorScheme.primary
     var expandedSettingsSections by remember { mutableStateOf(emptySet<String>()) }
-    val profilePrefs = remember { ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE) }
-    var profilePhotoUri by remember { mutableStateOf(profilePrefs.getString("profile_photo_uri", null)) }
-    var profilePhotoUploadedUri by remember { mutableStateOf(profilePrefs.getString("profile_photo_uploaded_uri", null)) }
+    val generalPrefs = remember { ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE) }
+    val profilePrefs = remember(profileAccountId) {
+        ctx.getSharedPreferences("halimeo_profile_$profileAccountId", android.content.Context.MODE_PRIVATE)
+    }
+    var profilePhotoUri by remember(profileAccountId) { mutableStateOf(profilePrefs.getString("profile_photo_uri", null)) }
+    var profilePhotoUploadedUri by remember(profileAccountId) { mutableStateOf(profilePrefs.getString("profile_photo_uploaded_uri", null)) }
     var profileUploadBusy by remember { mutableStateOf(false) }
-    var profileNickname by remember { mutableStateOf(profilePrefs.getString("profile_nickname", displayName) ?: displayName) }
-    var profileAbout by remember { mutableStateOf(profilePrefs.getString("profile_about", "") ?: "") }
-    var isProfileEditing by remember {
+    var profileNickname by remember(profileAccountId) { mutableStateOf(profilePrefs.getString("profile_nickname", displayName) ?: displayName) }
+    var profileAbout by remember(profileAccountId) { mutableStateOf(profilePrefs.getString("profile_about", "") ?: "") }
+    var isProfileEditing by remember(profileAccountId) {
         mutableStateOf(
             !profilePrefs.getBoolean(
                 "profile_saved",
                 profilePrefs.contains("profile_nickname") || profilePrefs.contains("profile_about") || profilePrefs.contains("profile_photo_uri")
             )
         )
+    }
+
+    LaunchedEffect(profileAccountId) {
+        if (profileAccountId.isBlank()) return@LaunchedEffect
+        val token = session.token() ?: return@LaunchedEffect
+        if (!profilePrefs.getBoolean("profile_migrated", false)) {
+            val legacyNickname = generalPrefs.getString("profile_nickname", null)
+            val legacyAbout = generalPrefs.getString("profile_about", null)
+            val legacyPhoto = generalPrefs.getString("profile_photo_uri", null)
+            if (legacyNickname != null || legacyAbout != null || legacyPhoto != null) {
+                val migratedNickname = legacyNickname?.takeIf { it.isNotBlank() } ?: displayName
+                val migratedAbout = legacyAbout.orEmpty()
+                profilePrefs.edit()
+                    .putString("profile_nickname", migratedNickname)
+                    .putString("profile_about", migratedAbout)
+                    .putString("profile_photo_uri", legacyPhoto)
+                    .putBoolean("profile_saved", true)
+                    .apply()
+                profileNickname = migratedNickname
+                profileAbout = migratedAbout
+                profilePhotoUri = legacyPhoto
+                runCatching {
+                    ApiClient.api.updateProfile(
+                        "Bearer $token",
+                        ProfileUpdateRequest(migratedNickname, migratedAbout)
+                    )
+                }
+            }
+            generalPrefs.edit()
+                .remove("profile_nickname")
+                .remove("profile_about")
+                .remove("profile_photo_uri")
+                .remove("profile_photo_uploaded_uri")
+                .remove("profile_saved")
+                .apply()
+            profilePrefs.edit().putBoolean("profile_migrated", true).apply()
+        }
+        runCatching { ApiClient.api.profile("Bearer $token") }
+            .onSuccess { profile ->
+                profileNickname = profile.nickname
+                profileAbout = profile.about
+                profilePrefs.edit()
+                    .putString("profile_nickname", profile.nickname)
+                    .putString("profile_about", profile.about)
+                    .apply()
+            }
     }
     val profilePhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -1277,7 +1408,7 @@ private fun SettingsScreen(
     var specialDate by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date", "")?.let { displayHaliMeoDate(it) } ?: "") }
     var specialDates by remember { mutableStateOf(readHaliMeoSpecialDates(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE))) }
     var backgroundColor by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("background_color", "default") ?: "default") }
-    var selectedAppIcon by remember { mutableStateOf(profilePrefs.getString("app_icon_variant", "ocean") ?: "ocean") }
+    var selectedAppIcon by remember { mutableStateOf(generalPrefs.getString("app_icon_variant", "ocean") ?: "ocean") }
     var backgroundPhoto by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("background_photo", null)) }
     var backgroundBlur by remember { mutableFloatStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getFloat("background_blur", 0f)) }
     var backgroundOverlay by remember { mutableFloatStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getFloat("background_overlay", 0.48f)) }
@@ -1438,6 +1569,11 @@ private fun SettingsScreen(
                                         .putString("profile_about", profileAbout.trim())
                                         .putBoolean("profile_saved", true)
                                         .apply()
+                                    val token = session.token() ?: throw IllegalStateException("Sessione non disponibile.")
+                                    ApiClient.api.updateProfile(
+                                        "Bearer $token",
+                                        ProfileUpdateRequest(profileNickname.trim(), profileAbout.trim())
+                                    )
                                     val selectedPhoto = profilePhotoUri
                                     if (!selectedPhoto.isNullOrBlank() && selectedPhoto != profilePhotoUploadedUri) {
                                         repo.uploadProfilePhoto(selectedPhoto)
@@ -2010,7 +2146,7 @@ private fun SettingsScreen(
                                 runCatching { applyLauncherIcon(ctx, key) }
                                     .onSuccess {
                                         selectedAppIcon = key
-                                        profilePrefs.edit().putString("app_icon_variant", key).apply()
+                                        generalPrefs.edit().putString("app_icon_variant", key).apply()
                                         Toast.makeText(ctx, "Icona $label selezionata", Toast.LENGTH_SHORT).show()
                                     }
                                     .onFailure { error ->
@@ -2426,9 +2562,78 @@ private fun SettingsScreen(
 
 }
 @Composable
+private fun InviteActivationScreen(
+    onRedeem: (String, (String) -> Unit) -> Unit,
+    onLogout: () -> Unit
+) {
+    var inviteCode by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf("") }
+    Box(
+        Modifier.fillMaxSize().background(haliMeoAuthBackdrop()),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp)
+                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
+            shape = RoundedCornerShape(32.dp),
+            colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
+        ) {
+            Column(
+                Modifier.fillMaxWidth().padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Icon(Icons.Default.LockOpen, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(34.dp))
+                Text("Account creato!", style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    "Per attivare HaliMeo e accedere al diario, inserisci il codice d'invito che hai ricevuto.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = inviteCode,
+                    onValueChange = { inviteCode = it.trim() },
+                    label = { Text("Codice d'invito") },
+                    leadingIcon = { Icon(Icons.Default.ConfirmationNumber, null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    singleLine = true,
+                    enabled = !busy,
+                    colors = haliMeoTextFieldColors()
+                )
+                if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
+                Button(
+                    enabled = !busy && inviteCode.length >= 16,
+                    onClick = {
+                        busy = true
+                        error = ""
+                        onRedeem(inviteCode) { message -> error = message; busy = false }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    if (busy) CircularProgressIndicator(Modifier.size(19.dp), strokeWidth = 2.dp)
+                    else Icon(Icons.Default.VerifiedUser, null)
+                    Spacer(Modifier.width(9.dp))
+                    Text("ATTIVA ACCOUNT")
+                }
+                TextButton(
+                    onClick = onLogout,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !busy
+                ) { Text("Esci da questo account") }
+            }
+        }
+    }
+}
+
+@Composable
 private fun AuthScreen(
     onLogin: (String, String, (String) -> Unit) -> Unit,
-    onRedeem: (String, String, String, String, (String) -> Unit) -> Unit,
+    onRegister: (String, String, String, (String) -> Unit) -> Unit,
     onSocialLogin: (String, String, String?, String?, (String) -> Unit) -> Unit
 ) {
     val authHaze = rememberHazeState()
@@ -2445,7 +2650,6 @@ private fun AuthScreen(
     var recovery by remember { mutableStateOf(false) }
     var resetCodeSent by remember { mutableStateOf(false) }
     var code by remember { mutableStateOf("") }
-    var inviteCode by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
@@ -2713,7 +2917,7 @@ private fun AuthScreen(
                         )
                         Text(
                             if (redeem)
-                                "Crea il tuo account e inserisci il codice personale che hai ricevuto."
+                                "Crea il tuo account. Potrai attivarlo subito dopo con il codice d'invito."
                             else
                                 "Accedi al vostro spazio privato e ritrova tutti i vostri ricordi.",
                             style = MaterialTheme.typography.bodyMedium,
@@ -2752,16 +2956,6 @@ private fun AuthScreen(
                         }
 
                         if (redeem) {
-                            OutlinedTextField(
-                                value = inviteCode,
-                                onValueChange = { inviteCode = it.trim() },
-                                label = { Text("Codice invito") },
-                                leadingIcon = { Icon(Icons.Default.ConfirmationNumber, null) },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = fieldShape,
-                                singleLine = true,
-                                colors = haliMeoTextFieldColors()
-                            )
                             OutlinedTextField(
                                 value = name,
                                 onValueChange = { name = it },
@@ -2820,20 +3014,20 @@ private fun AuthScreen(
 
                         Button(
                             enabled = !busy && email.contains("@") && pass.length >= 10 &&
-                                (!redeem || (inviteCode.isNotBlank() && name.isNotBlank())),
+                                (!redeem || name.isNotBlank()),
                             onClick = {
                                 busy = true
                                 val fail: (String) -> Unit = { error = it; busy = false }
-                                if (redeem) onRedeem(inviteCode, name, email, pass, fail)
+                                if (redeem) onRegister(name, email, pass, fail)
                                 else onLogin(email, pass, fail)
                             },
                             modifier = Modifier.fillMaxWidth().height(56.dp),
                             shape = RoundedCornerShape(18.dp)
                         ) {
                             if (busy) CircularProgressIndicator(Modifier.size(19.dp), strokeWidth = 2.dp)
-                            else Icon(if (redeem) Icons.Default.MarkEmailRead else Icons.Default.ArrowForward, null)
+                            else Icon(if (redeem) Icons.Default.PersonAddAlt1 else Icons.Default.ArrowForward, null)
                             Spacer(Modifier.width(9.dp))
-                            Text(if (redeem) "CREA ACCOUNT CON INVITO" else "ACCEDI")
+                            Text(if (redeem) "CREA ACCOUNT" else "ACCEDI")
                         }
 
                         if (!recovery) {
@@ -2849,8 +3043,8 @@ private fun AuthScreen(
                                             onSocialLogin(
                                                 "google",
                                                 googleCredential.idToken,
-                                                if (redeem) inviteCode.trim() else null,
-                                                if (redeem) name.trim().ifBlank { googleCredential.displayName.orEmpty() } else googleCredential.displayName
+                                                null,
+                                                if (redeem) name.trim().takeIf { it.isNotBlank() } else googleCredential.displayName?.takeIf { it.isNotBlank() }
                                             ) { message -> error = message; socialBusy = false }
                                         } catch (e: GetCredentialException) {
                                             error = e.message?.takeIf { it.isNotBlank() } ?: "Impossibile accedere con Google."
@@ -2868,7 +3062,7 @@ private fun AuthScreen(
                                 if (socialBusy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                                 else Text("G", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
                                 Spacer(Modifier.width(10.dp))
-                                Text(if (redeem) "CONTINUA CON GOOGLE" else "ACCEDI CON GOOGLE")
+                                Text(if (redeem) "REGISTRATI CON GOOGLE" else "ACCEDI CON GOOGLE")
                             }
                             OutlinedButton(
                                 enabled = !busy && !socialBusy,
@@ -2886,8 +3080,8 @@ private fun AuthScreen(
                                                 onSocialLogin(
                                                     "facebook",
                                                     token,
-                                                    if (redeem) inviteCode.trim() else null,
-                                                    if (redeem) name.trim().ifBlank { email.substringBefore("@") } else null
+                                                    null,
+                                                    if (redeem) name.trim().takeIf { it.isNotBlank() } else null
                                                 ) { message -> error = message; socialBusy = false }
                                             },
                                             onFacebookCancel = { socialBusy = false },
@@ -2902,7 +3096,7 @@ private fun AuthScreen(
                                 if (socialBusy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                                 else Text("f", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
                                 Spacer(Modifier.width(10.dp))
-                                Text(if (redeem) "CONTINUA CON FACEBOOK" else "ACCEDI CON FACEBOOK")
+                                Text(if (redeem) "REGISTRATI CON FACEBOOK" else "ACCEDI CON FACEBOOK")
                             }
                             Text(
                                 "Oppure continua con email e password",
@@ -2927,7 +3121,7 @@ private fun AuthScreen(
                             ) {
                                 Icon(Icons.Default.Shield, null, tint = accent)
                                 Text(
-                                    "HaliMeo è privato: il codice invito è necessario per attivare l'accesso.",
+                                    "Dopo la creazione dell'account, inserirai il codice d'invito per attivarlo.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -4197,6 +4391,7 @@ private fun SocialMemoryPost(
 private fun MemoryDetailScreen(
     entry: DiaryEntry,
     repo: DiaryRepository,
+    canManage: Boolean,
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -4253,28 +4448,30 @@ private fun MemoryDetailScreen(
                         tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 }
             }
-            Spacer(Modifier.width(9.dp))
-            Box(
-                Modifier.size(36.dp)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                IconButton(onClick = onEdit, modifier = Modifier.fillMaxSize()) {
-                    Icon(Icons.Default.Edit, contentDescription = "Modifica ricordo",
-                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
+            if (canManage) {
+                Spacer(Modifier.width(9.dp))
+                Box(
+                    Modifier.size(36.dp)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), CircleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    IconButton(onClick = onEdit, modifier = Modifier.fillMaxSize()) {
+                        Icon(Icons.Default.Edit, contentDescription = "Modifica ricordo",
+                            tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
+                    }
                 }
-            }
-            Spacer(Modifier.width(9.dp))
-            Box(
-                Modifier.size(36.dp)
-                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.12f), CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.24f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                IconButton(onClick = { showDeleteConfirmation = true }, modifier = Modifier.fillMaxSize()) {
-                    Icon(Icons.Default.DeleteOutline, contentDescription = "Elimina ricordo",
-                        tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(9.dp))
+                Box(
+                    Modifier.size(36.dp)
+                        .background(MaterialTheme.colorScheme.error.copy(alpha = 0.12f), CircleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.24f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    IconButton(onClick = { showDeleteConfirmation = true }, modifier = Modifier.fillMaxSize()) {
+                        Icon(Icons.Default.DeleteOutline, contentDescription = "Elimina ricordo",
+                            tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                    }
                 }
             }
         }
@@ -4388,7 +4585,7 @@ private fun MemoryDetailScreen(
         Spacer(Modifier.height(24.dp))
     }
     }
-    if (showDeleteConfirmation) {
+    if (showDeleteConfirmation && canManage) {
         AlertDialog(
                         shape = RoundedCornerShape(30.dp),
             containerColor = haliMeoPopupSurfaceColor(), titleContentColor = MaterialTheme.colorScheme.onSurface, textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
