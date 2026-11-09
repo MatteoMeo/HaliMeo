@@ -364,22 +364,23 @@ private val reduceAnimationsState = mutableStateOf(false)
 private val reduceStaticEffectsState = mutableStateOf(false)
 private val appThemeModeState = mutableStateOf("dark")
 @Composable
+@Composable
 private fun haliMeoAuthBackdrop(): Brush {
+    val colors = MaterialTheme.colorScheme
     return if (isHaliMeoDark()) {
         Brush.verticalGradient(
             listOf(
-                Color(0xFF11152B),
-                Color(0xFF10172B),
-                Color(0xFF090D1B)
+                colors.primary.copy(alpha = 0.13f).compositeOver(Color(0xFF11151D)),
+                colors.tertiary.copy(alpha = 0.09f).compositeOver(Color(0xFF10141C)),
+                Color(0xFF090C12)
             )
         )
     } else {
-        val accent = MaterialTheme.colorScheme.primary
         Brush.verticalGradient(
             listOf(
-                accent.copy(alpha = 0.09f).compositeOver(Color(0xFFF4F7FB)),
-                Color(0xFFEAF0F7),
-                Color(0xFFF8F7FB)
+                colors.primary.copy(alpha = 0.09f).compositeOver(Color(0xFFF4F6F9)),
+                colors.tertiary.copy(alpha = 0.045f).compositeOver(Color(0xFFEDF0F5)),
+                Color(0xFFF8F8FA)
             )
         )
     }
@@ -2809,7 +2810,7 @@ private fun AuthScreen(
                     .graphicsLayer { rotationZ = -27f }
                     .background(
                         Brush.horizontalGradient(
-                            listOf(Color(0xFF5A3A9D).copy(alpha = 0.38f), Color(0xFF302C76).copy(alpha = 0.16f), Color.Transparent)
+                            listOf(accent.copy(alpha = 0.34f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.18f), Color.Transparent)
                         ),
                         RoundedCornerShape(50)
                     )
@@ -2822,7 +2823,7 @@ private fun AuthScreen(
                     .graphicsLayer { rotationZ = -25f }
                     .background(
                         Brush.horizontalGradient(
-                            listOf(Color.Transparent, Color(0xFF365DAD).copy(alpha = 0.20f), Color(0xFF8B55D6).copy(alpha = 0.34f))
+                            listOf(Color.Transparent, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.20f), accent.copy(alpha = 0.32f))
                         ),
                         RoundedCornerShape(50)
                     )
@@ -2854,18 +2855,19 @@ private fun AuthScreen(
                     .clip(RoundedCornerShape(39.dp))
                     .background(
                         Brush.linearGradient(
-                            colors = listOf(Color(0xFF28204D), Color(0xFF101127), Color(0xFF17152F))
+                            colors = listOf(accent.copy(alpha = 0.22f).compositeOver(Color(0xFF171922)), MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f))
                         )
                     )
-                    .border(1.dp, Color(0xFFBBA1FF).copy(alpha = 0.48f), RoundedCornerShape(39.dp))
-                    .shadow(24.dp, RoundedCornerShape(39.dp), ambientColor = Color(0xFF9870FF).copy(alpha = 0.35f), spotColor = Color(0xFF9870FF).copy(alpha = 0.28f)),
+                    .border(1.dp, accent.copy(alpha = 0.48f), RoundedCornerShape(39.dp))
+                    .shadow(24.dp, RoundedCornerShape(39.dp), ambientColor = accent.copy(alpha = 0.30f), spotColor = accent.copy(alpha = 0.24f)),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
                     painter = androidx.compose.ui.res.painterResource(R.drawable.ic_launcher_foreground),
                     contentDescription = "Logo HaliMeo",
                     modifier = Modifier.fillMaxSize().padding(8.dp),
-                    contentScale = ContentScale.Fit
+                    contentScale = ContentScale.Fit,
+                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(accent)
                 )
             }
             Spacer(Modifier.height(13.dp))
@@ -3086,7 +3088,7 @@ private fun AuthScreen(
                                 TextButton(
                                     onClick = { recovery = true; error = ""; info = "" },
                                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
-                                ) { Text("Hai dimenticato la password?", color = Color(0xFFB994FF)) }
+                                ) { Text("Hai dimenticato la password?", color = accent) }
                             }
                         }
 
@@ -3098,7 +3100,7 @@ private fun AuthScreen(
                                 .clip(RoundedCornerShape(50))
                                 .background(
                                     Brush.horizontalGradient(
-                                        listOf(Color(0xFF8D62F4), Color(0xFF713BD7), Color(0xFF8745D8))
+                                        listOf(accent, MaterialTheme.colorScheme.tertiary, accent.copy(alpha = 0.82f))
                                     )
                                 )
                                 .clickable(enabled = canSubmit) {
@@ -3112,17 +3114,17 @@ private fun AuthScreen(
                         ) {
                             Spacer(Modifier.weight(1f))
                             if (busy) {
-                                CircularProgressIndicator(Modifier.size(19.dp), color = Color.White, strokeWidth = 2.dp)
+                                CircularProgressIndicator(Modifier.size(19.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
                             } else {
                                 Text(
                                     if (redeem) "Crea account" else "Accedi",
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onPrimary,
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.titleMedium
                                 )
                             }
                             Spacer(Modifier.weight(1f))
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color.White)
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
                         }
 
                         if (!recovery) {
@@ -3198,7 +3200,7 @@ private fun AuthScreen(
                             }
                         }
 
-                        } else {
+                        if (redeem) {
                             Row(
                                 Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
                                     .background(accent.copy(alpha = 0.08f)).padding(12.dp),
@@ -3225,7 +3227,7 @@ private fun AuthScreen(
                             )
                             Text(
                                 if (redeem) "Accedi" else "Registrati",
-                                color = Color(0xFFB994FF),
+                                color = accent,
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable {
