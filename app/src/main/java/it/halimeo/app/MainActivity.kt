@@ -3060,7 +3060,7 @@ private fun AuthScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(9.dp))
+            Spacer(Modifier.height(58.dp))
 
             if (recovery) {
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -3090,7 +3090,19 @@ private fun AuthScreen(
                     .drawPrismalGlass(
                         backdrop = prismalBackdrop,
                         shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
-                        effects = com.styropyr0.prismal.prismalGlassEffects(prismalDensity)
+                        effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.46f),
+                        onDrawSurface = {
+                            drawRect(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.22f),
+                                        Color.White.copy(alpha = 0.105f),
+                                        Color(0xFFB9C5D8).copy(alpha = 0.055f),
+                                        Color(0xFF101827).copy(alpha = 0.12f)
+                                    )
+                                )
+                            )
+                        }
                     )
                     .clip(RoundedCornerShape(36.dp)),
                 shape = RoundedCornerShape(36.dp),
@@ -3197,7 +3209,19 @@ private fun AuthScreen(
                                 .drawPrismalGlass(
                                     backdrop = prismalBackdrop,
                                     shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
-                                    effects = prismalGlassEffects(prismalDensity)
+                                    effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.52f),
+                                    onDrawSurface = {
+                                        drawRect(
+                                            Brush.verticalGradient(
+                                                listOf(
+                                                    Color.White.copy(alpha = 0.19f),
+                                                    Color.White.copy(alpha = 0.085f),
+                                                    Color(0xFFBFC9D8).copy(alpha = 0.035f),
+                                                    Color.Black.copy(alpha = 0.095f)
+                                                )
+                                            )
+                                        )
+                                    }
                                 ),
                                 shape = fieldShape,
                                 singleLine = true,
