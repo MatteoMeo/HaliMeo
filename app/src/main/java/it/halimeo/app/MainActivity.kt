@@ -1507,6 +1507,50 @@ private fun SettingsScreen(
                             }
                         }
                     }
+                    if (linkedSocialIdentities.none { it.provider.equals("facebook", ignoreCase = true) }) {
+                        OutlinedButton(
+                            enabled = !accountSecurityBusy,
+                            onClick = {
+                                val hostActivity = activity as? MainActivity
+                                if (hostActivity == null) {
+                                    Toast.makeText(ctx, "Accesso Facebook non disponibile.", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    accountSecurityBusy = true
+                                    hostActivity.startFacebookLogin(
+                                        onToken = { token ->
+                                            activity.lifecycleScope.launch {
+                                                runCatching {
+                                                    ApiClient.api.linkSocialIdentity(
+                                                        "Bearer ${session.token().orEmpty()}",
+                                                        "facebook",
+                                                        SocialLoginRequest(token, displayName = displayName)
+                                                    )
+                                                    ApiClient.api.socialIdentities("Bearer ${session.token().orEmpty()}")
+                                                }.onSuccess {
+                                                    accountEmail = it.email
+                                                    linkedSocialIdentities = it.identities
+                                                    Toast.makeText(ctx, "Account Facebook collegato", Toast.LENGTH_SHORT).show()
+                                                }.onFailure { error ->
+                                                    Toast.makeText(ctx, error.localizedMessage ?: "Impossibile collegare Facebook", Toast.LENGTH_LONG).show()
+                                                }
+                                                accountSecurityBusy = false
+                                            }
+                                        },
+                                        onCancel = { accountSecurityBusy = false },
+                                        onError = { message ->
+                                            accountSecurityBusy = false
+                                            Toast.makeText(ctx, message, Toast.LENGTH_LONG).show()
+                                        }
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Link, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Collega account Facebook")
+                        }
+                    }
                     if (linkedSocialIdentities.none { it.provider.equals("google", ignoreCase = true) }) {
                         OutlinedButton(
                             enabled = !accountSecurityBusy,
@@ -2809,6 +2853,40 @@ private fun AuthScreen(
                                 else Text("G", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
                                 Spacer(Modifier.width(10.dp))
                                 Text(if (redeem) "CONTINUA CON GOOGLE" else "ACCEDI CON GOOGLE")
+                            }
+                            OutlinedButton(
+                                enabled = !busy && !socialBusy,
+                                onClick = {
+                                    socialBusy = true
+                                    error = ""
+                                    info = ""
+                                    val hostActivity = authActivity as? MainActivity
+                                    if (hostActivity == null) {
+                                        error = "Accesso Facebook non disponibile."
+                                        socialBusy = false
+                                    } else {
+                                        hostActivity.startFacebookLogin(
+                                            onToken = { token ->
+                                                onSocialLogin(
+                                                    "facebook",
+                                                    token,
+                                                    if (redeem) inviteCode.trim() else null,
+                                                    if (redeem) name.trim().ifBlank { email.substringBefore("@") } else null
+                                                ) { message -> error = message; socialBusy = false }
+                                            },
+                                            onCancel = { socialBusy = false },
+                                            onError = { message -> error = message; socialBusy = false }
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth().height(52.dp),
+                                shape = RoundedCornerShape(18.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+                            ) {
+                                if (socialBusy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                                else Text("f", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
+                                Spacer(Modifier.width(10.dp))
+                                Text(if (redeem) "CONTINUA CON FACEBOOK" else "ACCEDI CON FACEBOOK")
                             }
                             Text(
                                 "Oppure continua con email e password",
