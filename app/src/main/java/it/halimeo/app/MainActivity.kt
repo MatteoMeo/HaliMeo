@@ -2125,8 +2125,6 @@ private fun SettingsScreen(
                 }
                 Text("Scegli il colore d'accento dell'app.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
-                Text("Icona dell’app", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Text("Scegli l’aspetto di HaliMeo nella schermata Home.", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 val iconChoices = listOf(
                     Triple("ocean", "Oceano", R.mipmap.ic_launcher),
                     Triple("rose", "Tramonto", R.mipmap.ic_launcher_rose),
@@ -2135,59 +2133,107 @@ private fun SettingsScreen(
                     Triple("graphite", "Grafite", R.mipmap.ic_launcher_graphite),
                     Triple("aurora", "Aurora", R.mipmap.ic_launcher_aurora)
                 )
-                Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                val selectedIconLabel = iconChoices.firstOrNull { it.first == selectedAppIcon }?.second ?: "Oceano"
+                Column(
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(frostedSurfaceColor())
+                        .border(1.dp, frostedEdgeColor(), RoundedCornerShape(24.dp))
+                        .padding(15.dp),
+                    verticalArrangement = Arrangement.spacedBy(13.dp)
                 ) {
-                    iconChoices.forEach { (key, label, iconRes) ->
-                        Column(
-                            modifier = Modifier.width(68.dp).clip(RoundedCornerShape(16.dp)).clickable {
-                                runCatching { applyLauncherIcon(ctx, key) }
-                                    .onSuccess {
-                                        selectedAppIcon = key
-                                        generalPrefs.edit().putString("app_icon_variant", key).apply()
-                                        Toast.makeText(ctx, "Icona $label selezionata", Toast.LENGTH_SHORT).show()
-                                    }
-                                    .onFailure { error ->
-                                        android.util.Log.e("HaliMeoLauncher", "Cambio icona non riuscito per la variante $key", error)
-                                        Toast.makeText(ctx, "Non è stato possibile cambiare icona. Riprova.", Toast.LENGTH_LONG).show()
-                                    }
-                            }.padding(vertical = 6.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(7.dp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("Icona dell’app", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            Text("Personalizza il simbolo di HaliMeo.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                        }
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.13f),
+                            shape = RoundedCornerShape(50)
                         ) {
-                            Box(
-                                Modifier.size(62.dp).clip(RoundedCornerShape(18.dp))
-                                    .border(
-                                        width = if (selectedAppIcon == key) 2.dp else 1.dp,
-                                        color = if (selectedAppIcon == key) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
-                                        shape = RoundedCornerShape(18.dp)
-                                    ).padding(3.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                val iconPreview = remember(iconRes, ctx) {
-                                    val drawable = requireNotNull(ctx.getDrawable(iconRes)) {
-                                        "Risorsa anteprima icona non disponibile"
+                            Text(
+                                selectedIconLabel,
+                                Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                    iconChoices.chunked(3).forEach { choicesRow ->
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(9.dp)
+                        ) {
+                            choicesRow.forEach { (key, label, iconRes) ->
+                                val selected = selectedAppIcon == key
+                                Column(
+                                    Modifier.weight(1f)
+                                        .clip(RoundedCornerShape(18.dp))
+                                        .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
+                                        .border(
+                                            if (selected) 1.5.dp else 1.dp,
+                                            if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.22f),
+                                            RoundedCornerShape(18.dp)
+                                        )
+                                        .clickable {
+                                            runCatching { applyLauncherIcon(ctx, key) }
+                                                .onSuccess {
+                                                    selectedAppIcon = key
+                                                    generalPrefs.edit().putString("app_icon_variant", key).apply()
+                                                    Toast.makeText(ctx, "Icona $label selezionata", Toast.LENGTH_SHORT).show()
+                                                }
+                                                .onFailure { error ->
+                                                    android.util.Log.e("HaliMeoLauncher", "Cambio icona non riuscito per la variante $key", error)
+                                                    Toast.makeText(ctx, "Non è stato possibile cambiare icona. Riprova.", Toast.LENGTH_LONG).show()
+                                                }
+                                        }
+                                        .padding(vertical = 10.dp, horizontal = 5.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                                ) {
+                                    val iconPreview = remember(iconRes, ctx) {
+                                        val drawable = requireNotNull(ctx.getDrawable(iconRes)) {
+                                            "Risorsa anteprima icona non disponibile"
+                                        }
+                                        android.graphics.Bitmap.createBitmap(
+                                            128, 128, android.graphics.Bitmap.Config.ARGB_8888
+                                        ).also { bitmap ->
+                                            val canvas = android.graphics.Canvas(bitmap)
+                                            drawable.setBounds(0, 0, canvas.width, canvas.height)
+                                            drawable.draw(canvas)
+                                        }.asImageBitmap()
                                     }
-                                    android.graphics.Bitmap.createBitmap(
-                                        128, 128, android.graphics.Bitmap.Config.ARGB_8888
-                                    ).also { bitmap ->
-                                        val canvas = android.graphics.Canvas(bitmap)
-                                        drawable.setBounds(0, 0, canvas.width, canvas.height)
-                                        drawable.draw(canvas)
-                                    }.asImageBitmap()
-                                }
-                                Image(
-                                    bitmap = iconPreview,
-                                    contentDescription = "Icona HaliMeo $label",
-                                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp))
-                                )
-                                if (selectedAppIcon == key) {
-                                    Icon(Icons.Default.CheckCircle, contentDescription = "Selezionata", tint = Color.White, modifier = Modifier.align(Alignment.BottomEnd).size(19.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
+                                    Box(
+                                        Modifier.size(62.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Image(
+                                            bitmap = iconPreview,
+                                            contentDescription = "Icona HaliMeo $label",
+                                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(17.dp))
+                                        )
+                                        if (selected) {
+                                            Box(
+                                                Modifier.align(Alignment.TopEnd)
+                                                    .size(21.dp)
+                                                    .background(MaterialTheme.colorScheme.primary, CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(Icons.Default.Check, contentDescription = "Selezionata", tint = Color.White, modifier = Modifier.size(14.dp))
+                                            }
+                                        }
+                                    }
+                                    Text(
+                                        label,
+                                        color = if (selected) primaryText else secondaryText,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        maxLines = 1,
+                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                                    )
                                 }
                             }
-                            Text(label, color = if (selectedAppIcon == key) primaryText else secondaryText, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                            repeat(3 - choicesRow.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                 }
@@ -2631,6 +2677,60 @@ private fun InviteActivationScreen(
 }
 
 @Composable
+private fun SocialAuthButton(
+    provider: String,
+    label: String,
+    enabled: Boolean,
+    loading: Boolean,
+    onClick: () -> Unit
+) {
+    val isGoogle = provider == "google"
+    val background = if (isGoogle) Color(0xFFFFFFFF) else Color(0xFF1877F2)
+    val foreground = if (isGoogle) Color(0xFF202124) else Color.White
+    Row(
+        Modifier.fillMaxWidth()
+            .height(52.dp)
+            .clip(RoundedCornerShape(17.dp))
+            .background(background)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 17.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier.size(29.dp)
+                .clip(CircleShape)
+                .background(if (isGoogle) Color.Transparent else Color.White.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (loading) {
+                CircularProgressIndicator(
+                    Modifier.size(17.dp),
+                    color = if (isGoogle) Color(0xFF4285F4) else Color.White,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(
+                    if (isGoogle) "G" else "f",
+                    color = if (isGoogle) Color(0xFF4285F4) else Color.White,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = if (isGoogle) 21.sp else 24.sp,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        Text(
+            label,
+            color = foreground,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.width(29.dp))
+    }
+}
+
+@Composable
 private fun AuthScreen(
     onLogin: (String, String, (String) -> Unit) -> Unit,
     onRegister: (String, String, String, (String) -> Unit) -> Unit,
@@ -2678,7 +2778,7 @@ private fun AuthScreen(
         }
     }
 
-    val fieldShape = RoundedCornerShape(20.dp)
+    val fieldShape = RoundedCornerShape(18.dp)
     val accent = MaterialTheme.colorScheme.primary
     val dark = isHaliMeoDark()
 
@@ -2707,58 +2807,67 @@ private fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            Spacer(Modifier.height(22.dp))
-            Box(
-                Modifier.size(72.dp)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(accent.copy(alpha = 0.28f), accent.copy(alpha = 0.08f))
-                        ),
-                        RoundedCornerShape(25.dp)
-                    )
-                    .border(1.dp, accent.copy(alpha = 0.34f), RoundedCornerShape(25.dp)),
-                contentAlignment = Alignment.Center
+            Row(
+                Modifier.fillMaxWidth().padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Icon(
-                    Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(34.dp)
-                )
-            }
-            Spacer(Modifier.height(15.dp))
-            Surface(
-                color = accent.copy(alpha = 0.11f),
-                shape = RoundedCornerShape(50)
-            ) {
-                Row(
-                    Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                Box(
+                    Modifier.size(66.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(accent.copy(alpha = 0.98f), accent.copy(alpha = 0.72f), Color(0xFF5143A5))
+                            )
+                        )
+                        .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(22.dp)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Shield, contentDescription = null, tint = accent, modifier = Modifier.size(13.dp))
                     Text(
-                        "SPAZIO PRIVATO",
-                        color = accent,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.1.sp
+                        "H",
+                        color = Color.White,
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            fontSize = 40.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                        )
                     )
                 }
+                Column(
+                    Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Text(
+                        "HaliMeo",
+                        style = MaterialTheme.typography.headlineMedium.copy(letterSpacing = (-0.7).sp),
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        "Il vostro diario privato",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(7.dp).background(
+                                when (serverOnline) {
+                                    true -> Color(0xFF75D6A2)
+                                    false -> Color(0xFFFF8996)
+                                    null -> Color(0xFFFFC66D)
+                                },
+                                CircleShape
+                            )
+                        )
+                        Spacer(Modifier.width(7.dp))
+                        Text(
+                            serverMessage,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
-            Spacer(Modifier.height(10.dp))
-            Text(
-                "HaliMeo",
-                style = MaterialTheme.typography.displaySmall.copy(letterSpacing = (-1.1).sp),
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "I vostri ricordi, custoditi insieme.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
             Spacer(Modifier.height(22.dp))
 
             Card(
@@ -2772,33 +2881,6 @@ private fun AuthScreen(
                     Modifier.padding(horizontal = 20.dp, vertical = 22.dp),
                     verticalArrangement = Arrangement.spacedBy(15.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier.size(9.dp)
-                                .background(
-                                    when (serverOnline) {
-                                        true -> Color(0xFF75D6A2)
-                                        false -> Color(0xFFFF8996)
-                                        null -> Color(0xFFFFC66D)
-                                    },
-                                    CircleShape
-                                )
-                        )
-                        Spacer(Modifier.width(9.dp))
-                        Text(
-                            serverMessage,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Icon(
-                            if (serverOnline == true) Icons.Default.CloudDone else Icons.Default.Cloud,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
                     if (recovery) {
                         Text(
                             "Recupera il tuo accesso",
@@ -3031,8 +3113,11 @@ private fun AuthScreen(
                         }
 
                         if (!recovery) {
-                            OutlinedButton(
+                            SocialAuthButton(
+                                provider = "google",
+                                label = if (redeem) "Continua con Google" else "Accedi con Google",
                                 enabled = !busy && !socialBusy,
+                                loading = socialBusy,
                                 onClick = {
                                     socialBusy = true
                                     error = ""
@@ -3054,18 +3139,13 @@ private fun AuthScreen(
                                             socialBusy = false
                                         }
                                     }
-                                },
-                                modifier = Modifier.fillMaxWidth().height(52.dp),
-                                shape = RoundedCornerShape(18.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
-                            ) {
-                                if (socialBusy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                                else Text("G", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
-                                Spacer(Modifier.width(10.dp))
-                                Text(if (redeem) "REGISTRATI CON GOOGLE" else "ACCEDI CON GOOGLE")
-                            }
-                            OutlinedButton(
+                                }
+                            )
+                            SocialAuthButton(
+                                provider = "facebook",
+                                label = if (redeem) "Continua con Facebook" else "Accedi con Facebook",
                                 enabled = !busy && !socialBusy,
+                                loading = socialBusy,
                                 onClick = {
                                     socialBusy = true
                                     error = ""
@@ -3088,23 +3168,21 @@ private fun AuthScreen(
                                             onFacebookError = { message -> error = message; socialBusy = false }
                                         )
                                     }
-                                },
-                                modifier = Modifier.fillMaxWidth().height(52.dp),
-                                shape = RoundedCornerShape(18.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
-                            ) {
-                                if (socialBusy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                                else Text("f", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
-                                Spacer(Modifier.width(10.dp))
-                                Text(if (redeem) "REGISTRATI CON FACEBOOK" else "ACCEDI CON FACEBOOK")
-                            }
-                            Text(
-                                "Oppure continua con email e password",
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.labelSmall
+                                }
                             )
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Divider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+                                Text(
+                                    "oppure con email",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                                Divider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+                            }
                         }
 
                         if (!redeem) {
