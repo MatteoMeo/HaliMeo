@@ -396,7 +396,7 @@ private fun haliMeoAuthBackdrop(): Brush {
     val colors = MaterialTheme.colorScheme
     val atmosphere = haliMeoAtmosphere(customBackgroundColorState.value)
     val accent = atmosphere?.primary ?: colors.primary
-    val secondary = atmosphere?.secondary ?: colors.tertiary
+    val secondary = atmosphere?.secondary ?: colors.secondary
     return if (isHaliMeoDark()) {
         Brush.linearGradient(
             0f to Color(0xFF080D19),
@@ -2835,7 +2835,7 @@ private fun AuthScreen(
         // Layered, theme-aware ambient waves inspired by the concept artwork.
         val atmosphere = haliMeoAtmosphere(customBackgroundColorState.value)
         val waveA = atmosphere?.primary ?: accent
-        val waveB = atmosphere?.secondary ?: MaterialTheme.colorScheme.tertiary
+        val waveB = atmosphere?.secondary ?: MaterialTheme.colorScheme.secondary
         if (dark) {
             Box(
                 Modifier.align(Alignment.TopStart)
