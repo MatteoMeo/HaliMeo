@@ -3060,7 +3060,7 @@ private fun AuthScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(58.dp))
+            Spacer(Modifier.height(86.dp))
 
             if (recovery) {
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
