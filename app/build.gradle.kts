@@ -82,6 +82,12 @@ dependencies {
     implementation("androidx.webkit:webkit:1.18.0")
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.metrics:metrics-performance:1.0.0")
+    // Image pipeline: async Compose loading, memory/disk cache and decoding.
+    implementation("io.coil-kt.coil3:coil-compose:3.6.3")
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.6.3")
+    // Paginated feed primitives for large shared diaries.
+    implementation("androidx.paging:paging-runtime:3.5.3")
+    implementation("androidx.paging:paging-compose:3.5.3")
     testImplementation("junit:junit:4.13.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
