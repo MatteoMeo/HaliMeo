@@ -36,6 +36,18 @@ class HaliMeoVisualTokensTest {
     }
 
     @Test
+    fun darkGlassSurfaceStaysNeutralAcrossDifferentThemeAccents() {
+        val violet = HaliMeoVisualTokens.create(Color(0xFF9B78FF), dark = true, reduceEffects = false)
+        val cyan = HaliMeoVisualTokens.create(Color(0xFF35C8E8), dark = true, reduceEffects = false)
+
+        assertTrue(kotlin.math.abs(violet.strongSurface.red - cyan.strongSurface.red) < 0.01f)
+        assertTrue(kotlin.math.abs(violet.strongSurface.green - cyan.strongSurface.green) < 0.01f)
+        assertTrue(kotlin.math.abs(violet.strongSurface.blue - cyan.strongSurface.blue) < 0.01f)
+        assertTrue(violet.strongSurface.red < 0.20f)
+        assertTrue(violet.strongSurface.green < 0.22f)
+    }
+
+    @Test
     fun lightPaletteRetainsReadableNeutralSurfaces() {
         val tokens = HaliMeoVisualTokens.create(Color(0xFF527DFF), dark = false, reduceEffects = false)
 
