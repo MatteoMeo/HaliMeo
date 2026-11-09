@@ -2807,68 +2807,60 @@ private fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            Row(
-                Modifier.fillMaxWidth().padding(top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            Spacer(Modifier.height(10.dp))
+            Box(
+                Modifier.size(132.dp)
+                    .clip(RoundedCornerShape(39.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(Color(0xFF28204D), Color(0xFF101127), Color(0xFF17152F))
+                        )
+                    )
+                    .border(1.dp, Color(0xFFBBA1FF).copy(alpha = 0.48f), RoundedCornerShape(39.dp))
+                    .shadow(24.dp, RoundedCornerShape(39.dp), ambientColor = Color(0xFF9870FF).copy(alpha = 0.35f), spotColor = Color(0xFF9870FF).copy(alpha = 0.28f)),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    Modifier.size(66.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(
-                            Brush.linearGradient(
-                                listOf(accent.copy(alpha = 0.98f), accent.copy(alpha = 0.72f), Color(0xFF5143A5))
-                            )
-                        )
-                        .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(22.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "H",
-                        color = Color.White,
-                        style = MaterialTheme.typography.headlineLarge.copy(
-                            fontSize = 40.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                        )
-                    )
-                }
-                Column(
-                    Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    Text(
-                        "HaliMeo",
-                        style = MaterialTheme.typography.headlineMedium.copy(letterSpacing = (-0.7).sp),
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        "Il vostro diario privato",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier.size(7.dp).background(
-                                when (serverOnline) {
-                                    true -> Color(0xFF75D6A2)
-                                    false -> Color(0xFFFF8996)
-                                    null -> Color(0xFFFFC66D)
-                                },
-                                CircleShape
-                            )
-                        )
-                        Spacer(Modifier.width(7.dp))
-                        Text(
-                            serverMessage,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                Image(
+                    painter = androidx.compose.ui.res.painterResource(R.drawable.ic_launcher_foreground),
+                    contentDescription = "Logo HaliMeo",
+                    modifier = Modifier.fillMaxSize().padding(8.dp),
+                    contentScale = ContentScale.Fit
+                )
             }
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(13.dp))
+            Text(
+                "HaliMeo",
+                style = MaterialTheme.typography.headlineLarge.copy(letterSpacing = (-1.1).sp),
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                "Il vostro diario privato",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(7.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(6.dp).background(
+                        when (serverOnline) {
+                            true -> Color(0xFF75D6A2)
+                            false -> Color(0xFFFF8996)
+                            null -> Color(0xFFFFC66D)
+                        },
+                        CircleShape
+                    )
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    if (serverOnline == true) "Online" else serverMessage,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+                )
+            }
+            Spacer(Modifier.height(25.dp))
+
 
             Card(
                 modifier = Modifier.fillMaxWidth()
@@ -2991,52 +2983,6 @@ private fun AuthScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Torna all'accesso") }
                     } else {
-                        Text(
-                            if (redeem) "Entra a far parte di HaliMeo"
-                            else "Bentornato",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            if (redeem)
-                                "Crea il tuo account. Potrai attivarlo subito dopo con il codice d'invito."
-                            else
-                                "Accedi al vostro spazio privato e ritrova tutti i vostri ricordi.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Row(
-                            Modifier.fillMaxWidth()
-                                .background(frostedSurfaceColor(), RoundedCornerShape(16.dp))
-                                .padding(4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            listOf("Accedi" to false, "Registrati" to true).forEach { (label, selected) ->
-                                val active = redeem == selected
-                                Box(
-                                    Modifier.weight(1f)
-                                        .clip(RoundedCornerShape(13.dp))
-                                        .background(if (active) accent.copy(alpha = 0.18f) else Color.Transparent)
-                                        .clickable {
-                                            redeem = selected
-                                            error = ""
-                                            info = ""
-                                            pass = ""
-                                        }
-                                        .padding(vertical = 11.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        label,
-                                        color = if (active) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
-                                }
-                            }
-                        }
-
                         if (redeem) {
                             OutlinedTextField(
                                 value = name,
@@ -3186,10 +3132,12 @@ private fun AuthScreen(
                         }
 
                         if (!redeem) {
-                            TextButton(
-                                onClick = { recovery = true; error = ""; info = "" },
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text("Password dimenticata?") }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                TextButton(
+                                    onClick = { recovery = true; error = ""; info = "" },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                ) { Text("Hai dimenticato la password?", color = Color(0xFFB994FF)) }
+                            }
                         } else {
                             Row(
                                 Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
@@ -3205,23 +3153,34 @@ private fun AuthScreen(
                                 )
                             }
                         }
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 2.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                if (redeem) "Hai già un account? " else "Non hai un account? ",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                if (redeem) "Accedi" else "Registrati",
+                                color = Color(0xFFB994FF),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable {
+                                    redeem = !redeem
+                                    error = ""
+                                    info = ""
+                                    pass = ""
+                                }.padding(horizontal = 4.dp, vertical = 3.dp)
+                            )
+                        }
                     }
                 }
             }
 
             Spacer(Modifier.height(18.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(7.dp)
-            ) {
-                Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
-                Text(
-                    "Uno spazio privato, accessibile solo su invito.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(Modifier.height(12.dp))
         }
     }
 }
