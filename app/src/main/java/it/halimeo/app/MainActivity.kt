@@ -2845,6 +2845,10 @@ private fun AuthScreen(
     onSocialLogin: (String, String, String?, String?, (String) -> Unit) -> Unit
 ) {
     val authHaze = rememberHazeState()
+    val prismalBackdrop = com.styropyr0.prismal.sources.rememberPrismalCanvasSource {
+        drawRect(Brush.linearGradient(listOf(Color(0xFF18233A), Color(0xFF202B45), Color(0xFF111A2D), Color(0xFF252044))))
+    }
+    val prismalDensity = LocalDensity.current
     val accent = MaterialTheme.colorScheme.primary
     val authViolet = Color(0xFF8D5CFF)
     val fieldShape = RoundedCornerShape(50.dp)
@@ -2994,11 +2998,11 @@ private fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            Spacer(Modifier.height(30.dp))
+            Spacer(Modifier.height(12.dp))
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(
-                        Modifier.size(108.dp)
+                        Modifier.size(78.dp)
                             .clip(RoundedCornerShape(27.dp))
                             .background(
                                 Brush.linearGradient(
@@ -3081,17 +3085,18 @@ private fun AuthScreen(
                         ambientColor = Color.Black.copy(alpha = 0.20f),
                         spotColor = Color.Black.copy(alpha = 0.30f)
                     )
-                    .hazeGlass(
-                        input = HazeInput.Backdrop(authHaze),
-                        style = glassStyle
+                    .drawPrismalGlass(
+                        backdrop = prismalBackdrop,
+                        shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
+                        effects = com.styropyr0.prismal.prismalGlassEffects(prismalDensity)
                     )
                     .clip(RoundedCornerShape(36.dp)),
                 shape = RoundedCornerShape(36.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
                 Column(
-                    Modifier.padding(horizontal = 20.dp, vertical = 17.dp),
-                    verticalArrangement = Arrangement.spacedBy(9.dp)
+                    Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
                     if (recovery || redeem) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -3136,7 +3141,11 @@ private fun AuthScreen(
                                     Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.055f), Color.Black.copy(alpha = 0.07f))),
                                     fieldShape
                                 )
-                                .hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).semantics {
+                                .drawPrismalGlass(
+                                    backdrop = prismalBackdrop,
+                                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
+                                    effects = com.styropyr0.prismal.prismalGlassEffects(prismalDensity)
+                                ).semantics {
                                 contentType = androidx.compose.ui.autofill.ContentType.EmailAddress
                             },
                             shape = fieldShape,
@@ -3336,14 +3345,7 @@ private fun AuthScreen(
                                 .shadow(16.dp, RoundedCornerShape(50), ambientColor = accent.copy(alpha = 0.34f), spotColor = Color.Black.copy(alpha = 0.30f))
                                 .clip(RoundedCornerShape(50))
                                 .background(
-                                    Brush.verticalGradient(
-                                        listOf(
-                                            Color.White.copy(alpha = 0.26f),
-                                            accent.copy(alpha = 0.98f),
-                                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.94f),
-                                            accent.copy(alpha = 0.88f)
-                                        )
-                                    )
+                                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.30f), accent.copy(alpha = 0.30f), accent.copy(alpha = 0.16f)))
                                 )
 
                                 .clickable(enabled = canSubmit) {
