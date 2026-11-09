@@ -400,8 +400,9 @@ private fun haliMeoAuthBackdrop(): Brush {
     return if (isHaliMeoDark()) {
         Brush.linearGradient(
             0f to Color(0xFF080D19),
-            0.42f to Color(0xFF11182B),
-            0.76f to accent.copy(alpha = 0.20f).compositeOver(Color(0xFF101326)),
+            0.28f to accent.copy(alpha = 0.18f).compositeOver(Color(0xFF101326)),
+            0.62f to secondary.copy(alpha = 0.16f).compositeOver(Color(0xFF101326)),
+            0.84f to accent.copy(alpha = 0.22f).compositeOver(Color(0xFF101326)),
             1f to Color(0xFF080D17)
         )
     } else {
@@ -2831,33 +2832,49 @@ private fun AuthScreen(
             .background(haliMeoAuthBackdrop())
             .hazeSource(authHaze)
     ) {
-        // Static ambient ribbons echo the purple-blue waves in the HaliMeo identity.
+        // Layered, theme-aware ambient waves inspired by the concept artwork.
+        val atmosphere = haliMeoAtmosphere(customBackgroundColorState.value)
+        val waveA = atmosphere?.primary ?: accent
+        val waveB = atmosphere?.secondary ?: MaterialTheme.colorScheme.tertiary
         if (dark) {
             Box(
                 Modifier.align(Alignment.TopStart)
-                    .offset(x = (-150).dp, y = 58.dp)
-                    .size(470.dp, 245.dp)
-                    .graphicsLayer { rotationZ = -27f }
+                    .offset(x = (-175).dp, y = 42.dp)
+                    .size(520.dp, 285.dp)
+                    .graphicsLayer { rotationZ = -24f }
                     .background(
-                        Brush.horizontalGradient(
-                            listOf(Color(0xFF8B5CF6).copy(alpha = 0.30f), Color(0xFF4E70D8).copy(alpha = 0.18f), Color.Transparent)
+                        Brush.linearGradient(
+                            listOf(waveA.copy(alpha = 0.34f), waveB.copy(alpha = 0.24f), Color.Transparent)
                         ),
-                        RoundedCornerShape(50)
+                        RoundedCornerShape(topStart = 150.dp, topEnd = 120.dp, bottomEnd = 220.dp, bottomStart = 80.dp)
                     )
-                    .blur(28.dp)
+                    .blur(34.dp)
             )
             Box(
-                Modifier.align(Alignment.BottomEnd)
-                    .offset(x = 175.dp, y = (-145).dp)
-                    .size(500.dp, 220.dp)
-                    .graphicsLayer { rotationZ = -25f }
+                Modifier.align(Alignment.CenterEnd)
+                    .offset(x = 205.dp, y = 35.dp)
+                    .size(390.dp, 260.dp)
+                    .graphicsLayer { rotationZ = -31f }
+                    .background(
+                        Brush.linearGradient(
+                            listOf(Color.Transparent, waveB.copy(alpha = 0.22f), waveA.copy(alpha = 0.26f))
+                        ),
+                        RoundedCornerShape(topStart = 190.dp, topEnd = 80.dp, bottomEnd = 170.dp, bottomStart = 120.dp)
+                    )
+                    .blur(38.dp)
+            )
+            Box(
+                Modifier.align(Alignment.BottomStart)
+                    .offset(x = (-150).dp, y = (-105).dp)
+                    .size(470.dp, 230.dp)
+                    .graphicsLayer { rotationZ = -19f }
                     .background(
                         Brush.horizontalGradient(
-                            listOf(Color.Transparent, Color(0xFF315DAB).copy(alpha = 0.22f), Color(0xFF8B5CF6).copy(alpha = 0.24f))
+                            listOf(Color.Transparent, waveA.copy(alpha = 0.22f), waveB.copy(alpha = 0.17f))
                         ),
-                        RoundedCornerShape(50)
+                        RoundedCornerShape(topStart = 180.dp, topEnd = 110.dp, bottomEnd = 150.dp, bottomStart = 210.dp)
                     )
-                    .blur(30.dp)
+                    .blur(36.dp)
             )
         } else {
             Box(
@@ -2876,7 +2893,7 @@ private fun AuthScreen(
                 .verticalScroll(rememberScrollState())
                 .imePadding()
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(horizontal = 22.dp, vertical = 18.dp),
+                .padding(horizontal = 16.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
@@ -2940,7 +2957,7 @@ private fun AuthScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(15.dp))
 
             if (redeem || recovery) {
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2959,7 +2976,7 @@ private fun AuthScreen(
                 }
                 Spacer(Modifier.height(12.dp))
             } else {
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(0.dp))
             }
 
             Card(
@@ -2996,8 +3013,8 @@ private fun AuthScreen(
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
                 Column(
-                    Modifier.padding(horizontal = 22.dp, vertical = 25.dp),
-                    verticalArrangement = Arrangement.spacedBy(17.dp)
+                    Modifier.padding(horizontal = 19.dp, vertical = 19.dp),
+                    verticalArrangement = Arrangement.spacedBy(11.dp)
                 ) {
                     if (recovery || redeem) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -3194,12 +3211,20 @@ private fun AuthScreen(
 
                         val canSubmit = !busy && email.contains("@") && pass.length >= 10 &&
                             (!redeem || name.isNotBlank())
-                        Row(
+                        Box(
                             Modifier.fillMaxWidth()
                                 .height(56.dp)
-                                .shadow(18.dp, RoundedCornerShape(50), ambientColor = accent.copy(alpha = 0.28f), spotColor = accent.copy(alpha = 0.22f))
+                                .shadow(18.dp, RoundedCornerShape(50), ambientColor = accent.copy(alpha = 0.30f), spotColor = accent.copy(alpha = 0.24f))
                                 .clip(RoundedCornerShape(50))
-                                .background(Brush.horizontalGradient(listOf(accent, MaterialTheme.colorScheme.tertiary, accent.copy(alpha = 0.82f))))
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(
+                                            accent.copy(alpha = 0.98f),
+                                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.96f),
+                                            accent.copy(alpha = 0.78f)
+                                        )
+                                    )
+                                )
                                 .clickable(enabled = canSubmit) {
                                     busy = true
                                     val fail: (String) -> Unit = { error = it; busy = false }
@@ -3207,9 +3232,8 @@ private fun AuthScreen(
                                     else onLogin(email, pass, fail)
                                 }
                                 .padding(horizontal = 22.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            contentAlignment = Alignment.Center
                         ) {
-                            Spacer(Modifier.weight(1f))
                             if (busy) {
                                 CircularProgressIndicator(Modifier.size(19.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
                             } else {
@@ -3217,14 +3241,32 @@ private fun AuthScreen(
                                     if (redeem) "Crea account" else "Accedi",
                                     color = MaterialTheme.colorScheme.onPrimary,
                                     fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.titleMedium
+                                    style = MaterialTheme.typography.titleMedium,
+                                    textAlign = TextAlign.Center
                                 )
                             }
-                            Spacer(Modifier.weight(1f))
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.align(Alignment.CenterEnd)
+                            )
                         }
 
                         if (!recovery) {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Divider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+                                Text(
+                                    "oppure continua con",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                                Divider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+                            }
                             SocialAuthButton(
                                 provider = "google",
                                 label = if (redeem) "Continua con Google" else "Accedi con Google",
@@ -3282,19 +3324,7 @@ private fun AuthScreen(
                                     }
                                 }
                             )
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Divider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
-                                Text(
-                                    "oppure con email",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                                Divider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
-                            }
+
                         }
 
                         if (redeem) {
