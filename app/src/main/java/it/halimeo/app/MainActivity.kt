@@ -2944,7 +2944,7 @@ private fun AuthScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(
-                            if (recovery) Icons.Default.Key else if (redeem) Icons.Default.PersonAddAlt1 else Icons.Default.LockPerson,
+                            if (recovery) Icons.Default.Key else if (redeem) Icons.Default.PersonAdd else Icons.Default.Lock,
                             contentDescription = null,
                             tint = accent,
                             modifier = Modifier.size(17.dp)
