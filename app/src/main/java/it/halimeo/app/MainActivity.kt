@@ -108,6 +108,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.styropyr0.prismal.drawPrismalGlass
+import com.styropyr0.prismal.sources.prismalGlassLayer
+import com.styropyr0.prismal.sources.rememberPrismalGlassLayer
 import com.styropyr0.prismal.prismalGlassEffects
 import dev.chrisbanes.haze.HazeFeatureFlags
 import dev.chrisbanes.haze.HazeInput
@@ -2847,9 +2849,7 @@ private fun AuthScreen(
     onSocialLogin: (String, String, String?, String?, (String) -> Unit) -> Unit
 ) {
     val authHaze = rememberHazeState()
-    val prismalBackdrop = com.styropyr0.prismal.sources.rememberPrismalCanvasSource {
-        drawRect(Brush.linearGradient(listOf(Color(0xFF18233A), Color(0xFF202B45), Color(0xFF111A2D), Color(0xFF252044))))
-    }
+    val prismalBackdrop = com.styropyr0.prismal.sources.rememberPrismalGlassLayer()
     val prismalDensity = LocalDensity.current
     val accent = MaterialTheme.colorScheme.primary
     val authViolet = Color(0xFF8D5CFF)
@@ -2935,6 +2935,7 @@ private fun AuthScreen(
             .background(haliMeoAuthBackdrop())
             .hazeSource(authHaze)
     ) {
+        Box(Modifier.fillMaxSize().prismalGlassLayer(prismalBackdrop)) {
         // Layered, theme-aware ambient waves inspired by the concept artwork.
         val atmosphere = haliMeoAtmosphere(customBackgroundColorState.value)
         val waveA = authViolet
@@ -2990,6 +2991,7 @@ private fun AuthScreen(
                         CircleShape
                     )
             )
+        }
         }
         Column(
             Modifier.fillMaxSize()
@@ -3173,7 +3175,7 @@ private fun AuthScreen(
                                 .drawPrismalGlass(
                                     backdrop = prismalBackdrop,
                                     shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
-                                    effects = prismalGlassEffects(prismalDensity)
+                                    effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.42f)
                                 ),
                                 shape = fieldShape,
                                 singleLine = true,
