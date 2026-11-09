@@ -45,6 +45,9 @@ class HaliMeoVisualTokensTest {
         assertTrue(kotlin.math.abs(violet.strongSurface.blue - cyan.strongSurface.blue) < 0.01f)
         assertTrue(violet.strongSurface.red < 0.20f)
         assertTrue(violet.strongSurface.green < 0.22f)
+        assertTrue(kotlin.math.abs(violet.outline.red - cyan.outline.red) < 0.01f)
+        assertTrue(kotlin.math.abs(violet.outline.green - cyan.outline.green) < 0.01f)
+        assertTrue(kotlin.math.abs(violet.outline.blue - cyan.outline.blue) < 0.01f)
     }
 
     @Test
