@@ -2710,7 +2710,14 @@ private fun InviteActivationScreen(
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     Box(
-        Modifier.fillMaxSize().background(haliMeoAuthBackdrop()),
+        Modifier.fillMaxSize().background(
+                Brush.linearGradient(
+                    0f to Color(0xFF080B19),
+                    0.34f to Color(0xFF191A3B),
+                    0.68f to Color(0xFF202443),
+                    1f to Color(0xFF090D1B)
+                )
+            ),
         contentAlignment = Alignment.Center
     ) {
         Card(
