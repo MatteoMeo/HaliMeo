@@ -311,8 +311,8 @@ private fun frostedEdgeColor(): Color = haliMeoVisualTokens().outline
 private fun authTextFieldColors(accent: Color) = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = accent.copy(alpha = 0.82f),
     unfocusedBorderColor = Color(0xFFD0D9E8).copy(alpha = 0.30f),
-    focusedContainerColor = Color(0xFFB7C9E8).copy(alpha = 0.10f),
-    unfocusedContainerColor = Color(0xFFB7C9E8).copy(alpha = 0.045f),
+    focusedContainerColor = Color(0xFFB7C9E8).copy(alpha = 0.17f),
+    unfocusedContainerColor = Color(0xFFB7C9E8).copy(alpha = 0.12f),
     focusedTextColor = Color(0xFFF5F6FC),
     unfocusedTextColor = Color(0xFFF0F2FA),
     focusedLabelColor = accent,
@@ -394,21 +394,21 @@ private val appThemeModeState = mutableStateOf("dark")
 @Composable
 private fun haliMeoAuthBackdrop(): Brush {
     val colors = MaterialTheme.colorScheme
+    val atmosphere = haliMeoAtmosphere(customBackgroundColorState.value)
+    val accent = atmosphere?.primary ?: colors.primary
+    val secondary = atmosphere?.secondary ?: colors.tertiary
     return if (isHaliMeoDark()) {
-        Brush.verticalGradient(
-            listOf(
-                Color(0xFF17152B),
-                Color(0xFF101B30),
-                Color(0xFF080D17)
-            )
+        Brush.linearGradient(
+            0f to Color(0xFF080D19),
+            0.42f to Color(0xFF11182B),
+            0.76f to accent.copy(alpha = 0.20f).compositeOver(Color(0xFF101326)),
+            1f to Color(0xFF080D17)
         )
     } else {
-        Brush.verticalGradient(
-            listOf(
-                colors.primary.copy(alpha = 0.09f).compositeOver(Color(0xFFF4F6F9)),
-                colors.tertiary.copy(alpha = 0.045f).compositeOver(Color(0xFFEDF0F5)),
-                Color(0xFFF8F8FA)
-            )
+        Brush.linearGradient(
+            0f to accent.copy(alpha = 0.13f).compositeOver(Color(0xFFF2F3F9)),
+            0.52f to secondary.copy(alpha = 0.10f).compositeOver(Color(0xFFEAEDF5)),
+            1f to Color(0xFFF8F8FC)
         )
     }
 }
@@ -2780,11 +2780,14 @@ private fun AuthScreen(
     val authHaze = rememberHazeState()
     val glassStyle = remember {
         HazeBlurStyle {
-            blurRadius(42.dp)
-            backgroundColor(Color(0x501A2638))
-            colorEffects(listOf(HazeColorEffect.tint(Color(0xFF9C8CFF).copy(alpha = 0.075f))))
-            fallbackColorEffect(HazeColorEffect.tint(Color(0xFF9EABC4).copy(alpha = 0.18f)))
-            noiseFactor(0.035f)
+            blurRadius(58.dp)
+            backgroundColor(Color(0x661A2638))
+            colorEffects(listOf(
+                HazeColorEffect.tint(accent.copy(alpha = 0.11f)),
+                HazeColorEffect.tint(Color(0xFFE4E9F8).copy(alpha = 0.045f))
+            ))
+            fallbackColorEffect(HazeColorEffect.tint(Color(0xFF9EABC4).copy(alpha = 0.22f)))
+            noiseFactor(0.045f)
         }
     }
     var redeem by remember { mutableStateOf(false) }
@@ -2872,91 +2875,102 @@ private fun AuthScreen(
             Modifier.fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .imePadding()
-                .padding(horizontal = 22.dp, vertical = 26.dp),
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(horizontal = 22.dp, vertical = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            Spacer(Modifier.height(18.dp))
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+            Spacer(Modifier.height(20.dp))
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(
-                        Modifier.size(54.dp)
-                            .clip(RoundedCornerShape(19.dp))
-                            .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.28f), MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.52f))))
-                            .border(1.dp, accent.copy(alpha = 0.42f), RoundedCornerShape(19.dp)),
+                        Modifier.size(88.dp)
+                            .clip(RoundedCornerShape(27.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(accent.copy(alpha = 0.34f), Color(0xFF171B34).copy(alpha = 0.88f), accent.copy(alpha = 0.18f))
+                                )
+                            )
+                            .border(1.dp, accent.copy(alpha = 0.48f), RoundedCornerShape(27.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Image(
                             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_launcher_foreground),
                             contentDescription = "Logo HaliMeo",
-                            modifier = Modifier.fillMaxSize().padding(5.dp),
+                            modifier = Modifier.fillMaxSize().padding(8.dp),
                             contentScale = ContentScale.Fit,
                             colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(accent)
                         )
                     }
-                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text("HALIMEO", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.2.sp, color = MaterialTheme.colorScheme.onSurface)
-                        Text("IL VOSTRO SPAZIO PRIVATO", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.05.sp)
-                    }
-                }
-                Row(
-                    Modifier.clip(CircleShape)
-                        .background(frostedSurfaceColor())
-                        .border(1.dp, frostedEdgeColor().copy(alpha = 0.7f), CircleShape)
-                        .padding(horizontal = 11.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(7.dp)
-                ) {
-                    Box(
-                        Modifier.size(7.dp).background(
-                            when (serverOnline) {
-                                true -> Color(0xFF75D6A2)
-                                false -> Color(0xFFFF8996)
-                                null -> Color(0xFFFFC66D)
-                            },
-                            CircleShape
-                        )
+                    Text(
+                        "HaliMeo",
+                        style = MaterialTheme.typography.headlineLarge.copy(letterSpacing = (-0.7).sp),
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        if (serverOnline == true) "ONLINE" else if (serverOnline == false) "OFFLINE" else "CHECK",
-                        style = MaterialTheme.typography.labelSmall,
+                        "Il vostro diario privato",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        Modifier.padding(top = 2.dp).clip(CircleShape)
+                            .background(frostedSurfaceColor().copy(alpha = 0.72f))
+                            .border(1.dp, frostedEdgeColor().copy(alpha = 0.55f), CircleShape)
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            Modifier.size(6.dp).background(
+                                when (serverOnline) {
+                                    true -> Color(0xFF75D6A2)
+                                    false -> Color(0xFFFF8996)
+                                    null -> Color(0xFFFFC66D)
+                                },
+                                CircleShape
+                            )
+                        )
+                        Text(
+                            if (serverOnline == true) "ONLINE" else if (serverOnline == false) "OFFLINE" else "CHECK",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+
+            if (redeem || recovery) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        if (redeem) "Cominciamo insieme." else "Ritroviamo il tuo accesso.",
+                        style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        if (redeem) "Crea il tuo account. L'invito verrà richiesto per attivarlo."
+                        else "Ti aiutiamo a rientrare nel tuo spazio condiviso.",
+                        style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                Spacer(Modifier.height(12.dp))
+            } else {
+                Spacer(Modifier.height(2.dp))
             }
-            Spacer(Modifier.height(34.dp))
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    if (redeem) "Cominciamo\ninsieme." else if (recovery) "Ritroviamo\nil tuo accesso." else "Bentornato\na casa.",
-                    style = MaterialTheme.typography.displaySmall.copy(letterSpacing = (-1.7).sp, lineHeight = 43.sp),
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    if (redeem) "Crea il tuo account. L'invito verrà richiesto per attivarlo."
-                    else if (recovery) "Ti aiutiamo a rientrare nel tuo spazio condiviso."
-                    else "I vostri momenti, custoditi in un posto tutto vostro.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(Modifier.height(25.dp))
-
 
             Card(
                 modifier = Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(36.dp))
                     .hazeBlur(
                         input = HazeInput.Backdrop(authHaze),
                         style = glassStyle,
                         performanceMode = HazePerformanceMode.Default,
                         expandLayerBounds = true
                     )
+                    .clip(RoundedCornerShape(36.dp))
                     .background(
                         Brush.linearGradient(
                             listOf(
@@ -2982,23 +2996,25 @@ private fun AuthScreen(
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
                 Column(
-                    Modifier.padding(horizontal = 21.dp, vertical = 23.dp),
-                    verticalArrangement = Arrangement.spacedBy(15.dp)
+                    Modifier.padding(horizontal = 22.dp, vertical = 25.dp),
+                    verticalArrangement = Arrangement.spacedBy(17.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(
-                            if (recovery) Icons.Default.Key else if (redeem) Icons.Default.PersonAdd else Icons.Default.Lock,
-                            contentDescription = null,
-                            tint = accent,
-                            modifier = Modifier.size(17.dp)
-                        )
-                        Text(
-                            if (recovery) "RECUPERO ACCOUNT" else if (redeem) "NUOVO ACCOUNT" else "ACCESSO RISERVATO",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.25.sp,
-                            color = accent
-                        )
+                    if (recovery || redeem) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(
+                                if (recovery) Icons.Default.Key else if (redeem) Icons.Default.PersonAdd else Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = accent,
+                                modifier = Modifier.size(17.dp)
+                            )
+                            Text(
+                                if (recovery) "RECUPERO ACCOUNT" else if (redeem) "NUOVO ACCOUNT" else "ACCESSO RISERVATO",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.25.sp,
+                                color = accent
+                            )
+                        }
                     }
                     if (recovery) {
                         Text(
@@ -3136,7 +3152,7 @@ private fun AuthScreen(
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
                             ),
-                            colors = haliMeoTextFieldColors()
+                            colors = authTextFieldColors(accent)
                         )
                         OutlinedTextField(
                             value = pass,
@@ -3162,7 +3178,7 @@ private fun AuthScreen(
                                     )
                                 }
                             },
-                            colors = haliMeoTextFieldColors()
+                            colors = authTextFieldColors(accent)
                         )
                         if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
                         if (info.isNotBlank()) Text(info, color = accent)
