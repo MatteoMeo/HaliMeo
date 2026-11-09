@@ -2747,7 +2747,7 @@ private fun AuthScreen(
 
                         if (!recovery) {
                             OutlinedButton(
-                                enabled = !busy && !socialBusy && (!redeem || (inviteCode.isNotBlank() && name.isNotBlank())),
+                                enabled = !busy && !socialBusy,
                                 onClick = {
                                     socialBusy = true
                                     error = ""
