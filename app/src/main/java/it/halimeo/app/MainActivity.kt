@@ -3289,7 +3289,12 @@ private fun AuthScreen(
                                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Password
                             ),
                             trailingIcon = {
-                                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                IconButton(
+                                    onClick = { passwordVisible = !passwordVisible },
+                                    modifier = Modifier.clip(CircleShape)
+                                        .background(Color(0xFF53617E).copy(alpha = 0.20f))
+                                        .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.16f), CircleShape)
+                                ) {
                                     Icon(
                                         if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                         contentDescription = if (passwordVisible) "Nascondi password" else "Mostra password"
