@@ -364,7 +364,6 @@ private val reduceAnimationsState = mutableStateOf(false)
 private val reduceStaticEffectsState = mutableStateOf(false)
 private val appThemeModeState = mutableStateOf("dark")
 @Composable
-@Composable
 private fun haliMeoAuthBackdrop(): Brush {
     val colors = MaterialTheme.colorScheme
     return if (isHaliMeoDark()) {
