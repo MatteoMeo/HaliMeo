@@ -2931,11 +2931,9 @@ private fun AuthScreen(
     val dark = isHaliMeoDark()
 
     Box(
-        Modifier.fillMaxSize()
-            .background(haliMeoAuthBackdrop())
-            .hazeSource(authHaze)
+        Modifier.fillMaxSize().hazeSource(authHaze)
     ) {
-        Box(Modifier.fillMaxSize().prismalGlassLayer(prismalBackdrop)) {
+        Box(Modifier.fillMaxSize().background(haliMeoAuthBackdrop()).prismalGlassLayer(prismalBackdrop)) {
         // Layered, theme-aware ambient waves inspired by the concept artwork.
         val atmosphere = haliMeoAtmosphere(customBackgroundColorState.value)
         val waveA = authViolet
