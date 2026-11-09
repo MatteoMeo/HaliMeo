@@ -316,8 +316,8 @@ private fun frostedEdgeColor(): Color = haliMeoVisualTokens().outline
 private fun authTextFieldColors(accent: Color) = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = accent.copy(alpha = 0.82f),
     unfocusedBorderColor = Color(0xFFD0D9E8).copy(alpha = 0.30f),
-    focusedContainerColor = Color(0xFFB7C9E8).copy(alpha = 0.17f),
-    unfocusedContainerColor = Color(0xFFB7C9E8).copy(alpha = 0.12f),
+    focusedContainerColor = Color.Transparent,
+    unfocusedContainerColor = Color.Transparent,
     focusedTextColor = Color(0xFFF5F6FC),
     unfocusedTextColor = Color(0xFFF0F2FA),
     focusedLabelColor = accent,
@@ -2844,9 +2844,10 @@ private fun AuthScreen(
             tint(accent.copy(alpha = 0.105f))
             optics(
                 GlassOptics.regular.copy(
-                    refractionStrength = 0.78f,
-                    refractionHeightFraction = 0.30f,
-                    depth = OpticalSizeValue.Fixed(0.48f)
+                    blurRadius = OpticalSizeValue.Fixed(24.dp),
+                    refractionStrength = 0.84f,
+                    refractionHeightFraction = 0.32f,
+                    depth = OpticalSizeValue.Fixed(0.54f)
                 )
             )
             specularIntensity(0.76f)
@@ -2867,9 +2868,10 @@ private fun AuthScreen(
             optics(
                 GlassOptics.regular.copy(
                     blurRadius = OpticalSizeValue.Fixed(10.dp),
-                    refractionStrength = 0.62f,
-                    refractionHeightFraction = 0.24f,
-                    depth = OpticalSizeValue.Fixed(0.28f)
+                    blurRadius = OpticalSizeValue.Fixed(12.dp),
+                    refractionStrength = 0.72f,
+                    refractionHeightFraction = 0.27f,
+                    depth = OpticalSizeValue.Fixed(0.34f)
                 )
             )
             specularIntensity(0.58f)
@@ -3083,10 +3085,10 @@ private fun AuthScreen(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color.White.copy(alpha = 0.105f),
-                                Color.White.copy(alpha = 0.025f),
-                                accent.copy(alpha = 0.045f),
-                                Color.Black.copy(alpha = 0.12f)
+                                Color.White.copy(alpha = 0.16f),
+                                Color.White.copy(alpha = 0.055f),
+                                accent.copy(alpha = 0.075f),
+                                Color.Black.copy(alpha = 0.16f)
                             )
                         ),
                         RoundedCornerShape(36.dp)
@@ -3145,7 +3147,7 @@ private fun AuthScreen(
                             onValueChange = { email = it.trim() },
                             label = { Text("Indirizzo email") },
                             leadingIcon = { Icon(Icons.Default.MailOutline, null) },
-                            modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).semantics {
+                            modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).clip(fieldShape).semantics {
                                 contentType = androidx.compose.ui.autofill.ContentType.EmailAddress
                             },
                             shape = fieldShape,
@@ -3161,7 +3163,7 @@ private fun AuthScreen(
                                 onValueChange = { code = it.filter(Char::isDigit).take(8) },
                                 label = { Text("Codice di verifica") },
                                 leadingIcon = { Icon(Icons.Default.Pin, null) },
-                                modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle),
+                                modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).clip(fieldShape),
                                 shape = fieldShape,
                                 singleLine = true,
                                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
@@ -3174,7 +3176,7 @@ private fun AuthScreen(
                                 onValueChange = { newPassword = it },
                                 label = { Text("Nuova password") },
                                 leadingIcon = { Icon(Icons.Default.Lock, null) },
-                                modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle),
+                                modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).clip(fieldShape),
                                 shape = fieldShape,
                                 singleLine = true,
                                 visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
@@ -3242,7 +3244,7 @@ private fun AuthScreen(
                                 onValueChange = { name = it },
                                 label = { Text("Come vuoi essere chiamato?") },
                                 leadingIcon = { Icon(Icons.Default.PersonOutline, null) },
-                                modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle),
+                                modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).clip(fieldShape),
                                 shape = fieldShape,
                                 singleLine = true,
                                 colors = haliMeoTextFieldColors()
@@ -3254,7 +3256,7 @@ private fun AuthScreen(
                             onValueChange = { email = it.trim() },
                             placeholder = { Text("Email") },
                             leadingIcon = { Icon(Icons.Default.MailOutline, null) },
-                            modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).semantics {
+                            modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).clip(fieldShape).semantics {
                                 contentType = androidx.compose.ui.autofill.ContentType.Username
                             },
                             shape = fieldShape,
@@ -3269,7 +3271,7 @@ private fun AuthScreen(
                             onValueChange = { pass = it },
                             placeholder = { Text("Password") },
                             leadingIcon = { Icon(Icons.Default.Lock, null) },
-                            modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).semantics {
+                            modifier = Modifier.fillMaxWidth().hazeGlass(input = HazeInput.Backdrop(authHaze), style = fieldGlassStyle).clip(fieldShape).semantics {
                                 contentType = androidx.compose.ui.autofill.ContentType.Password
                             },
                             shape = fieldShape,
@@ -3312,11 +3314,10 @@ private fun AuthScreen(
                                 .background(
                                     Brush.verticalGradient(
                                         listOf(
-                                            Color.White.copy(alpha = 0.24f),
+                                            Color.White.copy(alpha = 0.20f),
                                             accent.copy(alpha = 0.98f),
-                                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.96f),
-                                            accent.copy(alpha = 0.88f),
-                                            Color.Black.copy(alpha = 0.12f)
+                                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.92f),
+                                            accent.copy(alpha = 0.94f)
                                         )
                                     )
                                 )
