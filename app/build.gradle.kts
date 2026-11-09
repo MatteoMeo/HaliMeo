@@ -61,6 +61,7 @@ dependencies {
     implementation("androidx.compose.material3.adaptive:adaptive:1.4.0-alpha03")
     implementation("androidx.compose.material3.adaptive:adaptive-layout:1.4.0-alpha03")
     implementation("androidx.compose.material3.adaptive:adaptive-navigation:1.4.0-alpha03")
+    implementation("androidx.window:window:1.5.1")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
