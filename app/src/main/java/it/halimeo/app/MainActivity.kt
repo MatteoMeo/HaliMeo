@@ -322,15 +322,15 @@ private fun authTextFieldColors(accent: Color) = OutlinedTextFieldDefaults.color
     unfocusedBorderColor = Color.Transparent,
     focusedContainerColor = Color.Transparent,
     unfocusedContainerColor = Color.Transparent,
-    focusedTextColor = Color(0xFFF5F6FC),
-    unfocusedTextColor = Color(0xFFF0F2FA),
+    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+    unfocusedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.94f),
     focusedLabelColor = accent,
-    unfocusedLabelColor = Color(0xFFC5CCDA),
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
     cursorColor = accent,
-    focusedPlaceholderColor = Color(0xFFC5CCDA),
-    unfocusedPlaceholderColor = Color(0xFFC5CCDA),
+    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
     focusedLeadingIconColor = accent,
-    unfocusedLeadingIconColor = Color(0xFFD0D7E5)
+    unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
 )
 
 @Composable
@@ -2936,8 +2936,9 @@ private fun AuthScreen(
         Box(Modifier.fillMaxSize().background(haliMeoAuthBackdrop()).prismalGlassLayer(prismalBackdrop)) {
         // Layered, theme-aware ambient waves inspired by the concept artwork.
         val atmosphere = haliMeoAtmosphere(customBackgroundColorState.value)
-        val waveA = authViolet
-        val waveB = Color(0xFF354B83)
+        val waveA = accent
+        val waveB = MaterialTheme.colorScheme.secondary
+        val waveC = MaterialTheme.colorScheme.tertiary
         if (dark) {
             Box(
                 Modifier.align(Alignment.TopStart)
@@ -2946,7 +2947,7 @@ private fun AuthScreen(
                     .graphicsLayer { rotationZ = -24f }
                     .background(
                         Brush.linearGradient(
-                            listOf(waveA.copy(alpha = 0.34f), waveB.copy(alpha = 0.24f), Color.Transparent)
+                            listOf(waveA.copy(alpha = 0.48f), waveB.copy(alpha = 0.34f), waveC.copy(alpha = 0.20f), Color.Transparent)
                         ),
                         RoundedCornerShape(topStart = 150.dp, topEnd = 120.dp, bottomEnd = 220.dp, bottomStart = 80.dp)
                     )
@@ -2959,7 +2960,7 @@ private fun AuthScreen(
                     .graphicsLayer { rotationZ = -31f }
                     .background(
                         Brush.linearGradient(
-                            listOf(Color.Transparent, waveB.copy(alpha = 0.22f), waveA.copy(alpha = 0.26f))
+                            listOf(Color.Transparent, waveB.copy(alpha = 0.32f), waveC.copy(alpha = 0.26f), waveA.copy(alpha = 0.38f))
                         ),
                         RoundedCornerShape(topStart = 190.dp, topEnd = 80.dp, bottomEnd = 170.dp, bottomStart = 120.dp)
                     )
@@ -2972,7 +2973,7 @@ private fun AuthScreen(
                     .graphicsLayer { rotationZ = -19f }
                     .background(
                         Brush.horizontalGradient(
-                            listOf(Color.Transparent, waveA.copy(alpha = 0.22f), waveB.copy(alpha = 0.17f))
+                            listOf(Color.Transparent, waveA.copy(alpha = 0.34f), waveB.copy(alpha = 0.28f), waveC.copy(alpha = 0.22f))
                         ),
                         RoundedCornerShape(topStart = 180.dp, topEnd = 110.dp, bottomEnd = 150.dp, bottomStart = 210.dp)
                     )
@@ -3095,10 +3096,10 @@ private fun AuthScreen(
                             drawRect(
                                 Brush.verticalGradient(
                                     listOf(
-                                        Color.White.copy(alpha = 0.22f),
-                                        Color.White.copy(alpha = 0.105f),
-                                        Color(0xFFB9C5D8).copy(alpha = 0.055f),
-                                        Color(0xFF101827).copy(alpha = 0.12f)
+                                        Color.White.copy(alpha = 0.34f),
+                                        accent.copy(alpha = 0.22f),
+                                        Color(0xFFB9C5D8).copy(alpha = 0.16f),
+                                        Color(0xFF101827).copy(alpha = 0.30f)
                                     )
                                 )
                             )
@@ -3106,7 +3107,7 @@ private fun AuthScreen(
                     )
                     .clip(RoundedCornerShape(36.dp)),
                 shape = RoundedCornerShape(36.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor().copy(alpha = 0.78f))
             ) {
                 Column(
                     Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
@@ -3152,7 +3153,7 @@ private fun AuthScreen(
                                 .shadow(9.dp, fieldShape, ambientColor = Color.White.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.24f))
                                 .clip(fieldShape)
                                 .background(
-                                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.055f), Color.Black.copy(alpha = 0.07f))),
+                                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.25f), accent.copy(alpha = 0.10f), Color.White.copy(alpha = 0.14f), Color.Black.copy(alpha = 0.16f))),
                                     fieldShape
                                 )
                                 .drawPrismalGlass(
@@ -3214,10 +3215,10 @@ private fun AuthScreen(
                                         drawRect(
                                             Brush.verticalGradient(
                                                 listOf(
-                                                    Color.White.copy(alpha = 0.19f),
-                                                    Color.White.copy(alpha = 0.085f),
-                                                    Color(0xFFBFC9D8).copy(alpha = 0.035f),
-                                                    Color.Black.copy(alpha = 0.095f)
+                                                    Color.White.copy(alpha = 0.30f),
+                                                    accent.copy(alpha = 0.13f),
+                                                    Color(0xFFBFC9D8).copy(alpha = 0.13f),
+                                                    Color.Black.copy(alpha = 0.19f)
                                                 )
                                             )
                                         )
@@ -3427,8 +3428,15 @@ private fun AuthScreen(
                                 .shadow(16.dp, RoundedCornerShape(50), ambientColor = accent.copy(alpha = 0.34f), spotColor = Color.Black.copy(alpha = 0.30f))
                                 .clip(RoundedCornerShape(50))
                                 .background(
-                                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.30f), accent.copy(alpha = 0.30f), accent.copy(alpha = 0.16f)))
+                                    Brush.linearGradient(
+                                        listOf(
+                                            accent.copy(alpha = 0.98f),
+                                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.92f),
+                                            accent.copy(alpha = 0.86f)
+                                        )
+                                    )
                                 )
+                                .border(1.dp, Color.White.copy(alpha = 0.32f), RoundedCornerShape(50))
 
                                 .clickable(enabled = canSubmit) {
                                     busy = true
