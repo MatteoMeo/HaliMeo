@@ -43,13 +43,14 @@ internal data class HaliMeoVisualTokens(
             }
 
             val base = Color(0xFF090C12)
-            val surfaceAlpha = if (reduceEffects) 0.10f else 0.16f
+            // Glass is a material, not a theme-colored panel. Keep its body neutral
+            // so violet/cyan/green accents remain readable as edge light and states.
             return HaliMeoVisualTokens(
                 background = base,
-                surface = accent.copy(alpha = surfaceAlpha).compositeOver(Color(0xB9101420)),
-                strongSurface = accent.copy(alpha = if (reduceEffects) 0.13f else 0.22f).compositeOver(Color(0xD10D1120)),
+                surface = if (reduceEffects) Color(0xA9161C27) else Color(0xB81A202B),
+                strongSurface = if (reduceEffects) Color(0xC5161D2A) else Color(0xD91B2433),
                 elevatedSurface = Color(0xF21A1D2C),
-                outline = accent.copy(alpha = if (reduceEffects) 0.16f else 0.28f),
+                outline = Color(0xFF9BA9BE).copy(alpha = if (reduceEffects) 0.13f else 0.22f),
                 ambientAccent = accent.copy(alpha = if (reduceEffects) 0.20f else 0.42f),
                 ambientSecondary = accent.copy(alpha = if (reduceEffects) 0.08f else 0.18f),
                 onSurface = Color(0xFFF4F3FA),
