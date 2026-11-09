@@ -23,6 +23,8 @@ android {
         versionName = alphaVersionName
         val apiBaseUrl = (project.findProperty("HALIMEO_API_BASE_URL") as String?) ?: "https://api.halimeo.bid/"
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"609968712989-909cckera569ft2g5ivrp79obp7ij4hn.apps.googleusercontent.com\"")
+        buildConfigField("String", "FACEBOOK_APP_ID", "\"2135436027084791\"")
         buildConfigField("int", "APP_VERSION_CODE", alphaVersionCode.toString())
     }
     buildFeatures { compose = true; buildConfig = true }
@@ -61,6 +63,9 @@ dependencies {
     ksp("androidx.room:room-compiler:2.8.5")
     implementation("androidx.work:work-runtime-ktx:2.12.0")
     implementation("androidx.datastore:datastore-preferences:1.3.0")
+    implementation("androidx.credentials:credentials:1.6.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.2.0")
     implementation("com.squareup.retrofit2:retrofit:3.0.0")
     implementation("com.squareup.retrofit2:converter-gson:3.0.0")
     implementation("com.squareup.okhttp3:okhttp:5.4.0")
