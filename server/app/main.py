@@ -291,7 +291,7 @@ def login(data: LoginIn):
         row = c.execute("SELECT * FROM users WHERE email=? AND disabled=0", (data.email.lower(),)).fetchone()
     if not row or not pwd.verify(data.password, row["password_hash"]):
         raise HTTPException(401, "Email o password non corretti")
-    return {"accessToken":make_token(dict(row)),"tokenType":"Bearer",**public_user(dict(row))}\n
+    return {"accessToken":make_token(dict(row)),"tokenType":"Bearer",**public_user(dict(row))}
 def send_password_reset_email(destination: str, code: str):
     host = os.getenv("HALIMEO_SMTP_HOST", "").strip()
     sender = os.getenv("HALIMEO_SMTP_FROM", "").strip()
