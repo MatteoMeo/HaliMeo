@@ -314,7 +314,27 @@ private val profilePhotoRefreshState = mutableStateOf(0)
 private val reduceAnimationsState = mutableStateOf(false)
 private val reduceStaticEffectsState = mutableStateOf(false)
 private val appThemeModeState = mutableStateOf("dark")
-@Composable private fun haliMeoAuthBackdrop(): Brush = if (isHaliMeoDark()) Brush.verticalGradient(listOf(Color(0xFF0A1426), Color(0xFF0B1220), Color(0xFF080D16))) else Brush.verticalGradient(listOf(Color(0xFFF4F8FC), Color(0xFFE7F0F8), Color(0xFFF5F0FA)))
+@Composable
+private fun haliMeoAuthBackdrop(): Brush {
+    val accent = MaterialTheme.colorScheme.primary
+    return if (isHaliMeoDark()) {
+        Brush.verticalGradient(
+            listOf(
+                accent.copy(alpha = 0.15f).compositeOver(Color(0xFF0A1019)),
+                Color(0xFF0B111B),
+                Color(0xFF080C13)
+            )
+        )
+    } else {
+        Brush.verticalGradient(
+            listOf(
+                accent.copy(alpha = 0.09f).compositeOver(Color(0xFFF4F7FB)),
+                Color(0xFFEAF0F7),
+                Color(0xFFF8F7FB)
+            )
+        )
+    }
+}
 private val TextPrimary = Color(0xFFF5F7FA)
 
 
@@ -1108,6 +1128,9 @@ private fun SettingsScreen(
     val pendingSyncCount = remember(diaryEntries) { diaryEntries.count { it.syncState != "SYNCED" || it.photoSyncState != "SYNCED" } }
     val lastSyncAt by lastSyncAtState
     var isOwner by remember { mutableStateOf<Boolean?>(null) }
+    var accountEmail by remember { mutableStateOf("") }
+    var linkedSocialIdentities by remember { mutableStateOf<List<SocialIdentity>>(emptyList()) }
+    var accountSecurityBusy by remember { mutableStateOf(false) }
     var inviteCode by remember { mutableStateOf("") }
     var inviteBusy by remember { mutableStateOf(false) }
     var inviteMessage by remember { mutableStateOf("") }
@@ -1130,6 +1153,17 @@ private fun SettingsScreen(
                 .onFailure {
                     isOwner = false
                     inviteMessage = "Impossibile verificare i permessi. Controlla la connessione e aggiorna il server."
+                }
+        }
+        if (!token.isNullOrBlank()) {
+            runCatching { ApiClient.api.socialIdentities("Bearer $token") }
+                .onSuccess {
+                    accountEmail = it.email
+                    linkedSocialIdentities = it.identities
+                }
+                .onFailure {
+                    accountEmail = ""
+                    linkedSocialIdentities = emptyList()
                 }
         }
     }
@@ -1361,6 +1395,85 @@ private fun SettingsScreen(
                         Spacer(Modifier.width(8.dp))
                         Text("Modifica profilo")
                     }
+                }
+                // Account security lives with the profile, not in a separate legacy settings page.
+                Column(
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(frostedSurfaceColor())
+                        .border(1.dp, frostedEdgeColor().copy(alpha = 0.65f), RoundedCornerShape(22.dp))
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(11.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Icon(Icons.Default.Security, contentDescription = null, tint = accentText)
+                        Text("ACCESSO E SICUREZZA", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                    }
+                    Text("Email dell'account", color = secondaryText, style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        accountEmail.ifBlank { "Informazioni account non disponibili" },
+                        color = primaryText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                    Text("ACCOUNT COLLEGATI", color = secondaryText, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                    listOf("google" to "Google", "facebook" to "Facebook").forEach { (provider, label) ->
+                        val identity = linkedSocialIdentities.firstOrNull { it.provider.equals(provider, ignoreCase = true) }
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Box(
+                                Modifier.size(34.dp).clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(if (provider == "google") "G" else "f", color = accentText, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            }
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                Text(label, color = primaryText, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                Text(identity?.email ?: "Nessun account collegato", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = (if (identity != null) Color(0xFF55B98A) else MaterialTheme.colorScheme.surfaceVariant).copy(alpha = 0.16f)
+                            ) {
+                                Text(
+                                    if (identity != null) "Collegato" else "Non collegato",
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                    color = if (identity != null) Color(0xFF55B98A) else secondaryText,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            accountSecurityBusy = true
+                            activity.lifecycleScope.launch {
+                                runCatching { ApiClient.api.socialIdentities("Bearer ${session.token().orEmpty()}") }
+                                    .onSuccess {
+                                        accountEmail = it.email
+                                        linkedSocialIdentities = it.identities
+                                    }
+                                    .onFailure {
+                                        Toast.makeText(ctx, "Impossibile aggiornare lo stato degli account collegati", Toast.LENGTH_SHORT).show()
+                                    }
+                                accountSecurityBusy = false
+                            }
+                        },
+                        enabled = !accountSecurityBusy,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (accountSecurityBusy) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                        else Icon(Icons.Default.Refresh, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Aggiorna stato account")
+                    }
+                    Text(
+                        "Il recupero password avviene dalla schermata di accesso. I collegamenti social saranno gestibili da qui dopo l'attivazione dei provider nell'app.",
+                        color = secondaryText,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
                     }
                 }
