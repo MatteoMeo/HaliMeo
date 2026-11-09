@@ -63,6 +63,9 @@ jobs:
           FINGERPRINT="$(keytool -exportcert -alias halimeo-alpha -keystore "$KEYSTORE" -storepass "$HALIMEO_SIGNING_STORE_PASSWORD" | sha256sum | awk '{print $1}')"
           EXPECTED="116c6d8173c20696d4a0d13d01e2a469aee068f26d3ede8a6ddd77efe1c573df"
           echo "Impronta SHA-256 chiave permanente HaliMeo: $FINGERPRINT"
+          FACEBOOK_KEY_HASH="$(keytool -exportcert -alias halimeo-alpha -keystore "$KEYSTORE" -storepass "$HALIMEO_SIGNING_STORE_PASSWORD" | openssl sha1 -binary | openssl base64 -A)"
+          echo "Facebook Android Key Hash (da registrare in Meta Developers): $FACEBOOK_KEY_HASH"
+          echo "Google OAuth Android SHA-1 (da registrare in Google Cloud): $(keytool -list -v -keystore "$KEYSTORE" -storepass "$HALIMEO_SIGNING_STORE_PASSWORD" -alias halimeo-alpha | awk -F": " '/SHA1:/{print $2; exit}')"
           if [ "$FINGERPRINT" != "$EXPECTED" ]; then
             echo "::error::Keystore non valido: l'impronta non corrisponde alla chiave permanente HaliMeo."
             exit 1
