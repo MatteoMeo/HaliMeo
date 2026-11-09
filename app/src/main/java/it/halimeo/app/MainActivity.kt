@@ -2868,6 +2868,19 @@ private fun AuthScreen(
                 drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.13f), accent.copy(alpha = 0.045f), Color(0xFF202B43).copy(alpha = 0.13f), Color(0xFF101827).copy(alpha = 0.19f))))
             }
         )
+    val authCardModifier = Modifier.fillMaxWidth()
+        .shadow(26.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.24f), spotColor = Color.Black.copy(alpha = 0.34f))
+        .clip(RoundedCornerShape(36.dp))
+        .background(Brush.verticalGradient(listOf(Color(0xFF53617E).copy(alpha = 0.25f), Color(0xFF293650).copy(alpha = 0.42f), Color(0xFF111A2B).copy(alpha = 0.52f))))
+        .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.26f), RoundedCornerShape(36.dp))
+        .drawPrismalGlass(
+            backdrop = prismalBackdrop,
+            shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
+            effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.32f),
+            onDrawSurface = {
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF7785A2).copy(alpha = 0.10f), accent.copy(alpha = 0.055f), Color(0xFF111A2B).copy(alpha = 0.22f))))
+            }
+        )
     val glassStyle = remember {
         GlassStyle {
             backgroundColor(Color(0xFF34415D).copy(alpha = 0.42f))
@@ -3095,7 +3108,7 @@ private fun AuthScreen(
             }
 
             Card(
-                modifier = authFieldModifier,
+                modifier = authCardModifier,
                 shape = RoundedCornerShape(36.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF26324B).copy(alpha = 0.62f))
             ) {
@@ -3230,7 +3243,26 @@ private fun AuthScreen(
                                 error = ""
                                 info = ""
                             },
-                            modifier = authFieldModifier,
+                            modifier = Modifier.clip(RoundedCornerShape(50.dp))
+                                .background(Color(0xFF53617E).copy(alpha = 0.22f))
+                                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.16f), RoundedCornerShape(50.dp)),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                        ) { Text("Torna all'accesso", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    } else {
+                        if (redeem) {
+                            OutlinedTextField(
+                                value = name,
+                                onValueChange = { name = it },
+                                placeholder = { Text("Come vuoi essere chiamato?") },
+                                leadingIcon = { Icon(Icons.Default.PersonOutline, null) },
+                                modifier = authFieldModifier,
+                                shape = fieldShape,
+                                singleLine = true,
+                                colors = authTextFieldColors(accent)
+                            )
+                        }
+                        OutlinedTextField(
+                            value = email,
                             onValueChange = { email = it.trim() },
                             placeholder = { Text("Email") },
                             leadingIcon = { Icon(Icons.Default.MailOutline, null) },
