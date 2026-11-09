@@ -2802,7 +2802,7 @@ private fun AuthScreen(
         }
     }
 
-    val fieldShape = RoundedCornerShape(22.dp)
+    val fieldShape = RoundedCornerShape(18.dp)
     val accent = MaterialTheme.colorScheme.primary
     val dark = isHaliMeoDark()
 
@@ -2859,57 +2859,73 @@ private fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            Spacer(Modifier.height(10.dp))
-            Box(
-                Modifier.size(132.dp)
-                    .clip(RoundedCornerShape(39.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(accent.copy(alpha = 0.22f).compositeOver(Color(0xFF171922)), MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f))
+            Spacer(Modifier.height(18.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                    Box(
+                        Modifier.size(54.dp)
+                            .clip(RoundedCornerShape(19.dp))
+                            .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.28f), MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.52f))))
+                            .border(1.dp, accent.copy(alpha = 0.42f), RoundedCornerShape(19.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_launcher_foreground),
+                            contentDescription = "Logo HaliMeo",
+                            modifier = Modifier.fillMaxSize().padding(5.dp),
+                            contentScale = ContentScale.Fit,
+                            colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(accent)
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text("HALIMEO", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.2.sp)
+                        Text("IL VOSTRO SPAZIO PRIVATO", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.05.sp)
+                    }
+                }
+                Row(
+                    Modifier.clip(CircleShape)
+                        .background(frostedSurfaceColor())
+                        .border(1.dp, frostedEdgeColor().copy(alpha = 0.7f), CircleShape)
+                        .padding(horizontal = 11.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    Box(
+                        Modifier.size(7.dp).background(
+                            when (serverOnline) {
+                                true -> Color(0xFF75D6A2)
+                                false -> Color(0xFFFF8996)
+                                null -> Color(0xFFFFC66D)
+                            },
+                            CircleShape
                         )
                     )
-                    .border(1.dp, accent.copy(alpha = 0.48f), RoundedCornerShape(39.dp))
-                    .shadow(24.dp, RoundedCornerShape(39.dp), ambientColor = accent.copy(alpha = 0.30f), spotColor = accent.copy(alpha = 0.24f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = androidx.compose.ui.res.painterResource(R.drawable.ic_launcher_foreground),
-                    contentDescription = "Logo HaliMeo",
-                    modifier = Modifier.fillMaxSize().padding(8.dp),
-                    contentScale = ContentScale.Fit,
-                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(accent)
-                )
-            }
-            Spacer(Modifier.height(13.dp))
-            Text(
-                "HaliMeo",
-                style = MaterialTheme.typography.headlineLarge.copy(letterSpacing = (-1.1).sp),
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                "Il vostro diario privato",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(7.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier.size(6.dp).background(
-                        when (serverOnline) {
-                            true -> Color(0xFF75D6A2)
-                            false -> Color(0xFFFF8996)
-                            null -> Color(0xFFFFC66D)
-                        },
-                        CircleShape
+                    Text(
+                        if (serverOnline == true) "ONLINE" else if (serverOnline == false) "OFFLINE" else "CHECK",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                )
-                Spacer(Modifier.width(6.dp))
+                }
+            }
+            Spacer(Modifier.height(34.dp))
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    if (serverOnline == true) "Online" else serverMessage,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+                    if (redeem) "Cominciamo\ninsieme." else if (recovery) "Ritroviamo\nil tuo accesso." else "Bentornato\na casa.",
+                    style = MaterialTheme.typography.displaySmall.copy(letterSpacing = (-1.7).sp, lineHeight = 43.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    if (redeem) "Crea il tuo account. L'invito verrà richiesto per attivarlo."
+                    else if (recovery) "Ti aiutiamo a rientrare nel tuo spazio condiviso."
+                    else "I vostri momenti, custoditi in un posto tutto vostro.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Spacer(Modifier.height(25.dp))
@@ -2918,14 +2934,29 @@ private fun AuthScreen(
             Card(
                 modifier = Modifier.fillMaxWidth()
                     .hazeBlur(HazeInput.Sources(authHaze), glassStyle)
-                    .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
-                shape = RoundedCornerShape(32.dp),
+                    .border(1.dp, frostedEdgeColor().copy(alpha = 0.82f), RoundedCornerShape(28.dp)),
+                shape = RoundedCornerShape(28.dp),
                 colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
             ) {
                 Column(
-                    Modifier.padding(horizontal = 20.dp, vertical = 22.dp),
+                    Modifier.padding(horizontal = 21.dp, vertical = 23.dp),
                     verticalArrangement = Arrangement.spacedBy(15.dp)
                 ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(
+                            if (recovery) Icons.Default.Key else if (redeem) Icons.Default.PersonAddAlt1 else Icons.Default.LockPerson,
+                            contentDescription = null,
+                            tint = accent,
+                            modifier = Modifier.size(17.dp)
+                        )
+                        Text(
+                            if (recovery) "RECUPERO ACCOUNT" else if (redeem) "NUOVO ACCOUNT" else "ACCESSO RISERVATO",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.25.sp,
+                            color = accent
+                        )
+                    }
                     if (recovery) {
                         Text(
                             "Recupera il tuo accesso",
