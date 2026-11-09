@@ -3101,7 +3101,6 @@ private fun AuthScreen(
                                         listOf(Color(0xFF8D62F4), Color(0xFF713BD7), Color(0xFF8745D8))
                                     )
                                 )
-                                .graphicsLayer { alpha = if (canSubmit) 1f else 0.52f }
                                 .clickable(enabled = canSubmit) {
                                     busy = true
                                     val fail: (String) -> Unit = { error = it; busy = false }
