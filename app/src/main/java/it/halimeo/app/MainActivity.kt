@@ -116,6 +116,11 @@ import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.HazeColorEffect
 import dev.chrisbanes.haze.HazePerformanceMode
 import dev.chrisbanes.haze.blur.hazeBlur
+import dev.chrisbanes.haze.glass.GlassOptics
+import dev.chrisbanes.haze.glass.GlassStyle
+import dev.chrisbanes.haze.glass.OpticalSizeValue
+import dev.chrisbanes.haze.glass.SurfaceProfile
+import dev.chrisbanes.haze.glass.hazeGlass
 import androidx.compose.ui.graphics.compositeOver
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
@@ -2781,15 +2786,23 @@ private fun AuthScreen(
     val authHaze = rememberHazeState()
     val accent = MaterialTheme.colorScheme.primary
     val glassStyle = remember(accent) {
-        HazeBlurStyle {
-            blurRadius(58.dp)
-            backgroundColor(Color(0x661A2638))
-            colorEffects(listOf(
-                HazeColorEffect.tint(accent.copy(alpha = 0.11f)),
-                HazeColorEffect.tint(Color(0xFFE4E9F8).copy(alpha = 0.045f))
-            ))
-            fallbackColorEffect(HazeColorEffect.tint(Color(0xFF9EABC4).copy(alpha = 0.22f)))
-            noiseFactor(0.045f)
+        GlassStyle {
+            tint(accent.copy(alpha = 0.105f))
+            optics(
+                GlassOptics.regular.copy(
+                    refractionStrength = 0.78f,
+                    refractionHeightFraction = 0.30f,
+                    depth = OpticalSizeValue.Fixed(0.48f)
+                )
+            )
+            specularIntensity(0.76f)
+            ambientResponse(0.62f)
+            edgeSoftness(11.dp)
+            shape(RoundedCornerShape(36.dp))
+            surfaceProfile(SurfaceProfile.Squircle)
+            lightPosition(Alignment.TopStart)
+            rimHighlight(intensity = 0.38f, width = 1.3.dp, sides = 0.72f)
+            edgeOutline(Color.White.copy(alpha = 0.19f), width = 1.dp)
         }
     }
     var redeem by remember { mutableStateOf(false) }
@@ -2981,30 +2994,23 @@ private fun AuthScreen(
 
             Card(
                 modifier = Modifier.fillMaxWidth()
-                    .hazeBlur(
-                        input = HazeInput.Backdrop(authHaze),
-                        style = glassStyle,
-                        performanceMode = HazePerformanceMode.Default,
-                        expandLayerBounds = true
+                    .shadow(
+                        26.dp,
+                        RoundedCornerShape(36.dp),
+                        ambientColor = accent.copy(alpha = 0.18f),
+                        spotColor = Color.Black.copy(alpha = 0.30f)
                     )
-                    .clip(RoundedCornerShape(36.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(
-                                Color(0xFFB9C9DF).copy(alpha = 0.13f),
-                                Color(0xFF7186A8).copy(alpha = 0.075f),
-                                Color(0xFF9A8BCA).copy(alpha = 0.11f)
-                            )
-                        ),
-                        RoundedCornerShape(36.dp)
+                    .hazeGlass(
+                        input = HazeInput.Backdrop(authHaze),
+                        style = glassStyle
                     )
                     .border(
                         1.dp,
                         Brush.linearGradient(
                             listOf(
-                                Color(0xFFE2E9F7).copy(alpha = 0.52f),
-                                Color(0xFF9FB5D7).copy(alpha = 0.20f),
-                                Color(0xFFE2D9FF).copy(alpha = 0.42f)
+                                Color.White.copy(alpha = 0.38f),
+                                accent.copy(alpha = 0.16f),
+                                Color.White.copy(alpha = 0.08f)
                             )
                         ),
                         RoundedCornerShape(36.dp)
