@@ -293,10 +293,13 @@ def list_social_identities(user=Depends(current_user)):
             "SELECT provider, email, created_at FROM social_identities WHERE user_id=? ORDER BY provider",
             (user["id"],)
         ).fetchall()
-    return {"identities": [
-        {"provider": row["provider"], "email": row["email"], "linkedAt": row["created_at"]}
-        for row in rows
-    ]}
+    return {
+        "email": user["email"],
+        "identities": [
+            {"provider": row["provider"], "email": row["email"], "linkedAt": row["created_at"]}
+            for row in rows
+        ]
+    }
 
 
 @app.post("/v1/auth/login")
