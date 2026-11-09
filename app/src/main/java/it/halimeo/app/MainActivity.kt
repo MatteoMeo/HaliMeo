@@ -308,7 +308,6 @@ private fun haliMeoVisualTokens(): HaliMeoVisualTokens = HaliMeoVisualTokens.cre
 private fun frostedEdgeColor(): Color = haliMeoVisualTokens().outline
 
 @Composable
-@Composable
 private fun authTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = Color(0xFFD5C8FF).copy(alpha = 0.72f),
     unfocusedBorderColor = Color(0xFFB9C9DF).copy(alpha = 0.34f),
@@ -325,6 +324,7 @@ private fun authTextFieldColors() = OutlinedTextFieldDefaults.colors(
     unfocusedLeadingIconColor = Color(0xFFD0D7E5)
 )
 
+@Composable
 private fun haliMeoTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.78f),
     unfocusedBorderColor = haliMeoVisualTokens().outline.copy(alpha = 0.72f),
