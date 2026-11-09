@@ -123,6 +123,11 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.facebook.CallbackManager
+import com.facebook.FacebookCallback
+import com.facebook.FacebookException
+import com.facebook.login.LoginManager
+import com.facebook.login.LoginResult
 import androidx.lifecycle.lifecycleScope
 import androidx.metrics.performance.JankStats
 import androidx.navigation.compose.*
@@ -471,6 +476,32 @@ private val TextPrimary = Color(0xFFF5F7FA)
         )
 }
 class MainActivity:ComponentActivity() {
+    private val facebookCallbackManager = CallbackManager.Factory.create()
+
+    fun startFacebookLogin(onToken: (String) -> Unit, onCancel: () -> Unit, onError: (String) -> Unit) {
+        LoginManager.getInstance().registerCallback(facebookCallbackManager, object : FacebookCallback<LoginResult> {
+            override fun onSuccess(result: LoginResult) {
+                LoginManager.getInstance().unregisterCallback(facebookCallbackManager)
+                onToken(result.accessToken.token)
+            }
+            override fun onCancel() {
+                LoginManager.getInstance().unregisterCallback(facebookCallbackManager)
+                onCancel()
+            }
+            override fun onError(error: FacebookException) {
+                LoginManager.getInstance().unregisterCallback(facebookCallbackManager)
+                onError(error.localizedMessage ?: "Accesso Facebook non riuscito.")
+            }
+        })
+        LoginManager.getInstance().logInWithReadPermissions(this, listOf("email", "public_profile"))
+    }
+
+    @Deprecated("Facebook SDK result forwarding")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        facebookCallbackManager.onActivityResult(requestCode, resultCode, data)
+    }
+
     private var frameStats: JankStats? = null
     private var lastForegroundUpdateCheckAt: Long = 0L
 
