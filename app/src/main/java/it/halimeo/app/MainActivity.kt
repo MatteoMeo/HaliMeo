@@ -297,11 +297,20 @@ private val FrostedSurfaceStrong = Color(0xD90D1420)
 private val OneUiMotionEasing = CubicBezierEasing(0.22f, 0.25f, 0f, 1f)
 @Composable private fun frostedGlassBrush(): Brush = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.065f), Color.Transparent, MaterialTheme.colorScheme.primary.copy(alpha = 0.075f)))
 @Composable private fun isHaliMeoDark(): Boolean = when (appThemeModeState.value) { "light" -> false; "system" -> isSystemInDarkTheme(); else -> true }
-@Composable private fun frostedEdgeColor(): Color = MaterialTheme.colorScheme.primary.copy(alpha = if (isHaliMeoDark()) 0.22f else 0.16f)
+@Composable
+private fun haliMeoVisualTokens(): HaliMeoVisualTokens = HaliMeoVisualTokens.create(
+    accent = MaterialTheme.colorScheme.primary,
+    dark = isHaliMeoDark(),
+    reduceEffects = reduceStaticEffectsState.value
+)
+
+@Composable
+private fun frostedEdgeColor(): Color = haliMeoVisualTokens().outline
+
 @Composable
 private fun haliMeoTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
-    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.34f),
+    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.78f),
+    unfocusedBorderColor = haliMeoVisualTokens().outline.copy(alpha = 0.72f),
     focusedContainerColor = frostedSurfaceStrongColor(),
     unfocusedContainerColor = frostedSurfaceColor(),
     focusedTextColor = MaterialTheme.colorScheme.onSurface,
@@ -316,11 +325,13 @@ private fun haliMeoTextFieldColors() = OutlinedTextFieldDefaults.colors(
 )
 
 @Composable
-private fun haliMeoPopupSurfaceColor(): Color =
-    MaterialTheme.colorScheme.surface.copy(alpha = 1f)
+private fun haliMeoPopupSurfaceColor(): Color = haliMeoVisualTokens().elevatedSurface
 
-@Composable private fun frostedSurfaceColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.10f else 0.18f).compositeOver(Color(0xA9101419)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.075f).compositeOver(Color(0xE8FFFFFF))
-@Composable private fun frostedSurfaceStrongColor(): Color = if (isHaliMeoDark()) MaterialTheme.colorScheme.primary.copy(alpha = if (reduceStaticEffectsState.value) 0.12f else 0.22f).compositeOver(Color(0xC20C0F12)) else MaterialTheme.colorScheme.primary.copy(alpha = 0.11f).compositeOver(Color(0xF0FFFFFF))
+@Composable
+private fun frostedSurfaceColor(): Color = haliMeoVisualTokens().surface
+
+@Composable
+private fun frostedSurfaceStrongColor(): Color = haliMeoVisualTokens().strongSurface
 private val customBackgroundColorState = mutableStateOf("default")
 private val customBackgroundUriState = mutableStateOf<String?>(null)
 private val backgroundBlurState = mutableStateOf(0f)
