@@ -2850,8 +2850,8 @@ private fun AuthScreen(
     val fieldShape = RoundedCornerShape(50.dp)
     val glassStyle = remember {
         GlassStyle {
-            backgroundColor(Color(0xFF171A32).copy(alpha = 0.28f))
-            tint(Color(0xFFD9D5F5).copy(alpha = 0.075f))
+            backgroundColor(Color.Transparent)
+            tint(Color.White.copy(alpha = 0.055f))
             optics(
                 GlassOptics.regular.copy(
                     blurRadius = OpticalSizeValue.Fixed(24.dp),
@@ -2871,8 +2871,8 @@ private fun AuthScreen(
     }
     val fieldGlassStyle = remember {
         GlassStyle {
-            backgroundColor(Color(0xFF171A32).copy(alpha = 0.34f))
-            tint(Color(0xFFDCD7FF).copy(alpha = 0.14f))
+            backgroundColor(Color.Transparent)
+            tint(Color.White.copy(alpha = 0.085f))
             optics(
                 GlassOptics.regular.copy(
                     blurRadius = OpticalSizeValue.Fixed(18.dp),
@@ -3081,7 +3081,7 @@ private fun AuthScreen(
                     .shadow(
                         26.dp,
                         RoundedCornerShape(36.dp),
-                        ambientColor = Color(0xFF77729E).copy(alpha = 0.16f),
+                        ambientColor = Color.Black.copy(alpha = 0.20f),
                         spotColor = Color.Black.copy(alpha = 0.30f)
                     )
                     .hazeGlass(
@@ -3091,10 +3091,10 @@ private fun AuthScreen(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color.White.copy(alpha = 0.16f),
-                                Color.White.copy(alpha = 0.055f),
-                                Color(0xFF77729E).copy(alpha = 0.075f),
-                                Color.Black.copy(alpha = 0.16f)
+                                Color.White.copy(alpha = 0.12f),
+                                Color.White.copy(alpha = 0.035f),
+                                Color.White.copy(alpha = 0.025f),
+                                Color.Black.copy(alpha = 0.10f)
                             )
                         ),
                         RoundedCornerShape(36.dp)
@@ -3104,7 +3104,7 @@ private fun AuthScreen(
                         Brush.linearGradient(
                             listOf(
                                 Color.White.copy(alpha = 0.38f),
-                                Color(0xFFB8B3D8).copy(alpha = 0.14f),
+                                Color.White.copy(alpha = 0.12f),
                                 Color.White.copy(alpha = 0.08f)
                             )
                         ),
