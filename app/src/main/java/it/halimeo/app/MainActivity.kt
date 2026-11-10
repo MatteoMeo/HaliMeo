@@ -407,17 +407,19 @@ private fun haliMeoAuthBackdrop(): Brush {
     val accent = atmosphere?.primary ?: colors.primary
     val secondary = atmosphere?.secondary ?: colors.secondary
     return if (isHaliMeoDark()) {
+        val top = atmosphere?.top ?: Color(0xFF080D19)
+        val bottom = atmosphere?.bottom ?: Color(0xFF080D17)
         Brush.linearGradient(
-            0f to Color(0xFF080D19),
-            0.28f to accent.copy(alpha = 0.18f).compositeOver(Color(0xFF101326)),
-            0.62f to secondary.copy(alpha = 0.16f).compositeOver(Color(0xFF101326)),
-            0.84f to accent.copy(alpha = 0.22f).compositeOver(Color(0xFF101326)),
-            1f to Color(0xFF080D17)
+            0f to top,
+            0.24f to accent.copy(alpha = 0.30f).compositeOver(top),
+            0.52f to secondary.copy(alpha = 0.26f).compositeOver(top),
+            0.76f to accent.copy(alpha = 0.22f).compositeOver(bottom),
+            1f to bottom
         )
     } else {
         Brush.linearGradient(
-            0f to accent.copy(alpha = 0.13f).compositeOver(Color(0xFFF2F3F9)),
-            0.52f to secondary.copy(alpha = 0.10f).compositeOver(Color(0xFFEAEDF5)),
+            0f to accent.copy(alpha = 0.18f).compositeOver(Color(0xFFF0F2FA)),
+            0.48f to secondary.copy(alpha = 0.16f).compositeOver(Color(0xFFE8ECF7)),
             1f to Color(0xFFF8F8FC)
         )
     }
@@ -2881,9 +2883,9 @@ private fun AuthScreen(
         HazeBlurStyle {
             // Keep the same backdrop diffusion, but neutralize the milky veil
             // with a restrained blue-slate base underneath the glass.
-            backgroundColor(Color(0xFF35445D).copy(alpha = 0.90f))
-            colorEffects(listOf(HazeColorEffect.tint(accent.copy(alpha = 0.055f))))
-            fallbackColorEffect(HazeColorEffect.tint(Color(0xFF2D3B54).copy(alpha = 0.97f)))
+            backgroundColor(Color(0xFF26344B).copy(alpha = 0.94f))
+            colorEffects(listOf(HazeColorEffect.tint(accent.copy(alpha = 0.045f))))
+            fallbackColorEffect(HazeColorEffect.tint(Color(0xFF202C42).copy(alpha = 0.98f)))
         }
     }
     // Inputs share the card's softer haze, but keep the satin finish of the
@@ -2915,14 +2917,14 @@ private fun AuthScreen(
         .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
         .clip(RoundedCornerShape(36.dp))
         .hazeBlur(HazeInput.Sources(authHaze), authCardBlurStyle)
-        .background(Brush.verticalGradient(listOf(Color(0xFF465671).copy(alpha = 0.58f), Color(0xFF34445F).copy(alpha = 0.74f), Color(0xFF293951).copy(alpha = 0.84f))))
-        .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.23f), RoundedCornerShape(36.dp))
+        .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
+        .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(36.dp))
         .drawPrismalGlass(
             backdrop = prismalBackdrop,
             shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
-            effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.16f),
+            effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.12f),
             onDrawSurface = {
-                drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.045f), accent.copy(alpha = 0.055f), Color(0xFF263750).copy(alpha = 0.34f))))
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), accent.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
             }
         )
     val glassStyle = remember {
@@ -3005,99 +3007,155 @@ private fun AuthScreen(
         Box(Modifier.fillMaxSize().background(haliMeoAuthBackdrop()).prismalGlassLayer(prismalBackdrop).hazeSource(authHaze)) {
         // Layered, theme-aware ambient waves inspired by the concept artwork.
         val atmosphere = haliMeoAtmosphere(customBackgroundColorState.value)
-        val waveA = accent
-        val waveB = MaterialTheme.colorScheme.secondary
+        val waveA = atmosphere?.primary ?: accent
+        val waveB = atmosphere?.secondary ?: MaterialTheme.colorScheme.secondary
         val waveC = MaterialTheme.colorScheme.tertiary
         if (dark) {
-            // Rebuilt ambient backdrop: deep navy base with three flowing,
-            // theme-aware light fields matching the supplied concept.
+            // Static aurora composition: overlapping colour fields, long flowing
+            // ribbons and fine luminous edges create motion without animation.
             Box(
                 Modifier.align(Alignment.TopStart)
-                    .offset(x = (-185).dp, y = (-85).dp)
-                    .size(470.dp, 500.dp)
+                    .offset(x = (-190).dp, y = 35.dp)
+                    .size(500.dp, 470.dp)
                     .background(
                         Brush.radialGradient(
-                            listOf(waveB.copy(alpha = 0.68f), waveA.copy(alpha = 0.38f), Color.Transparent)
+                            0f to waveB.copy(alpha = 0.82f),
+                            0.42f to waveA.copy(alpha = 0.48f),
+                            1f to Color.Transparent
                         ),
+                        CircleShape
+                    )
+                    .blur(58.dp)
+            )
+            Box(
+                Modifier.align(Alignment.TopEnd)
+                    .offset(x = 190.dp, y = 165.dp)
+                    .size(460.dp, 560.dp)
+                    .background(
+                        Brush.radialGradient(
+                            0f to waveA.copy(alpha = 0.58f),
+                            0.48f to waveC.copy(alpha = 0.38f),
+                            1f to Color.Transparent
+                        ),
+                        CircleShape
+                    )
+                    .blur(62.dp)
+            )
+            Box(
+                Modifier.align(Alignment.Center)
+                    .offset(x = 18.dp, y = -8.dp)
+                    .size(700.dp, 245.dp)
+                    .graphicsLayer { rotationZ = -17f }
+                    .background(
+                        Brush.horizontalGradient(
+                            0f to Color.Transparent,
+                            0.18f to waveB.copy(alpha = 0.10f),
+                            0.42f to waveA.copy(alpha = 0.50f),
+                            0.72f to waveC.copy(alpha = 0.42f),
+                            1f to Color.Transparent
+                        ),
+                        RoundedCornerShape(50)
+                    )
+                    .blur(34.dp)
+            )
+            Box(
+                Modifier.align(Alignment.Center)
+                    .offset(x = (-28).dp, y = 48.dp)
+                    .size(650.dp, 112.dp)
+                    .graphicsLayer { rotationZ = -17f }
+                    .background(
+                        Brush.horizontalGradient(
+                            0f to Color.Transparent,
+                            0.28f to waveC.copy(alpha = 0.14f),
+                            0.52f to waveB.copy(alpha = 0.34f),
+                            0.78f to waveA.copy(alpha = 0.30f),
+                            1f to Color.Transparent
+                        ),
+                        RoundedCornerShape(50)
+                    )
+                    .blur(19.dp)
+            )
+            Box(
+                Modifier.align(Alignment.CenterStart)
+                    .offset(x = (-190).dp, y = 205.dp)
+                    .size(390.dp, 260.dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(waveC.copy(alpha = 0.50f), waveB.copy(alpha = 0.26f), Color.Transparent)
+                        ),
+                        CircleShape
+                    )
+                    .blur(52.dp)
+            )
+            Box(
+                Modifier.align(Alignment.BottomEnd)
+                    .offset(x = 185.dp, y = 110.dp)
+                    .size(490.dp, 420.dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(waveB.copy(alpha = 0.58f), waveA.copy(alpha = 0.30f), Color.Transparent)
+                        ),
+                        CircleShape
+                    )
+                    .blur(60.dp)
+            )
+            Box(
+                Modifier.align(Alignment.BottomStart)
+                    .offset(x = (-100).dp, y = 165.dp)
+                    .size(620.dp, 125.dp)
+                    .graphicsLayer { rotationZ = -12f }
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(Color.Transparent, waveA.copy(alpha = 0.20f), waveC.copy(alpha = 0.34f), waveB.copy(alpha = 0.18f), Color.Transparent)
+                        ),
+                        RoundedCornerShape(50)
+                    )
+                    .blur(22.dp)
+            )
+        } else {
+            // Light theme keeps the same flowing composition, with softer opacity.
+            Box(
+                Modifier.align(Alignment.TopStart)
+                    .offset(x = (-160).dp, y = 70.dp)
+                    .size(390.dp)
+                    .background(
+                        Brush.radialGradient(listOf(waveB.copy(alpha = 0.30f), waveA.copy(alpha = 0.16f), Color.Transparent)),
                         CircleShape
                     )
                     .blur(54.dp)
             )
             Box(
                 Modifier.align(Alignment.TopEnd)
-                    .offset(x = 205.dp, y = 70.dp)
-                    .size(430.dp, 520.dp)
+                    .offset(x = 150.dp, y = 210.dp)
+                    .size(380.dp, 470.dp)
                     .background(
-                        Brush.radialGradient(
-                            listOf(waveC.copy(alpha = 0.62f), waveB.copy(alpha = 0.28f), Color.Transparent)
-                        ),
-                        CircleShape
-                    )
-                    .blur(58.dp)
-            )
-            Box(
-                Modifier.align(Alignment.Center)
-                    .offset(x = 12.dp, y = 18.dp)
-                    .size(620.dp, 230.dp)
-                    .graphicsLayer { rotationZ = -13f }
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                Color.Transparent,
-                                waveB.copy(alpha = 0.18f),
-                                waveA.copy(alpha = 0.42f),
-                                waveC.copy(alpha = 0.34f),
-                                Color.Transparent
-                            )
-                        ),
-                        RoundedCornerShape(50)
-                    )
-                    .blur(30.dp)
-            )
-            Box(
-                Modifier.align(Alignment.Center)
-                    .offset(x = (-12).dp, y = 55.dp)
-                    .size(560.dp, 150.dp)
-                    .graphicsLayer { rotationZ = -13f }
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                Color.Transparent,
-                                waveC.copy(alpha = 0.16f),
-                                waveB.copy(alpha = 0.30f),
-                                waveA.copy(alpha = 0.22f),
-                                Color.Transparent
-                            )
-                        ),
-                        RoundedCornerShape(50)
-                    )
-                    .blur(24.dp)
-            )
-            Box(
-                Modifier.align(Alignment.BottomStart)
-                    .offset(x = (-165).dp, y = 95.dp)
-                    .size(440.dp)
-                    .background(
-                        Brush.radialGradient(
-                            listOf(waveC.copy(alpha = 0.52f), waveB.copy(alpha = 0.24f), Color.Transparent)
-                        ),
+                        Brush.radialGradient(listOf(waveA.copy(alpha = 0.24f), waveC.copy(alpha = 0.15f), Color.Transparent)),
                         CircleShape
                     )
                     .blur(56.dp)
             )
             Box(
-                Modifier.align(Alignment.BottomEnd)
-                    .offset(x = 180.dp, y = 110.dp)
-                    .size(470.dp)
+                Modifier.align(Alignment.Center)
+                    .offset(y = 12.dp)
+                    .size(640.dp, 190.dp)
+                    .graphicsLayer { rotationZ = -15f }
                     .background(
-                        Brush.radialGradient(
-                            listOf(waveA.copy(alpha = 0.48f), waveB.copy(alpha = 0.22f), Color.Transparent)
-                        ),
+                        Brush.horizontalGradient(listOf(Color.Transparent, waveB.copy(alpha = 0.12f), waveA.copy(alpha = 0.24f), waveC.copy(alpha = 0.18f), Color.Transparent)),
+                        RoundedCornerShape(50)
+                    )
+                    .blur(32.dp)
+            )
+            Box(
+                Modifier.align(Alignment.BottomEnd)
+                    .offset(x = 140.dp, y = 100.dp)
+                    .size(430.dp)
+                    .background(
+                        Brush.radialGradient(listOf(waveC.copy(alpha = 0.24f), waveB.copy(alpha = 0.12f), Color.Transparent)),
                         CircleShape
                     )
                     .blur(58.dp)
             )
-        } else {
+        }
             Box(
                 Modifier.align(Alignment.TopEnd).padding(top = 28.dp, end = 8.dp)
                     .size(230.dp)
