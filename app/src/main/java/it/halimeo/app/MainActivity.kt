@@ -2879,9 +2879,11 @@ private fun AuthScreen(
     val authSurfaceTint = frostedSurfaceStrongColor()
     val authCardBlurStyle = remember(accent, authSurfaceTint) {
         HazeBlurStyle {
-            backgroundColor(Color(0xFF46536B).copy(alpha = 0.82f))
-            colorEffects(listOf(HazeColorEffect.tint(accent.copy(alpha = 0.075f))))
-            fallbackColorEffect(HazeColorEffect.tint(Color(0xFF35445D).copy(alpha = 0.94f)))
+            // Keep the same backdrop diffusion, but neutralize the milky veil
+            // with a restrained blue-slate base underneath the glass.
+            backgroundColor(Color(0xFF35445D).copy(alpha = 0.90f))
+            colorEffects(listOf(HazeColorEffect.tint(accent.copy(alpha = 0.055f))))
+            fallbackColorEffect(HazeColorEffect.tint(Color(0xFF2D3B54).copy(alpha = 0.97f)))
         }
     }
     // Inputs share the card's softer haze, but keep the satin finish of the
@@ -2913,14 +2915,14 @@ private fun AuthScreen(
         .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
         .clip(RoundedCornerShape(36.dp))
         .hazeBlur(HazeInput.Sources(authHaze), authCardBlurStyle)
-        .background(Brush.verticalGradient(listOf(Color(0xFF4D5D78).copy(alpha = 0.54f), Color(0xFF394A67).copy(alpha = 0.70f), Color(0xFF293A57).copy(alpha = 0.82f))))
-        .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.30f), RoundedCornerShape(36.dp))
+        .background(Brush.verticalGradient(listOf(Color(0xFF465671).copy(alpha = 0.58f), Color(0xFF34445F).copy(alpha = 0.74f), Color(0xFF293951).copy(alpha = 0.84f))))
+        .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.23f), RoundedCornerShape(36.dp))
         .drawPrismalGlass(
             backdrop = prismalBackdrop,
             shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
-            effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.27f),
+            effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.16f),
             onDrawSurface = {
-                drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.12f), accent.copy(alpha = 0.075f), Color(0xFF263750).copy(alpha = 0.28f))))
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.045f), accent.copy(alpha = 0.055f), Color(0xFF263750).copy(alpha = 0.34f))))
             }
         )
     val glassStyle = remember {
