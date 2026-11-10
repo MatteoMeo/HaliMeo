@@ -67,7 +67,7 @@ private fun ensureUpdateNotificationChannel(context: Context) {
 private fun notificationsAllowed(context: Context): Boolean =
     Build.VERSION.SDK_INT < 33 || context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
-private fun notifyUpdateAvailable(context: Context, item: HaliMeoRelease?) {
+internal fun notifyUpdateAvailable(context: Context, item: HaliMeoRelease?) {
     if (item == null || item.versionCode <= BuildConfig.VERSION_CODE.toLong() || !notificationsAllowed(context)) return
     if (item.sha256.isNullOrBlank() || !item.sha256.matches(Regex("[a-fA-F0-9]{64}"))) return
     if (!item.apkUrl.startsWith("https://github.com/") || !item.apkName.matches(Regex("HaliMeo-[A-Za-z0-9._-]+\\.apk", RegexOption.IGNORE_CASE))) return
@@ -526,7 +526,7 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
     }
 }
 
-private suspend fun fetchLatestRelease(channel: String): HaliMeoRelease? {
+internal suspend fun fetchLatestRelease(channel: String): HaliMeoRelease? {
     val endpoint = "https://api.github.com/repos/$UPDATE_REPOSITORY/releases?per_page=100"
     val json = withContext(Dispatchers.IO) {
         var response: String? = null
