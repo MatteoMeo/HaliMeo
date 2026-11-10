@@ -2913,7 +2913,7 @@ private fun AuthScreen(
         .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
         .clip(RoundedCornerShape(36.dp))
         .hazeBlur(HazeInput.Sources(authHaze), authCardBlurStyle)
-        .background(Brush.verticalGradient(listOf(Color(0xFF65738D).copy(alpha = 0.52f), Color(0xFF4C5B74).copy(alpha = 0.68f), Color(0xFF35455F).copy(alpha = 0.78f))))
+        .background(Brush.verticalGradient(listOf(Color(0xFF4D5D78).copy(alpha = 0.54f), Color(0xFF394A67).copy(alpha = 0.70f), Color(0xFF293A57).copy(alpha = 0.82f))))
         .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.30f), RoundedCornerShape(36.dp))
         .drawPrismalGlass(
             backdrop = prismalBackdrop,
@@ -3007,75 +3007,93 @@ private fun AuthScreen(
         val waveB = MaterialTheme.colorScheme.secondary
         val waveC = MaterialTheme.colorScheme.tertiary
         if (dark) {
+            // Rebuilt ambient backdrop: deep navy base with three flowing,
+            // theme-aware light fields matching the supplied concept.
             Box(
                 Modifier.align(Alignment.TopStart)
-                    .offset(x = (-175).dp, y = 42.dp)
-                    .size(520.dp, 285.dp)
-                    .graphicsLayer { rotationZ = -24f }
+                    .offset(x = (-185).dp, y = (-85).dp)
+                    .size(470.dp, 500.dp)
                     .background(
-                        Brush.linearGradient(
-                            listOf(waveA.copy(alpha = 0.62f), waveB.copy(alpha = 0.46f), waveC.copy(alpha = 0.30f), Color.Transparent)
+                        Brush.radialGradient(
+                            listOf(waveB.copy(alpha = 0.68f), waveA.copy(alpha = 0.38f), Color.Transparent)
                         ),
-                        RoundedCornerShape(topStart = 150.dp, topEnd = 120.dp, bottomEnd = 220.dp, bottomStart = 80.dp)
+                        CircleShape
                     )
-                    .blur(34.dp)
-            )
-            Box(
-                Modifier.align(Alignment.CenterEnd)
-                    .offset(x = 205.dp, y = 35.dp)
-                    .size(390.dp, 260.dp)
-                    .graphicsLayer { rotationZ = -31f }
-                    .background(
-                        Brush.linearGradient(
-                            listOf(Color.Transparent, waveB.copy(alpha = 0.46f), waveC.copy(alpha = 0.38f), waveA.copy(alpha = 0.52f))
-                        ),
-                        RoundedCornerShape(topStart = 190.dp, topEnd = 80.dp, bottomEnd = 170.dp, bottomStart = 120.dp)
-                    )
-                    .blur(38.dp)
-            )
-            Box(
-                Modifier.align(Alignment.BottomStart)
-                    .offset(x = (-150).dp, y = (-105).dp)
-                    .size(470.dp, 230.dp)
-                    .graphicsLayer { rotationZ = -19f }
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(Color.Transparent, waveA.copy(alpha = 0.46f), waveB.copy(alpha = 0.38f), waveC.copy(alpha = 0.30f))
-                        ),
-                        RoundedCornerShape(topStart = 180.dp, topEnd = 110.dp, bottomEnd = 150.dp, bottomStart = 210.dp)
-                    )
-                    .blur(36.dp)
+                    .blur(54.dp)
             )
             Box(
                 Modifier.align(Alignment.TopEnd)
-                    .offset(x = 105.dp, y = 205.dp)
-                    .size(330.dp)
+                    .offset(x = 205.dp, y = 70.dp)
+                    .size(430.dp, 520.dp)
                     .background(
-                        Brush.radialGradient(listOf(waveC.copy(alpha = 0.42f), waveB.copy(alpha = 0.22f), Color.Transparent)),
+                        Brush.radialGradient(
+                            listOf(waveC.copy(alpha = 0.62f), waveB.copy(alpha = 0.28f), Color.Transparent)
+                        ),
                         CircleShape
                     )
-                    .blur(46.dp)
+                    .blur(58.dp)
             )
             Box(
-                Modifier.align(Alignment.CenterStart)
-                    .offset(x = (-145).dp, y = 85.dp)
-                    .size(360.dp, 250.dp)
-                    .graphicsLayer { rotationZ = 18f }
+                Modifier.align(Alignment.Center)
+                    .offset(x = 12.dp, y = 18.dp)
+                    .size(620.dp, 230.dp)
+                    .graphicsLayer { rotationZ = -13f }
                     .background(
-                        Brush.linearGradient(listOf(waveB.copy(alpha = 0.38f), waveA.copy(alpha = 0.30f), waveC.copy(alpha = 0.22f), Color.Transparent)),
-                        RoundedCornerShape(180.dp)
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color.Transparent,
+                                waveB.copy(alpha = 0.18f),
+                                waveA.copy(alpha = 0.42f),
+                                waveC.copy(alpha = 0.34f),
+                                Color.Transparent
+                            )
+                        ),
+                        RoundedCornerShape(50)
                     )
-                    .blur(48.dp)
+                    .blur(30.dp)
+            )
+            Box(
+                Modifier.align(Alignment.Center)
+                    .offset(x = (-12).dp, y = 55.dp)
+                    .size(560.dp, 150.dp)
+                    .graphicsLayer { rotationZ = -13f }
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color.Transparent,
+                                waveC.copy(alpha = 0.16f),
+                                waveB.copy(alpha = 0.30f),
+                                waveA.copy(alpha = 0.22f),
+                                Color.Transparent
+                            )
+                        ),
+                        RoundedCornerShape(50)
+                    )
+                    .blur(24.dp)
+            )
+            Box(
+                Modifier.align(Alignment.BottomStart)
+                    .offset(x = (-165).dp, y = 95.dp)
+                    .size(440.dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(waveC.copy(alpha = 0.52f), waveB.copy(alpha = 0.24f), Color.Transparent)
+                        ),
+                        CircleShape
+                    )
+                    .blur(56.dp)
             )
             Box(
                 Modifier.align(Alignment.BottomEnd)
-                    .offset(x = 120.dp, y = 80.dp)
-                    .size(370.dp, 300.dp)
+                    .offset(x = 180.dp, y = 110.dp)
+                    .size(470.dp)
                     .background(
-                        Brush.radialGradient(listOf(waveA.copy(alpha = 0.38f), waveC.copy(alpha = 0.24f), Color.Transparent)),
+                        Brush.radialGradient(
+                            listOf(waveA.copy(alpha = 0.48f), waveB.copy(alpha = 0.22f), Color.Transparent)
+                        ),
                         CircleShape
                     )
-                    .blur(52.dp)
+                    .blur(58.dp)
             )
         } else {
             Box(
@@ -3341,13 +3359,13 @@ private fun AuthScreen(
                             trailingIcon = {
                                 IconButton(
                                     onClick = { passwordVisible = !passwordVisible },
-                                    modifier = Modifier.clip(CircleShape)
-                                        .background(Brush.verticalGradient(listOf(Color(0xFF8190AE).copy(alpha = 0.34f), Color(0xFF394966).copy(alpha = 0.62f))))
-                                        .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.24f), CircleShape)
+                                    modifier = Modifier.size(48.dp)
                                 ) {
                                     Icon(
                                         if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                        contentDescription = if (passwordVisible) "Nascondi password" else "Mostra password"
+                                        contentDescription = if (passwordVisible) "Nascondi password" else "Mostra password",
+                                        modifier = Modifier.size(22.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             },
