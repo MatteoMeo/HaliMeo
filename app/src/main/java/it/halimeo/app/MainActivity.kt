@@ -295,6 +295,17 @@ private fun haliMeoAtmosphere(key: String): HaliMeoAtmosphere? = when (key) {
     else -> null
 }
 
+@Composable
+private fun haliMeoAnimatedAtmosphere(key: String): HaliMeoAtmosphere? {
+    val target = haliMeoAtmosphere(key) ?: return null
+    val transition = tween<Color>(durationMillis = 2600)
+    val primary by animateColorAsState(target.primary, transition, label = "themePrimary")
+    val secondary by animateColorAsState(target.secondary, transition, label = "themeSecondary")
+    val top by animateColorAsState(target.top, transition, label = "themeTop")
+    val bottom by animateColorAsState(target.bottom, transition, label = "themeBottom")
+    return HaliMeoAtmosphere(primary, secondary, top, bottom)
+}
+
 private val Ink = Color.Black
 private val Panel = Color(0xFF0D1420)
 private val Mint = Color(0xFF3E91FF)
@@ -400,10 +411,16 @@ private val profilePhotoRefreshState = mutableStateOf(0)
 private val reduceAnimationsState = mutableStateOf(false)
 private val reduceStaticEffectsState = mutableStateOf(false)
 private val appThemeModeState = mutableStateOf("dark")
+private val dynamicThemeEnabledState = mutableStateOf(false)
+private val dynamicThemeIntervalSecondsState = mutableIntStateOf(60)
+private val dynamicThemePresets = listOf(
+    "aurora", "deep_ocean", "sunset", "forest", "amethyst", "graphite",
+    "ruby", "citrus", "arctic", "copper", "lavender_mist", "emerald"
+)
 @Composable
 private fun haliMeoAuthBackdrop(): Brush {
     val colors = MaterialTheme.colorScheme
-    val atmosphere = haliMeoAtmosphere(customBackgroundColorState.value)
+    val atmosphere = haliMeoAnimatedAtmosphere(customBackgroundColorState.value)
     val accent = atmosphere?.primary ?: colors.primary
     val secondary = atmosphere?.secondary ?: colors.secondary
     return if (isHaliMeoDark()) {
@@ -451,6 +468,8 @@ private val TextPrimary = Color(0xFFF5F7FA)
         appThemeModeState.value = prefs.getString("app_theme_mode", "dark")?.takeIf { it in setOf("dark", "light", "system") } ?: "dark"
         customBackgroundColorState.value = (prefs.getString("background_color", "default") ?: "default").takeUnless { it == "photo" } ?: "default"
         customBackgroundUriState.value = null
+        dynamicThemeEnabledState.value = prefs.getBoolean("dynamic_theme_enabled", false)
+        dynamicThemeIntervalSecondsState.intValue = prefs.getInt("dynamic_theme_interval_seconds", 60).coerceIn(30, 180)
         backgroundBlurState.value = prefs.getFloat("background_blur", 0f)
         backgroundOverlayState.value = prefs.getFloat("background_overlay", 0.48f)
         ambientLightState.floatValue = prefs.getFloat("ambient_light_intensity", 0.78f).coerceIn(0.2f, 1f)
@@ -464,6 +483,24 @@ private val TextPrimary = Color(0xFFF5F7FA)
         val preferredHz = prefs.getInt("preferred_refresh_rate", 0).coerceIn(0, 120)
         (context as? ComponentActivity)?.window?.let { window ->
             window.attributes = window.attributes.apply { preferredRefreshRate = preferredHz.toFloat() }
+        }
+    }
+    LaunchedEffect(
+        dynamicThemeEnabledState.value,
+        dynamicThemeIntervalSecondsState.intValue,
+        reduceAnimationsState.value
+    ) {
+        if (dynamicThemeEnabledState.value && !reduceAnimationsState.value) {
+            val prefs = context.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
+            while (dynamicThemeEnabledState.value && !reduceAnimationsState.value) {
+                delay(dynamicThemeIntervalSecondsState.intValue.coerceIn(30, 180) * 1000L)
+                val current = customBackgroundColorState.value
+                val currentIndex = dynamicThemePresets.indexOf(current)
+                val next = dynamicThemePresets[(currentIndex + 1).mod(dynamicThemePresets.size)]
+                customBackgroundColorState.value = next
+                customBackgroundUriState.value = null
+                prefs.edit().putString("background_color", next).remove("background_photo").apply()
+            }
         }
     }
     val staticFontWidth = 100f
@@ -1284,7 +1321,7 @@ private fun HaliMeoAmbientBackdrop(modifier: Modifier = Modifier) {
             val effectiveOverlay = if (isHaliMeoDark()) maxOf(overlayStrength, 0.68f) else maxOf(overlayStrength, 0.58f)
             Box(Modifier.fillMaxSize().background(overlayColor.copy(alpha = effectiveOverlay)))
         } else if (haliMeoAtmosphere(backgroundChoice) != null) {
-            val atmosphere = haliMeoAtmosphere(backgroundChoice)!!
+            val atmosphere = haliMeoAnimatedAtmosphere(backgroundChoice)!!
             val lightTop = atmosphere.primary.copy(alpha = 0.075f).compositeOver(Color(0xFFF7F3FC))
             val lightBottom = atmosphere.secondary.copy(alpha = 0.095f).compositeOver(Color(0xFFECE8F5))
             Box(Modifier.fillMaxSize().background(
@@ -1552,6 +1589,12 @@ private fun SettingsScreen(
     LaunchedEffect(Unit) {
         customBackgroundColorState.value = backgroundColor
         customBackgroundUriState.value = backgroundPhoto
+    }
+    LaunchedEffect(customBackgroundColorState.value) {
+        if (customBackgroundColorState.value != backgroundColor) {
+            backgroundColor = customBackgroundColorState.value
+            backgroundPhoto = null
+        }
     }
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
@@ -2061,7 +2104,52 @@ private fun SettingsScreen(
                     }
                 }
                 Text("Il tema chiaro mantiene gli stessi accenti, sfondi e personalizzazioni del tema scuro.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
-                val activeAtmosphere = haliMeoAtmosphere(backgroundColor)
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("Tema dinamico", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "L'atmosfera cambia gradualmente tra i preset, con colori e sfondi coordinati.",
+                            color = secondaryText,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Switch(
+                        checked = dynamicThemeEnabledState.value,
+                        onCheckedChange = { enabled ->
+                            dynamicThemeEnabledState.value = enabled
+                            generalPrefs.edit().putBoolean("dynamic_theme_enabled", enabled).apply()
+                            if (enabled && backgroundColor !in dynamicThemePresets) {
+                                backgroundColor = "aurora"
+                                customBackgroundColorState.value = "aurora"
+                                customBackgroundUriState.value = null
+                                generalPrefs.edit().putString("background_color", "aurora").remove("background_photo").apply()
+                            }
+                        }
+                    )
+                }
+                if (dynamicThemeEnabledState.value) {
+                    Text("Frequenza di cambio", color = primaryText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        listOf(30 to "30 sec", 60 to "1 min", 120 to "2 min").forEachIndexed { index, item ->
+                            SegmentedButton(
+                                selected = dynamicThemeIntervalSecondsState.intValue == item.first,
+                                onClick = {
+                                    dynamicThemeIntervalSecondsState.intValue = item.first
+                                    generalPrefs.edit().putInt("dynamic_theme_interval_seconds", item.first).apply()
+                                },
+                                shape = SegmentedButtonDefaults.itemShape(index, 3, RoundedCornerShape(16.dp))
+                            ) { Text(item.second, maxLines = 1) }
+                        }
+                    }
+                    if (reduceAnimationsState.value) {
+                        Text("Il tema dinamico è in pausa perché è attiva la riduzione delle animazioni.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                val activeAtmosphere = haliMeoAnimatedAtmosphere(backgroundColor)
                 Box(
                     Modifier.fillMaxWidth().height(142.dp).clip(RoundedCornerShape(26.dp))
                         .background(
