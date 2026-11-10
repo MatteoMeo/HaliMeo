@@ -14,6 +14,7 @@ import androidx.activity.ComponentActivity
 import androidx.core.content.FileProvider
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
@@ -1501,7 +1502,7 @@ private fun SettingsScreen(
     val primaryText = MaterialTheme.colorScheme.onSurface
     val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
     val accentText = MaterialTheme.colorScheme.primary
-    var expandedSettingsSections by remember { mutableStateOf(emptySet<String>()) }
+    var selectedSettingsPage by remember { mutableStateOf<String?>(null) }
     val generalPrefs = remember { ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE) }
     val profilePrefs = remember(profileAccountId) {
         ctx.getSharedPreferences("halimeo_profile_$profileAccountId", android.content.Context.MODE_PRIVATE)
@@ -1618,19 +1619,21 @@ private fun SettingsScreen(
     }
 
     val settingsHaze = rememberHazeState()
-    val settingsGlassTint = frostedSurfaceColor()
-    val settingsGlassStyleBackground = MaterialTheme.colorScheme.surface
+    val settingsGlassTint = MaterialTheme.colorScheme.primary
     val settingsGlassStyle = remember(settingsGlassTint) {
         HazeBlurStyle {
-            backgroundColor(settingsGlassStyleBackground.copy(alpha = 0.42f))
-            colorEffects(listOf(HazeColorEffect.tint(settingsGlassTint.copy(alpha = 0.15f))))
-            fallbackColorEffect(HazeColorEffect.tint(settingsGlassTint.copy(alpha = 0.28f)))
+            backgroundColor(Color(0xFF26344B).copy(alpha = 0.94f))
+            colorEffects(listOf(HazeColorEffect.tint(settingsGlassTint.copy(alpha = 0.045f))))
+            fallbackColorEffect(HazeColorEffect.tint(Color(0xFF202C42).copy(alpha = 0.96f)))
         }
     }
     val settingsScrollState = rememberScrollState()
+    BackHandler(enabled = selectedSettingsPage != null) { selectedSettingsPage = null }
+    LaunchedEffect(selectedSettingsPage) { settingsScrollState.scrollTo(0) }
     val updateCenterRequester = remember { BringIntoViewRequester() }
     LaunchedEffect(focusUpdater) {
         if (focusUpdater) {
+            selectedSettingsPage = "appInfo"
             kotlinx.coroutines.delay(80)
             updateCenterRequester.bringIntoView()
             onUpdaterFocused()
@@ -1650,13 +1653,29 @@ private fun SettingsScreen(
         label = "settingsTitleScale"
     )
     Column(Modifier.fillMaxSize().background(Color.Transparent).hazeSource(settingsHaze)) {
-        // Keep the settings title pinned while it scales down as the options list scrolls.
-        Column(
-            Modifier.fillMaxWidth().padding(start = 20.dp, top = 8.dp, end = 20.dp, bottom = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(3.dp)
+        // A dedicated route header replaces accordion toggles with clear page navigation.
+        Row(
+            Modifier.fillMaxWidth().padding(start = 12.dp, top = 8.dp, end = 20.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            if (selectedSettingsPage != null) {
+                IconButton(onClick = { selectedSettingsPage = null }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Torna alle impostazioni", tint = MaterialTheme.colorScheme.onSurface)
+                }
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
-                "Impostazioni",
+                when (selectedSettingsPage) {
+                    "profile" -> "Profilo e account"
+                    "invites" -> "Inviti"
+                    "appearance" -> "Theme Center"
+                    "date" -> "Date speciali"
+                    "sync" -> "Sincronizzazione"
+                    "appInfo" -> "Informazioni app"
+                    "developer" -> "Opzioni sviluppatore"
+                    else -> "Impostazioni"
+                },
                 modifier = Modifier.graphicsLayer {
                     scaleX = settingsTitleScale
                     scaleY = settingsTitleScale
@@ -1668,7 +1687,16 @@ private fun SettingsScreen(
                 maxLines = 1
             )
             Text(
-                "Personalizza il vostro spazio.",
+                when (selectedSettingsPage) {
+                    "profile" -> "Gestisci il tuo profilo e account."
+                    "invites" -> "Gestisci gli inviti al vostro spazio."
+                    "appearance" -> "Personalizza colori, sfondo e atmosfera."
+                    "date" -> "Ricorrenze e promemoria importanti."
+                    "sync" -> "Backup e stato dei vostri ricordi."
+                    "appInfo" -> "Versione, aggiornamenti e dettagli."
+                    "developer" -> "Strumenti avanzati e server."
+                    else -> "Personalizza il vostro spazio."
+                },
                 modifier = Modifier.height(if (settingsHeaderCollapsed) 0.dp else 26.dp).graphicsLayer {
                     alpha = if (settingsHeaderCollapsed) 0f else 1f
                     translationY = if (settingsHeaderCollapsed) -4.dp.toPx() else 0f
@@ -1678,21 +1706,24 @@ private fun SettingsScreen(
                 maxLines = 1,
                 overflow = TextOverflow.Clip
             )
+            }
         }
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(settingsScrollState).padding(start = 20.dp, end = 20.dp, bottom = 116.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+        if (selectedSettingsPage == null || selectedSettingsPage == "profile") {
         val profileCardInteraction = remember { MutableInteractionSource() }
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(profileCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsProfilePress")
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clip(RoundedCornerShape(32.dp))
-                .clickable(interactionSource = profileCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("profile" in expandedSettingsSections) expandedSettingsSections - "profile" else expandedSettingsSections + "profile" }
+                .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
+                .clickable(interactionSource = profileCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "profile" }
                 .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
-            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1701,10 +1732,10 @@ private fun SettingsScreen(
                         Text("PROFILO E ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                         if ("profile" !in expandedSettingsSections) Text("Il vostro account e la foto profilo", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     }
-                    Icon(if ("profile" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("profile" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
+                    Icon(if (selectedSettingsPage == "profile") Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (selectedSettingsPage == "profile") "Comprimi" else "Espandi", tint = accentText)
                 }
                 AnimatedVisibility(
-                    visible = "profile" in expandedSettingsSections,
+                    visible = selectedSettingsPage == "profile",
                     enter = HaliMeoMotion.sectionEnter(reduceAnimationsState.value),
                     exit = HaliMeoMotion.sectionExit(reduceAnimationsState.value)
                 ) {
@@ -1946,16 +1977,20 @@ private fun SettingsScreen(
         }
 
 
+        }
+
+        if (selectedSettingsPage == null || selectedSettingsPage == "invites") {
         val invitesCardInteraction = remember { MutableInteractionSource() }
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(invitesCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsInvitesPress")
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clip(RoundedCornerShape(32.dp))
-                .clickable(interactionSource = invitesCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("invites" in expandedSettingsSections) expandedSettingsSections - "invites" else expandedSettingsSections + "invites" }
+                .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
+                .clickable(interactionSource = invitesCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "invites" }
                 .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
-            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1964,9 +1999,9 @@ private fun SettingsScreen(
                         Text("INVITI", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                         if ("invites" !in expandedSettingsSections) Text("Crea e condividi un invito privato", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
-                    Icon(if ("invites" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("invites" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
+                    Icon(if (selectedSettingsPage == "invites") Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (selectedSettingsPage == "invites") "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "invites" in expandedSettingsSections, enter = HaliMeoMotion.sectionEnter(reduceAnimationsState.value), exit = HaliMeoMotion.sectionExit(reduceAnimationsState.value)) {
+                AnimatedVisibility(visible = selectedSettingsPage == "invites", enter = HaliMeoMotion.sectionEnter(reduceAnimationsState.value), exit = HaliMeoMotion.sectionExit(reduceAnimationsState.value)) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Crea un codice monouso valido 7 giorni e condividilo direttamente dal telefono.", color = secondaryText)
 
@@ -2064,16 +2099,20 @@ private fun SettingsScreen(
             }
         }
 
+        }
+
+        if (selectedSettingsPage == null || selectedSettingsPage == "appearance") {
         val appearanceCardInteraction = remember { MutableInteractionSource() }
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(appearanceCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsAppearancePress")
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clip(RoundedCornerShape(32.dp))
+                .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
                 .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp))
-                .clickable(interactionSource = appearanceCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("appearance" in expandedSettingsSections) expandedSettingsSections - "appearance" else expandedSettingsSections + "appearance" },
+                .clickable(interactionSource = appearanceCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "appearance" },
             shape = RoundedCornerShape(32.dp),
-            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2082,9 +2121,9 @@ private fun SettingsScreen(
                         Text("THEME STUDIO", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                         if ("appearance" !in expandedSettingsSections) Text("Palette, atmosfere, luce e prestazioni", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     }
-                    Icon(if ("appearance" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("appearance" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
+                    Icon(if (selectedSettingsPage == "appearance") Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (selectedSettingsPage == "appearance") "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "appearance" in expandedSettingsSections, enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
+                AnimatedVisibility(visible = selectedSettingsPage == "appearance", enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Aspetto dell'app", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 var selectedThemeMode by remember { mutableStateOf(appThemeModeState.value) }
@@ -2545,16 +2584,20 @@ private fun SettingsScreen(
 
 
 
+        }
+
+        if (selectedSettingsPage == null || selectedSettingsPage == "date") {
         val dateCardInteraction = remember { MutableInteractionSource() }
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(dateCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsDatePress")
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clip(RoundedCornerShape(32.dp))
-                .clickable(interactionSource = dateCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("date" in expandedSettingsSections) expandedSettingsSections - "date" else expandedSettingsSections + "date" }
+                .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
+                .clickable(interactionSource = dateCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "date" }
                 .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
-            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2563,9 +2606,9 @@ private fun SettingsScreen(
                         Text("DATA SPECIALE", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                         if ("date" !in expandedSettingsSections) Text("Date importanti e promemoria", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     }
-                    Icon(if ("date" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("date" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
+                    Icon(if (selectedSettingsPage == "date") Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (selectedSettingsPage == "date") "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "date" in expandedSettingsSections, enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
+                AnimatedVisibility(visible = selectedSettingsPage == "date", enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Tenete a portata di mano una data importante", color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 OutlinedTextField(value = specialDateLabel, onValueChange = { specialDateLabel = it }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), singleLine = true, label = { Text("Nome (es. compleanno)") },
@@ -2598,16 +2641,20 @@ private fun SettingsScreen(
             }
         }
 
+        }
+
+        if (selectedSettingsPage == null || selectedSettingsPage == "sync") {
         val syncCardInteraction = remember { MutableInteractionSource() }
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(syncCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsSyncPress")
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clip(RoundedCornerShape(32.dp))
-                .clickable(interactionSource = syncCardInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("sync" in expandedSettingsSections) expandedSettingsSections - "sync" else expandedSettingsSections + "sync" }
+                .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
+                .clickable(interactionSource = syncCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "sync" }
                 .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
-            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2616,9 +2663,9 @@ private fun SettingsScreen(
                         Text("SINCRONIZZAZIONE", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                         if ("sync" !in expandedSettingsSections) Text("Backup e stato dei tuoi ricordi", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     }
-                    Icon(if ("sync" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if ("sync" in expandedSettingsSections) "Comprimi" else "Espandi", tint = accentText)
+                    Icon(if (selectedSettingsPage == "sync") Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (selectedSettingsPage == "sync") "Comprimi" else "Espandi", tint = accentText)
                 }
-                AnimatedVisibility(visible = "sync" in expandedSettingsSections, enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
+                AnimatedVisibility(visible = selectedSettingsPage == "sync", enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(if (pendingSyncCount == 0) Icons.Default.CloudDone else Icons.Default.CloudUpload, contentDescription = null, tint = Color(0xFF27A99A), modifier = Modifier.size(26.dp))
@@ -2678,16 +2725,20 @@ private fun SettingsScreen(
             }
         }
 
+        }
+
+        if (selectedSettingsPage == null || selectedSettingsPage == "appInfo") {
         val appInfoInteraction = remember { MutableInteractionSource() }
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(appInfoInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsAppInfoPress")
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clip(RoundedCornerShape(32.dp))
-                .clickable(interactionSource = appInfoInteraction, indication = LocalIndication.current) { expandedSettingsSections = if ("appInfo" in expandedSettingsSections) expandedSettingsSections - "appInfo" else expandedSettingsSections + "appInfo" }
+                .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
+                .clickable(interactionSource = appInfoInteraction, indication = LocalIndication.current) { selectedSettingsPage = "appInfo" }
                 .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
-            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -2699,9 +2750,9 @@ private fun SettingsScreen(
                         Text("Dettagli di HaliMeo e della build installata", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
                     Text("v${BuildConfig.VERSION_NAME}", color = accentText, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                    Icon(if ("appInfo" in expandedSettingsSections) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null, tint = accentText)
+                    Icon(if (selectedSettingsPage == "appInfo") Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null, tint = accentText)
                 }
-                AnimatedVisibility(visible = "appInfo" in expandedSettingsSections, enter = HaliMeoMotion.sectionEnter(reduceAnimationsState.value), exit = HaliMeoMotion.sectionExit(reduceAnimationsState.value)) {
+                AnimatedVisibility(visible = selectedSettingsPage == "appInfo", enter = HaliMeoMotion.sectionEnter(reduceAnimationsState.value), exit = HaliMeoMotion.sectionExit(reduceAnimationsState.value)) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.16f))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -2726,13 +2777,18 @@ private fun SettingsScreen(
             }
         }
 
+        }
+
+        if (selectedSettingsPage == null || selectedSettingsPage == "developer") {
         Card(
             modifier = Modifier.fillMaxWidth()
+                .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
                 .clip(RoundedCornerShape(32.dp))
-                .clickable { if (developerUnlocked) developerUnlocked = false else { showDeveloperPinDialog = true; developerPin = ""; developerPinError = false } }
+                .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
+                .clickable { if (developerUnlocked) selectedSettingsPage = "developer" else { showDeveloperPinDialog = true; developerPin = ""; developerPinError = false } }
                 .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
             shape = RoundedCornerShape(32.dp),
-            colors = CardDefaults.cardColors(containerColor = frostedSurfaceColor())
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
@@ -2745,11 +2801,11 @@ private fun SettingsScreen(
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("OPZIONI SVILUPPATORE", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                        Text(if (developerUnlocked) "Pannello sbloccato · tocca per bloccare" else "Strumenti avanzati e configurazione server", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                        Text(if (developerUnlocked && selectedSettingsPage == "developer") "Pannello sviluppatore" else if (developerUnlocked) "Strumenti avanzati sbloccati" else "Strumenti avanzati e configurazione server", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
                     Icon(if (developerUnlocked) Icons.Default.ExpandLess else Icons.Default.Lock, contentDescription = null, tint = accentText)
                 }
-                AnimatedVisibility(visible = developerUnlocked, enter = HaliMeoMotion.sectionEnter(reduceAnimationsState.value), exit = HaliMeoMotion.sectionExit(reduceAnimationsState.value)) {
+                AnimatedVisibility(visible = developerUnlocked && selectedSettingsPage == "developer", enter = HaliMeoMotion.sectionEnter(reduceAnimationsState.value), exit = HaliMeoMotion.sectionExit(reduceAnimationsState.value)) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("SERVER API", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                         Text("Server predefinito: ${ApiClient.baseUrl()}", color = secondaryText, style = MaterialTheme.typography.bodySmall)
@@ -2791,6 +2847,8 @@ private fun SettingsScreen(
             }
         }
 
+        }
+
         if (showDeveloperPinDialog) {
             AlertDialog(
                                 shape = RoundedCornerShape(30.dp),
@@ -2819,6 +2877,7 @@ private fun SettingsScreen(
                     TextButton(onClick = {
                         if (developerPin == "0802") {
                             developerUnlocked = true
+                            selectedSettingsPage = "developer"
                             showDeveloperPinDialog = false
                             developerPin = ""
                         } else developerPinError = true
