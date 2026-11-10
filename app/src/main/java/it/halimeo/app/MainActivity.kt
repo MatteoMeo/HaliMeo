@@ -3200,11 +3200,11 @@ private fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            Spacer(Modifier.height(42.dp))
+            Spacer(Modifier.height(62.dp))
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(
-                        Modifier.size(92.dp)
+                        Modifier.size(108.dp)
                             .clip(RoundedCornerShape(27.dp))
                             .background(
                                 Brush.linearGradient(
@@ -3222,21 +3222,35 @@ private fun AuthScreen(
                             colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(accent)
                         )
                     }
-                    Text(
-                        "HaliMeo",
-                        style = MaterialTheme.typography.headlineLarge.copy(letterSpacing = (-0.7).sp),
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        "Il vostro diario privato",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            "HaliMeo",
+                            style = MaterialTheme.typography.headlineLarge.copy(letterSpacing = (-0.7).sp),
+                            fontWeight = FontWeight.SemiBold,
+                            color = accent.copy(alpha = 0.30f).compositeOver(MaterialTheme.colorScheme.onSurface)
+                        )
+                        Text(
+                            "Il vostro diario privato",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Row(
                         Modifier.padding(top = 2.dp).clip(CircleShape)
-                            .background(frostedSurfaceColor().copy(alpha = 0.72f))
-                            .border(1.dp, frostedEdgeColor().copy(alpha = 0.55f), CircleShape)
+                            .hazeBlur(HazeInput.Sources(authHaze), authCardBlurStyle)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color(0xFF35435C).copy(alpha = 0.64f),
+                                        Color(0xFF293951).copy(alpha = 0.80f),
+                                        Color(0xFF202F49).copy(alpha = 0.88f)
+                                    )
+                                )
+                            )
+                            .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), CircleShape)
                             .padding(horizontal = 10.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -3260,7 +3274,7 @@ private fun AuthScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(86.dp))
+            Spacer(Modifier.height(56.dp))
 
             Card(
                 modifier = authCardModifier,
@@ -3461,8 +3475,9 @@ private fun AuthScreen(
                                 TextButton(
                                     onClick = { recovery = true; error = ""; info = "" },
                                     modifier = Modifier.clip(RoundedCornerShape(50.dp))
+                                        .hazeBlur(HazeInput.Sources(authHaze), authFieldBlurStyle)
                                         .background(Brush.verticalGradient(listOf(Color(0xFF647695).copy(alpha = 0.28f), Color(0xFF2D405F).copy(alpha = 0.66f))))
-                                        .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.24f), RoundedCornerShape(50.dp)),
+                                        .border(1.dp, Color(0xFFB7C7E0).copy(alpha = 0.20f), RoundedCornerShape(50.dp)),
                                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 7.dp)
                                 ) { Text("Hai dimenticato la password?", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                             }
