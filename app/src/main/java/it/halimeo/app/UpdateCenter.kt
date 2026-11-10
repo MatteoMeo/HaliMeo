@@ -69,15 +69,28 @@ private fun notificationsAllowed(context: Context): Boolean =
 
 private fun notifyUpdateAvailable(context: Context, item: HaliMeoRelease?) {
     if (item == null || item.versionCode <= BuildConfig.VERSION_CODE.toLong() || !notificationsAllowed(context)) return
+    if (item.sha256.isNullOrBlank() || !item.sha256.matches(Regex("[a-fA-F0-9]{64}"))) return
+    if (!item.apkUrl.startsWith("https://github.com/") || !item.apkName.matches(Regex("HaliMeo-[A-Za-z0-9._-]+\\.apk", RegexOption.IGNORE_CASE))) return
     ensureUpdateNotificationChannel(context)
-    val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
-    val pending = launch?.let { android.app.PendingIntent.getActivity(context, UPDATE_NOTIFICATION_ID, it, android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE) }
+    val downloadIntent = Intent(context, UpdateNotificationReceiver::class.java).apply {
+        action = UpdateNotificationReceiver.ACTION_DOWNLOAD
+        putExtra(UpdateNotificationReceiver.EXTRA_VERSION_CODE, item.versionCode)
+        putExtra(UpdateNotificationReceiver.EXTRA_VERSION_NAME, item.versionName)
+        putExtra(UpdateNotificationReceiver.EXTRA_APK_URL, item.apkUrl)
+        putExtra(UpdateNotificationReceiver.EXTRA_APK_NAME, item.apkName)
+        putExtra(UpdateNotificationReceiver.EXTRA_SHA256, item.sha256)
+    }
+    val downloadPending = android.app.PendingIntent.getBroadcast(
+        context, item.versionCode.toInt(), downloadIntent,
+        android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+    )
     val notification = NotificationCompat.Builder(context, UPDATE_NOTIFICATION_CHANNEL)
         .setSmallIcon(R.drawable.ic_launcher_foreground)
         .setContentTitle("Aggiornamento HaliMeo disponibile")
-        .setContentText("È pronta la versione ${item.versionName}. Tocca per aprire l'updater.")
+        .setContentText("HaliMeo ${item.versionName} è pronta. Tocca qui per scaricarla.")
         .setAutoCancel(true)
-        .setContentIntent(pending)
+        .setContentIntent(downloadPending)
+        .addAction(R.drawable.ic_launcher_foreground, "Scarica aggiornamento", downloadPending)
         .build()
     runCatching { NotificationManagerCompat.from(context).notify(UPDATE_NOTIFICATION_ID, notification) }
 }
@@ -273,6 +286,11 @@ internal fun UpdateCenterCard(activity: androidx.activity.ComponentActivity) {
     }
 
     fun startDownload(item: HaliMeoRelease) {
+        if (item.sha256.isNullOrBlank() || !item.sha256.matches(Regex("[a-fA-F0-9]{64}"))) {
+            status = "Download bloccato: hash SHA-256 della release non disponibile."
+            downloadFailed = true
+            return
+        }
         if (downloading) return
         scope.launch {
             try {
@@ -546,8 +564,11 @@ private suspend fun fetchLatestRelease(channel: String): HaliMeoRelease? {
             if (!name.endsWith(".apk", true)) continue
             val build = Regex("build(\\d+)", RegexOption.IGNORE_CASE).find(name)?.groupValues?.getOrNull(1)?.toLongOrNull() ?: continue
             val version = Regex("(\\d+\\.\\d+\\.\\d+)").find(name)?.groupValues?.getOrNull(1) ?: item.optString("name")
+            val digest = asset.optString("digest").removePrefix("sha256:").takeIf { it.matches(Regex("[a-fA-F0-9]{64}")) } ?: continue
+            val apkUrl = asset.optString("browser_download_url")
+            if (!apkUrl.startsWith("https://github.com/")) continue
             val body = item.optString("body", "").replace(Regex("(?m)^#{1,6}\\s*"), "").replace("*", "").trim()
-            candidates += HaliMeoRelease(item.optString("name", "HaliMeo $version"), build, version, body, asset.optString("browser_download_url"), name, asset.optString("digest").takeIf { it.startsWith("sha256:") }?.removePrefix("sha256:"))
+            candidates += HaliMeoRelease(item.optString("name", "HaliMeo $version"), build, version, body, apkUrl, name, digest)
         }
     }
     return candidates.maxByOrNull { it.versionCode }
