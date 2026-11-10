@@ -1726,13 +1726,15 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (selectedSettingsPage == null) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SettingsCategoryIcon(Icons.Default.AccountCircle, Color(0xFF4389E8))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("PROFILO E ACCOUNT", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
-                        if ("profile" !in expandedSettingsSections) Text("Il vostro account e la foto profilo", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                        if (selectedSettingsPage == null) Text("Il vostro account e la foto profilo", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     }
-                    Icon(if (selectedSettingsPage == "profile") Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (selectedSettingsPage == "profile") "Comprimi" else "Espandi", tint = accentText)
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Apri Profilo e account", tint = accentText)
+                }
                 }
                 AnimatedVisibility(
                     visible = selectedSettingsPage == "profile",
@@ -1993,13 +1995,15 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (selectedSettingsPage == null) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SettingsCategoryIcon(Icons.Default.MarkEmailRead, Color(0xFFEA9842))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("INVITI", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                        if ("invites" !in expandedSettingsSections) Text("Crea e condividi un invito privato", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                        if (selectedSettingsPage == null) Text("Crea e condividi un invito privato", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
-                    Icon(if (selectedSettingsPage == "invites") Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (selectedSettingsPage == "invites") "Comprimi" else "Espandi", tint = accentText)
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Apri Inviti", tint = accentText)
+                }
                 }
                 AnimatedVisibility(visible = selectedSettingsPage == "invites", enter = HaliMeoMotion.sectionEnter(reduceAnimationsState.value), exit = HaliMeoMotion.sectionExit(reduceAnimationsState.value)) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2115,13 +2119,15 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (selectedSettingsPage == null) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SettingsCategoryIcon(Icons.Default.Palette, Color(0xFF9A78E8))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("THEME STUDIO", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
-                        if ("appearance" !in expandedSettingsSections) Text("Palette, atmosfere, luce e prestazioni", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                        if (selectedSettingsPage == null) Text("Palette, atmosfere, luce e prestazioni", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     }
-                    Icon(if (selectedSettingsPage == "appearance") Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (selectedSettingsPage == "appearance") "Comprimi" else "Espandi", tint = accentText)
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Apri Theme Center", tint = accentText)
+                }
                 }
                 AnimatedVisibility(visible = selectedSettingsPage == "appearance", enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2600,13 +2606,15 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (selectedSettingsPage == null) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SettingsCategoryIcon(Icons.Default.Event, Color(0xFFE4779C))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("DATA SPECIALE", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
-                        if ("date" !in expandedSettingsSections) Text("Date importanti e promemoria", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                        if (selectedSettingsPage == null) Text("Date importanti e promemoria", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     }
-                    Icon(if (selectedSettingsPage == "date") Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (selectedSettingsPage == "date") "Comprimi" else "Espandi", tint = accentText)
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Apri Date speciali", tint = accentText)
+                }
                 }
                 AnimatedVisibility(visible = selectedSettingsPage == "date", enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2657,13 +2665,15 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (selectedSettingsPage == null) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SettingsCategoryIcon(Icons.Default.CloudSync, Color(0xFF27A99A))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("SINCRONIZZAZIONE", color = accentText, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
-                        if ("sync" !in expandedSettingsSections) Text("Backup e stato dei tuoi ricordi", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                        if (selectedSettingsPage == null) Text("Backup e stato dei tuoi ricordi", color = secondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     }
-                    Icon(if (selectedSettingsPage == "sync") Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (selectedSettingsPage == "sync") "Comprimi" else "Espandi", tint = accentText)
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Apri Sincronizzazione", tint = accentText)
+                }
                 }
                 AnimatedVisibility(visible = selectedSettingsPage == "sync", enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2741,6 +2751,7 @@ private fun SettingsScreen(
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (selectedSettingsPage == null) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)) {
                         SettingsCategoryIcon(Icons.Default.Info, Color(0xFF399FC5))
@@ -2750,7 +2761,8 @@ private fun SettingsScreen(
                         Text("Dettagli di HaliMeo e della build installata", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
                     Text("v${BuildConfig.VERSION_NAME}", color = accentText, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                    Icon(if (selectedSettingsPage == "appInfo") Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null, tint = accentText)
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Apri Informazioni app", tint = accentText)
+                }
                 }
                 AnimatedVisibility(visible = selectedSettingsPage == "appInfo", enter = HaliMeoMotion.sectionEnter(reduceAnimationsState.value), exit = HaliMeoMotion.sectionExit(reduceAnimationsState.value)) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -2803,7 +2815,7 @@ private fun SettingsScreen(
                         Text("OPZIONI SVILUPPATORE", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                         Text(if (developerUnlocked && selectedSettingsPage == "developer") "Pannello sviluppatore" else if (developerUnlocked) "Strumenti avanzati sbloccati" else "Strumenti avanzati e configurazione server", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                     }
-                    Icon(if (developerUnlocked) Icons.Default.ExpandLess else Icons.Default.Lock, contentDescription = null, tint = accentText)
+                    Icon(if (developerUnlocked) Icons.AutoMirrored.Filled.ArrowForward else Icons.Default.Lock, contentDescription = null, tint = accentText)
                 }
                 AnimatedVisibility(visible = developerUnlocked && selectedSettingsPage == "developer", enter = HaliMeoMotion.sectionEnter(reduceAnimationsState.value), exit = HaliMeoMotion.sectionExit(reduceAnimationsState.value)) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
