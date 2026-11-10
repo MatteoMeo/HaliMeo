@@ -2853,32 +2853,49 @@ private fun AuthScreen(
     val prismalDensity = LocalDensity.current
     val accent = MaterialTheme.colorScheme.primary
     val fieldShape = RoundedCornerShape(50.dp)
+    val authSurfaceTint = frostedSurfaceStrongColor()
+    val authCardBlurStyle = remember(accent, authSurfaceTint) {
+        HazeBlurStyle {
+            backgroundColor(authSurfaceTint.copy(alpha = 0.84f))
+            colorEffects(listOf(HazeColorEffect.tint(accent.copy(alpha = 0.13f))))
+            fallbackColorEffect(HazeColorEffect.tint(authSurfaceTint.copy(alpha = 0.94f)))
+        }
+    }
+    val authFieldBlurStyle = remember(accent, authSurfaceTint) {
+        HazeBlurStyle {
+            backgroundColor(authSurfaceTint.copy(alpha = 0.78f))
+            colorEffects(listOf(HazeColorEffect.tint(accent.copy(alpha = 0.10f))))
+            fallbackColorEffect(HazeColorEffect.tint(authSurfaceTint.copy(alpha = 0.90f)))
+        }
+    }
 
     // Shared flat-satin glass treatment: tinted body, defined rim and restrained top sheen.
     val authFieldModifier = Modifier.fillMaxWidth()
-        .shadow(10.dp, fieldShape, ambientColor = accent.copy(alpha = 0.12f), spotColor = Color.Black.copy(alpha = 0.30f))
+        .shadow(12.dp, fieldShape, ambientColor = accent.copy(alpha = 0.16f), spotColor = Color.Black.copy(alpha = 0.34f))
         .clip(fieldShape)
-        .background(Brush.verticalGradient(listOf(Color(0xFF7C88A5).copy(alpha = 0.25f), Color(0xFF46536F).copy(alpha = 0.34f), Color(0xFF222D45).copy(alpha = 0.46f))), fieldShape)
-        .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.24f), fieldShape)
+        .hazeBlur(HazeInput.Sources(authHaze), authFieldBlurStyle)
+        .background(Brush.verticalGradient(listOf(Color(0xFF8998B8).copy(alpha = 0.38f), Color(0xFF465675).copy(alpha = 0.54f), Color(0xFF202D47).copy(alpha = 0.68f))), fieldShape)
+        .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.30f), fieldShape)
         .drawPrismalGlass(
             backdrop = prismalBackdrop,
             shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
             effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.34f),
             onDrawSurface = {
-                drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.13f), accent.copy(alpha = 0.045f), Color(0xFF202B43).copy(alpha = 0.13f), Color(0xFF101827).copy(alpha = 0.19f))))
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.19f), accent.copy(alpha = 0.065f), Color(0xFF202B43).copy(alpha = 0.22f), Color(0xFF101827).copy(alpha = 0.28f))))
             }
         )
     val authCardModifier = Modifier.fillMaxWidth()
         .shadow(26.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.24f), spotColor = Color.Black.copy(alpha = 0.34f))
         .clip(RoundedCornerShape(36.dp))
-        .background(Brush.verticalGradient(listOf(Color(0xFF53617E).copy(alpha = 0.25f), Color(0xFF293650).copy(alpha = 0.42f), Color(0xFF111A2B).copy(alpha = 0.52f))))
+        .hazeBlur(HazeInput.Sources(authHaze), authCardBlurStyle)
+        .background(Brush.verticalGradient(listOf(Color(0xFF53617E).copy(alpha = 0.44f), Color(0xFF293650).copy(alpha = 0.62f), Color(0xFF111A2B).copy(alpha = 0.76f))))
         .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.26f), RoundedCornerShape(36.dp))
         .drawPrismalGlass(
             backdrop = prismalBackdrop,
             shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
             effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.32f),
             onDrawSurface = {
-                drawRect(Brush.verticalGradient(listOf(Color(0xFF7785A2).copy(alpha = 0.10f), accent.copy(alpha = 0.055f), Color(0xFF111A2B).copy(alpha = 0.22f))))
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF7785A2).copy(alpha = 0.17f), accent.copy(alpha = 0.075f), Color(0xFF111A2B).copy(alpha = 0.34f))))
             }
         )
     val glassStyle = remember {
@@ -2957,10 +2974,8 @@ private fun AuthScreen(
 
     val dark = isHaliMeoDark()
 
-    Box(
-        Modifier.fillMaxSize().hazeSource(authHaze)
-    ) {
-        Box(Modifier.fillMaxSize().background(haliMeoAuthBackdrop()).prismalGlassLayer(prismalBackdrop)) {
+    Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().background(haliMeoAuthBackdrop()).prismalGlassLayer(prismalBackdrop).hazeSource(authHaze)) {
         // Layered, theme-aware ambient waves inspired by the concept artwork.
         val atmosphere = haliMeoAtmosphere(customBackgroundColorState.value)
         val waveA = accent
@@ -3110,7 +3125,7 @@ private fun AuthScreen(
             Card(
                 modifier = authCardModifier,
                 shape = RoundedCornerShape(36.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF26324B).copy(alpha = 0.62f))
+                colors = CardDefaults.cardColors(containerColor = authSurfaceTint.copy(alpha = 0.88f))
             ) {
                 Column(
                     Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
@@ -3226,8 +3241,9 @@ private fun AuthScreen(
                             modifier = Modifier.fillMaxWidth().height(54.dp)
                                 .shadow(8.dp, RoundedCornerShape(50.dp), ambientColor = accent.copy(alpha = 0.10f))
                                 .clip(RoundedCornerShape(50.dp))
-                                .background(Brush.verticalGradient(listOf(Color(0xFF66738F).copy(alpha = 0.30f), Color(0xFF2B3852).copy(alpha = 0.58f))))
-                                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.22f), RoundedCornerShape(50.dp)),
+                                .hazeBlur(HazeInput.Sources(authHaze), authFieldBlurStyle)
+                                .background(Brush.verticalGradient(listOf(Color(0xFF8190AE).copy(alpha = 0.38f), Color(0xFF394966).copy(alpha = 0.68f))))
+                                .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.26f), RoundedCornerShape(50.dp)),
                             shape = RoundedCornerShape(50.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface)
                         ) {
@@ -3244,8 +3260,8 @@ private fun AuthScreen(
                                 info = ""
                             },
                             modifier = Modifier.clip(RoundedCornerShape(50.dp))
-                                .background(Color(0xFF53617E).copy(alpha = 0.22f))
-                                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.16f), RoundedCornerShape(50.dp)),
+                                .background(Brush.verticalGradient(listOf(Color(0xFF8190AE).copy(alpha = 0.34f), Color(0xFF394966).copy(alpha = 0.58f))))
+                                .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.24f), RoundedCornerShape(50.dp)),
                             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
                         ) { Text("Torna all'accesso", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     } else {
@@ -3292,8 +3308,8 @@ private fun AuthScreen(
                                 IconButton(
                                     onClick = { passwordVisible = !passwordVisible },
                                     modifier = Modifier.clip(CircleShape)
-                                        .background(Color(0xFF53617E).copy(alpha = 0.20f))
-                                        .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.16f), CircleShape)
+                                        .background(Brush.verticalGradient(listOf(Color(0xFF8190AE).copy(alpha = 0.34f), Color(0xFF394966).copy(alpha = 0.58f))))
+                                        .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.24f), CircleShape)
                                 ) {
                                     Icon(
                                         if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
@@ -3455,8 +3471,8 @@ private fun AuthScreen(
                         }
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(50.dp))
-                                .background(Brush.verticalGradient(listOf(Color(0xFF65728F).copy(alpha = 0.26f), Color(0xFF26324B).copy(alpha = 0.48f))))
-                                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.20f), RoundedCornerShape(50.dp))
+                                .background(Brush.verticalGradient(listOf(Color(0xFF8190AE).copy(alpha = 0.34f), Color(0xFF394966).copy(alpha = 0.62f))))
+                                .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.24f), RoundedCornerShape(50.dp))
                                 .padding(horizontal = 14.dp, vertical = 12.dp),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
