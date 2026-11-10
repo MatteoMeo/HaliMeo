@@ -3118,7 +3118,8 @@ private fun AuthScreen(
                         RoundedCornerShape(50)
                     )
                     .blur(12.dp)
-            )            Box(
+            )
+            Box(
                 Modifier.align(Alignment.Center)
                     .offset(x = 10.dp, y = 10.dp)
                     .size(720.dp, 3.dp)
