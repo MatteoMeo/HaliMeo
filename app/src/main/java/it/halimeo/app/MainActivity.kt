@@ -3596,7 +3596,7 @@ private fun AuthScreen(
                         }
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(50.dp))
-                                .background(Brush.verticalGradient(listOf(Color(0xFF8190AE).copy(alpha = 0.34f), Color(0xFF394966).copy(alpha = 0.62f))))
+                                .background(Brush.verticalGradient(listOf(Color(0xFF647695).copy(alpha = 0.28f), Color(0xFF2D405F).copy(alpha = 0.66f))))
                                 .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.24f), RoundedCornerShape(50.dp))
                                 .padding(horizontal = 14.dp, vertical = 12.dp),
                             horizontalArrangement = Arrangement.Center,
