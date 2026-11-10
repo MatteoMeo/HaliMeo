@@ -298,7 +298,11 @@ private fun haliMeoAtmosphere(key: String): HaliMeoAtmosphere? = when (key) {
 @Composable
 private fun haliMeoAnimatedAtmosphere(key: String): HaliMeoAtmosphere? {
     val target = haliMeoAtmosphere(key) ?: return null
-    val transition = tween<Color>(durationMillis = 2600)
+    // Let the whole palette morph almost for the entire interval. This keeps
+    // every colour field in sync instead of swapping presets in one frame.
+    val transitionDuration = if (reduceAnimationsState.value) 0
+        else ((dynamicThemeIntervalSecondsState.intValue.coerceIn(15, 120) - 2) * 1000).coerceAtLeast(1)
+    val transition = tween<Color>(durationMillis = transitionDuration, easing = LinearEasing)
     val primary by animateColorAsState(target.primary, transition, label = "themePrimary")
     val secondary by animateColorAsState(target.secondary, transition, label = "themeSecondary")
     val top by animateColorAsState(target.top, transition, label = "themeTop")
@@ -369,7 +373,7 @@ private fun frostedSurfaceColor(): Color = haliMeoVisualTokens().surface
 
 @Composable
 private fun frostedSurfaceStrongColor(): Color = haliMeoVisualTokens().strongSurface
-private val customBackgroundColorState = mutableStateOf("default")
+private val customBackgroundColorState = mutableStateOf("aurora")
 private val customBackgroundUriState = mutableStateOf<String?>(null)
 private val backgroundBlurState = mutableStateOf(0f)
 private val backgroundOverlayState = mutableStateOf(0.48f)
@@ -411,8 +415,8 @@ private val profilePhotoRefreshState = mutableStateOf(0)
 private val reduceAnimationsState = mutableStateOf(false)
 private val reduceStaticEffectsState = mutableStateOf(false)
 private val appThemeModeState = mutableStateOf("dark")
-private val dynamicThemeEnabledState = mutableStateOf(false)
-private val dynamicThemeIntervalSecondsState = mutableIntStateOf(60)
+private val dynamicThemeEnabledState = mutableStateOf(true)
+private val dynamicThemeIntervalSecondsState = mutableIntStateOf(20)
 private val dynamicThemePresets = listOf(
     "aurora", "deep_ocean", "sunset", "forest", "amethyst", "graphite",
     "ruby", "citrus", "arctic", "copper", "lavender_mist", "emerald"
@@ -466,10 +470,20 @@ private val TextPrimary = Color(0xFFF5F7FA)
     LaunchedEffect(context) {
         val prefs = context.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
         appThemeModeState.value = prefs.getString("app_theme_mode", "dark")?.takeIf { it in setOf("dark", "light", "system") } ?: "dark"
-        customBackgroundColorState.value = (prefs.getString("background_color", "default") ?: "default").takeUnless { it == "photo" } ?: "default"
+        val dynamicThemeEnabled = prefs.getBoolean("dynamic_theme_enabled", true)
+        dynamicThemeEnabledState.value = dynamicThemeEnabled
+        dynamicThemeIntervalSecondsState.intValue = prefs.getInt("dynamic_theme_interval_seconds", 20).coerceIn(15, 120)
+        val savedBackground = (prefs.getString("background_color", "aurora") ?: "aurora").takeUnless { it == "photo" } ?: "aurora"
+        val initialBackground = if (dynamicThemeEnabled && savedBackground !in dynamicThemePresets) "aurora" else savedBackground
+        customBackgroundColorState.value = initialBackground
         customBackgroundUriState.value = null
-        dynamicThemeEnabledState.value = prefs.getBoolean("dynamic_theme_enabled", false)
-        dynamicThemeIntervalSecondsState.intValue = prefs.getInt("dynamic_theme_interval_seconds", 60).coerceIn(30, 180)
+        if (!prefs.contains("dynamic_theme_enabled") || (dynamicThemeEnabled && initialBackground != savedBackground)) {
+            prefs.edit()
+                .putBoolean("dynamic_theme_enabled", dynamicThemeEnabled)
+                .putString("background_color", initialBackground)
+                .remove("background_photo")
+                .apply()
+        }
         backgroundBlurState.value = prefs.getFloat("background_blur", 0f)
         backgroundOverlayState.value = prefs.getFloat("background_overlay", 0.48f)
         ambientLightState.floatValue = prefs.getFloat("ambient_light_intensity", 0.78f).coerceIn(0.2f, 1f)
@@ -493,7 +507,7 @@ private val TextPrimary = Color(0xFFF5F7FA)
         if (dynamicThemeEnabledState.value && !reduceAnimationsState.value) {
             val prefs = context.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
             while (dynamicThemeEnabledState.value && !reduceAnimationsState.value) {
-                delay(dynamicThemeIntervalSecondsState.intValue.coerceIn(30, 180) * 1000L)
+                delay(dynamicThemeIntervalSecondsState.intValue.coerceIn(15, 120) * 1000L)
                 val current = customBackgroundColorState.value
                 val currentIndex = dynamicThemePresets.indexOf(current)
                 val next = dynamicThemePresets[(currentIndex + 1).mod(dynamicThemePresets.size)]
@@ -524,7 +538,7 @@ private val TextPrimary = Color(0xFFF5F7FA)
             outline = Color(0xFFB9B1C8), surfaceTint = Mint
         )
     }
-    val atmosphere = haliMeoAtmosphere(customBackgroundColorState.value)
+    val atmosphere = haliMeoAnimatedAtmosphere(customBackgroundColorState.value)
     val backgroundAccent = atmosphere?.primary ?: when (customBackgroundColorState.value) {
         "blue" -> Color(0xFF3E91FF)
         "lavender" -> Color(0xFF8878FF)
@@ -2134,7 +2148,7 @@ private fun SettingsScreen(
                 if (dynamicThemeEnabledState.value) {
                     Text("Frequenza di cambio", color = primaryText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                        listOf(30 to "30 sec", 60 to "1 min", 120 to "2 min").forEachIndexed { index, item ->
+                        listOf(15 to "15 sec", 20 to "20 sec", 30 to "30 sec").forEachIndexed { index, item ->
                             SegmentedButton(
                                 selected = dynamicThemeIntervalSecondsState.intValue == item.first,
                                 onClick = {
@@ -3101,7 +3115,7 @@ private fun AuthScreen(
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize().background(haliMeoAuthBackdrop()).prismalGlassLayer(prismalBackdrop).hazeSource(authHaze)) {
         // Layered, theme-aware ambient waves inspired by the concept artwork.
-        val atmosphere = haliMeoAtmosphere(customBackgroundColorState.value)
+        val atmosphere = haliMeoAnimatedAtmosphere(customBackgroundColorState.value)
         val waveA = atmosphere?.primary ?: accent
         val waveB = atmosphere?.secondary ?: MaterialTheme.colorScheme.secondary
         val waveC = MaterialTheme.colorScheme.tertiary
