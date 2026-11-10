@@ -1622,6 +1622,7 @@ private fun SettingsScreen(
     val settingsGlassTint = MaterialTheme.colorScheme.primary
     val settingsGlassStyle = remember(settingsGlassTint) {
         HazeBlurStyle {
+            // Keep settings on the exact same deep, neutral blue-slate glass as authentication.
             backgroundColor(Color(0xFF26344B).copy(alpha = 0.94f))
             colorEffects(listOf(HazeColorEffect.tint(settingsGlassTint.copy(alpha = 0.045f))))
             fallbackColorEffect(HazeColorEffect.tint(Color(0xFF202C42).copy(alpha = 0.96f)))
@@ -1709,7 +1710,7 @@ private fun SettingsScreen(
             }
         }
         Column(
-            Modifier.weight(1f).fillMaxWidth().verticalScroll(settingsScrollState).padding(start = 20.dp, end = 20.dp, bottom = 116.dp),
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(settingsScrollState).padding(start = 22.dp, end = 22.dp, bottom = 116.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
         if (selectedSettingsPage == null || selectedSettingsPage == "profile") {
@@ -1718,11 +1719,12 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(profileCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsProfilePress")
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
-                .clip(RoundedCornerShape(32.dp))
+                .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
+                .clip(RoundedCornerShape(36.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
                 .clickable(interactionSource = profileCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "profile" }
-                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
-            shape = RoundedCornerShape(32.dp),
+                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(36.dp)),
+            shape = RoundedCornerShape(36.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1987,11 +1989,12 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(invitesCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsInvitesPress")
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
-                .clip(RoundedCornerShape(32.dp))
+                .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
+                .clip(RoundedCornerShape(36.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
                 .clickable(interactionSource = invitesCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "invites" }
-                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
-            shape = RoundedCornerShape(32.dp),
+                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(36.dp)),
+            shape = RoundedCornerShape(36.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2111,11 +2114,12 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(appearanceCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsAppearancePress")
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
-                .clip(RoundedCornerShape(32.dp))
+                .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
+                .clip(RoundedCornerShape(36.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
-                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp))
+                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(36.dp))
                 .clickable(interactionSource = appearanceCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "appearance" },
-            shape = RoundedCornerShape(32.dp),
+            shape = RoundedCornerShape(36.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2598,11 +2602,12 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(dateCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsDatePress")
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
-                .clip(RoundedCornerShape(32.dp))
+                .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
+                .clip(RoundedCornerShape(36.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
                 .clickable(interactionSource = dateCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "date" }
-                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
-            shape = RoundedCornerShape(32.dp),
+                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(36.dp)),
+            shape = RoundedCornerShape(36.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -2657,11 +2662,12 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(syncCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsSyncPress")
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
-                .clip(RoundedCornerShape(32.dp))
+                .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
+                .clip(RoundedCornerShape(36.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
                 .clickable(interactionSource = syncCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "sync" }
-                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
-            shape = RoundedCornerShape(32.dp),
+                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(36.dp)),
+            shape = RoundedCornerShape(36.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2743,11 +2749,12 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(appInfoInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsAppInfoPress")
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
-                .clip(RoundedCornerShape(32.dp))
+                .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
+                .clip(RoundedCornerShape(36.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
                 .clickable(interactionSource = appInfoInteraction, indication = LocalIndication.current) { selectedSettingsPage = "appInfo" }
-                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
-            shape = RoundedCornerShape(32.dp),
+                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(36.dp)),
+            shape = RoundedCornerShape(36.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -2795,11 +2802,12 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
-                .clip(RoundedCornerShape(32.dp))
+                .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
+                .clip(RoundedCornerShape(36.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
                 .clickable { if (developerUnlocked) selectedSettingsPage = "developer" else { showDeveloperPinDialog = true; developerPin = ""; developerPinError = false } }
-                .border(1.dp, frostedEdgeColor(), RoundedCornerShape(32.dp)),
-            shape = RoundedCornerShape(32.dp),
+                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(36.dp)),
+            shape = RoundedCornerShape(36.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
