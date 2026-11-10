@@ -2879,46 +2879,48 @@ private fun AuthScreen(
     val authSurfaceTint = frostedSurfaceStrongColor()
     val authCardBlurStyle = remember(accent, authSurfaceTint) {
         HazeBlurStyle {
-            backgroundColor(authSurfaceTint.copy(alpha = 0.84f))
-            colorEffects(listOf(HazeColorEffect.tint(accent.copy(alpha = 0.13f))))
+            backgroundColor(authSurfaceTint.copy(alpha = 0.88f))
+            colorEffects(listOf(HazeColorEffect.tint(accent.copy(alpha = 0.09f))))
+            fallbackColorEffect(HazeColorEffect.tint(authSurfaceTint.copy(alpha = 0.96f)))
+        }
+    }
+    // Inputs share the card's softer haze, but keep the satin finish of the
+    // "Torna all'accesso" control: filled, matte and almost flat, never pill-3D.
+    val authFieldBlurStyle = remember(accent, authSurfaceTint) {
+        HazeBlurStyle {
+            backgroundColor(authSurfaceTint.copy(alpha = 0.86f))
+            colorEffects(listOf(HazeColorEffect.tint(accent.copy(alpha = 0.075f))))
             fallbackColorEffect(HazeColorEffect.tint(authSurfaceTint.copy(alpha = 0.94f)))
         }
     }
-    val authFieldBlurStyle = remember(accent, authSurfaceTint) {
-        HazeBlurStyle {
-            backgroundColor(authSurfaceTint.copy(alpha = 0.78f))
-            colorEffects(listOf(HazeColorEffect.tint(accent.copy(alpha = 0.10f))))
-            fallbackColorEffect(HazeColorEffect.tint(authSurfaceTint.copy(alpha = 0.90f)))
-        }
-    }
 
-    // Shared flat-satin glass treatment: tinted body, defined rim and restrained top sheen.
     val authFieldModifier = Modifier.fillMaxWidth()
-        .shadow(12.dp, fieldShape, ambientColor = accent.copy(alpha = 0.16f), spotColor = Color.Black.copy(alpha = 0.34f))
+        .heightIn(min = 58.dp)
         .clip(fieldShape)
         .hazeBlur(HazeInput.Sources(authHaze), authFieldBlurStyle)
-        .background(Brush.verticalGradient(listOf(Color(0xFF8998B8).copy(alpha = 0.38f), Color(0xFF465675).copy(alpha = 0.54f), Color(0xFF202D47).copy(alpha = 0.68f))), fieldShape)
-        .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.30f), fieldShape)
-        .drawPrismalGlass(
-            backdrop = prismalBackdrop,
-            shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
-            effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.34f),
-            onDrawSurface = {
-                drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.19f), accent.copy(alpha = 0.065f), Color(0xFF202B43).copy(alpha = 0.22f), Color(0xFF101827).copy(alpha = 0.28f))))
-            }
+        .background(
+            Brush.verticalGradient(
+                listOf(
+                    Color(0xFF8190AE).copy(alpha = 0.43f),
+                    Color(0xFF53627F).copy(alpha = 0.60f),
+                    Color(0xFF394966).copy(alpha = 0.70f)
+                )
+            ),
+            fieldShape
         )
+        .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.22f), fieldShape)
     val authCardModifier = Modifier.fillMaxWidth()
-        .shadow(26.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.24f), spotColor = Color.Black.copy(alpha = 0.34f))
+        .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
         .clip(RoundedCornerShape(36.dp))
         .hazeBlur(HazeInput.Sources(authHaze), authCardBlurStyle)
-        .background(Brush.verticalGradient(listOf(Color(0xFF53617E).copy(alpha = 0.44f), Color(0xFF293650).copy(alpha = 0.62f), Color(0xFF111A2B).copy(alpha = 0.76f))))
-        .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.26f), RoundedCornerShape(36.dp))
+        .background(Brush.verticalGradient(listOf(Color(0xFF7785A2).copy(alpha = 0.48f), Color(0xFF455672).copy(alpha = 0.64f), Color(0xFF263750).copy(alpha = 0.76f))))
+        .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.30f), RoundedCornerShape(36.dp))
         .drawPrismalGlass(
             backdrop = prismalBackdrop,
             shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
-            effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.32f),
+            effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.36f),
             onDrawSurface = {
-                drawRect(Brush.verticalGradient(listOf(Color(0xFF7785A2).copy(alpha = 0.17f), accent.copy(alpha = 0.075f), Color(0xFF111A2B).copy(alpha = 0.34f))))
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.20f), accent.copy(alpha = 0.055f), Color(0xFF263750).copy(alpha = 0.24f))))
             }
         )
     val glassStyle = remember {
@@ -3128,31 +3130,14 @@ private fun AuthScreen(
             }
             Spacer(Modifier.height(112.dp))
 
-            if (recovery) {
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "Ritroviamo il tuo accesso.",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        "Ti aiutiamo a rientrare nel tuo spazio condiviso.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-            }
-
             Card(
                 modifier = authCardModifier,
                 shape = RoundedCornerShape(36.dp),
-                colors = CardDefaults.cardColors(containerColor = authSurfaceTint.copy(alpha = 0.88f))
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
                 Column(
-                    Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                    Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+                    verticalArrangement = Arrangement.spacedBy(if (recovery) 11.dp else 7.dp)
                 ) {
                     if (recovery || redeem) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -3173,11 +3158,6 @@ private fun AuthScreen(
                     }
                     if (recovery) {
                         Text(
-                            "Recupera il tuo accesso",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
                             if (resetCodeSent)
                                 "Inserisci il codice ricevuto via email e scegli una nuova password."
                             else
@@ -3188,7 +3168,7 @@ private fun AuthScreen(
                         OutlinedTextField(
                             value = email,
                             onValueChange = { email = it.trim() },
-                            label = { Text("Indirizzo email") },
+                            placeholder = { Text("Email") },
                             leadingIcon = { Icon(Icons.Default.MailOutline, null) },
                             modifier = authFieldModifier,
                             shape = fieldShape,
@@ -3283,7 +3263,7 @@ private fun AuthScreen(
                                 info = ""
                             },
                             modifier = Modifier.clip(RoundedCornerShape(50.dp))
-                                .background(Brush.verticalGradient(listOf(Color(0xFF8190AE).copy(alpha = 0.34f), Color(0xFF394966).copy(alpha = 0.58f))))
+                                 .background(Brush.verticalGradient(listOf(Color(0xFF8190AE).copy(alpha = 0.34f), Color(0xFF394966).copy(alpha = 0.58f))))
                                 .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.24f), RoundedCornerShape(50.dp)),
                             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
                         ) { Text("Torna all'accesso", color = MaterialTheme.colorScheme.onSurfaceVariant) }
