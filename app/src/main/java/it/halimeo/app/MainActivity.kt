@@ -2892,9 +2892,9 @@ private fun AuthScreen(
     // "Torna all'accesso" control: filled, matte and almost flat, never pill-3D.
     val authFieldBlurStyle = remember(accent, authSurfaceTint) {
         HazeBlurStyle {
-            backgroundColor(Color(0xFF596985).copy(alpha = 0.76f))
-            colorEffects(listOf(HazeColorEffect.tint(accent.copy(alpha = 0.065f))))
-            fallbackColorEffect(HazeColorEffect.tint(Color(0xFF52617B).copy(alpha = 0.88f)))
+            backgroundColor(Color(0xFF40516E).copy(alpha = 0.84f))
+            colorEffects(listOf(HazeColorEffect.tint(accent.copy(alpha = 0.055f))))
+            fallbackColorEffect(HazeColorEffect.tint(Color(0xFF34445F).copy(alpha = 0.94f)))
         }
     }
 
@@ -2905,9 +2905,9 @@ private fun AuthScreen(
         .background(
             Brush.verticalGradient(
                 listOf(
-                    Color(0xFF8190AE).copy(alpha = 0.34f),
-                    Color(0xFF596985).copy(alpha = 0.48f),
-                    Color(0xFF394966).copy(alpha = 0.62f)
+                    Color(0xFF647695).copy(alpha = 0.30f),
+                    Color(0xFF465A79).copy(alpha = 0.50f),
+                    Color(0xFF2D405F).copy(alpha = 0.68f)
                 )
             ),
             fieldShape
@@ -2927,6 +2927,13 @@ private fun AuthScreen(
                 drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), accent.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
             }
         )
+    val authPrimaryButtonBrush = Brush.linearGradient(
+        listOf(
+            accent.copy(alpha = 0.98f),
+            MaterialTheme.colorScheme.secondary.copy(alpha = 0.94f),
+            accent.copy(alpha = 0.90f)
+        )
+    )
     val glassStyle = remember {
         GlassStyle {
             backgroundColor(Color(0xFF34415D).copy(alpha = 0.42f))
@@ -3019,13 +3026,13 @@ private fun AuthScreen(
                     .size(500.dp, 470.dp)
                     .background(
                         Brush.radialGradient(
-                            0f to waveB.copy(alpha = 0.82f),
-                            0.42f to waveA.copy(alpha = 0.48f),
+                            0f to waveB.copy(alpha = 0.96f),
+                            0.42f to waveA.copy(alpha = 0.70f),
                             1f to Color.Transparent
                         ),
                         CircleShape
                     )
-                    .blur(58.dp)
+                    .blur(42.dp)
             )
             Box(
                 Modifier.align(Alignment.TopEnd)
@@ -3033,13 +3040,13 @@ private fun AuthScreen(
                     .size(460.dp, 560.dp)
                     .background(
                         Brush.radialGradient(
-                            0f to waveA.copy(alpha = 0.58f),
-                            0.48f to waveC.copy(alpha = 0.38f),
+                            0f to waveA.copy(alpha = 0.82f),
+                            0.48f to waveC.copy(alpha = 0.58f),
                             1f to Color.Transparent
                         ),
                         CircleShape
                     )
-                    .blur(62.dp)
+                    .blur(44.dp)
             )
             Box(
                 Modifier.align(Alignment.Center)
@@ -3049,14 +3056,14 @@ private fun AuthScreen(
                     .background(
                         Brush.horizontalGradient(
                             0f to Color.Transparent,
-                            0.18f to waveB.copy(alpha = 0.10f),
-                            0.42f to waveA.copy(alpha = 0.50f),
-                            0.72f to waveC.copy(alpha = 0.42f),
+                            0.18f to waveB.copy(alpha = 0.28f),
+                            0.42f to waveA.copy(alpha = 0.76f),
+                            0.72f to waveC.copy(alpha = 0.66f),
                             1f to Color.Transparent
                         ),
                         RoundedCornerShape(50)
                     )
-                    .blur(34.dp)
+                    .blur(20.dp)
             )
             Box(
                 Modifier.align(Alignment.Center)
@@ -3066,14 +3073,14 @@ private fun AuthScreen(
                     .background(
                         Brush.horizontalGradient(
                             0f to Color.Transparent,
-                            0.28f to waveC.copy(alpha = 0.14f),
-                            0.52f to waveB.copy(alpha = 0.34f),
-                            0.78f to waveA.copy(alpha = 0.30f),
+                            0.28f to waveC.copy(alpha = 0.30f),
+                            0.52f to waveB.copy(alpha = 0.82f),
+                            0.78f to waveA.copy(alpha = 0.52f),
                             1f to Color.Transparent
                         ),
                         RoundedCornerShape(50)
                     )
-                    .blur(19.dp)
+                    .blur(12.dp)
             )
             Box(
                 Modifier.align(Alignment.CenterStart)
@@ -3081,11 +3088,11 @@ private fun AuthScreen(
                     .size(390.dp, 260.dp)
                     .background(
                         Brush.radialGradient(
-                            listOf(waveC.copy(alpha = 0.50f), waveB.copy(alpha = 0.26f), Color.Transparent)
+                            listOf(waveC.copy(alpha = 0.72f), waveB.copy(alpha = 0.44f), Color.Transparent)
                         ),
                         CircleShape
                     )
-                    .blur(52.dp)
+                    .blur(38.dp)
             )
             Box(
                 Modifier.align(Alignment.BottomEnd)
@@ -3093,11 +3100,11 @@ private fun AuthScreen(
                     .size(490.dp, 420.dp)
                     .background(
                         Brush.radialGradient(
-                            listOf(waveB.copy(alpha = 0.58f), waveA.copy(alpha = 0.30f), Color.Transparent)
+                            listOf(waveB.copy(alpha = 0.82f), waveA.copy(alpha = 0.52f), Color.Transparent)
                         ),
                         CircleShape
                     )
-                    .blur(60.dp)
+                    .blur(42.dp)
             )
             Box(
                 Modifier.align(Alignment.BottomStart)
@@ -3106,12 +3113,38 @@ private fun AuthScreen(
                     .graphicsLayer { rotationZ = -12f }
                     .background(
                         Brush.horizontalGradient(
-                            listOf(Color.Transparent, waveA.copy(alpha = 0.20f), waveC.copy(alpha = 0.34f), waveB.copy(alpha = 0.18f), Color.Transparent)
+                            listOf(Color.Transparent, waveA.copy(alpha = 0.42f), waveC.copy(alpha = 0.56f), waveB.copy(alpha = 0.18f), Color.Transparent)
                         ),
                         RoundedCornerShape(50)
                     )
-                    .blur(22.dp)
+                    .blur(12.dp)
+            )            Box(
+                Modifier.align(Alignment.Center)
+                    .offset(x = 10.dp, y = 10.dp)
+                    .size(720.dp, 3.dp)
+                    .graphicsLayer { rotationZ = -17f }
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(Color.Transparent, waveB.copy(alpha = 0.10f), waveA.copy(alpha = 0.94f), waveC.copy(alpha = 0.76f), Color.Transparent)
+                        ),
+                        RoundedCornerShape(50)
+                    )
+                    .blur(3.dp)
             )
+            Box(
+                Modifier.align(Alignment.BottomStart)
+                    .offset(x = (-80).dp, y = 155.dp)
+                    .size(660.dp, 2.dp)
+                    .graphicsLayer { rotationZ = -12f }
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(Color.Transparent, waveA.copy(alpha = 0.82f), waveC.copy(alpha = 0.92f), waveB.copy(alpha = 0.40f), Color.Transparent)
+                        ),
+                        RoundedCornerShape(50)
+                    )
+                    .blur(2.dp)
+            )
+
         } else {
             // Light theme keeps the same flowing composition, with softer opacity.
             Box(
@@ -3339,14 +3372,13 @@ private fun AuthScreen(
                                     }
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth().height(54.dp)
-                                .shadow(8.dp, RoundedCornerShape(50.dp), ambientColor = accent.copy(alpha = 0.10f))
+                            modifier = Modifier.fillMaxWidth().height(56.dp)
+                                .shadow(16.dp, RoundedCornerShape(50.dp), ambientColor = accent.copy(alpha = 0.30f), spotColor = Color.Black.copy(alpha = 0.24f))
                                 .clip(RoundedCornerShape(50.dp))
-                                .hazeBlur(HazeInput.Sources(authHaze), authFieldBlurStyle)
-                                .background(Brush.verticalGradient(listOf(Color(0xFF8190AE).copy(alpha = 0.38f), Color(0xFF394966).copy(alpha = 0.68f))))
-                                .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.26f), RoundedCornerShape(50.dp)),
+                                .background(authPrimaryButtonBrush)
+                                .border(1.dp, Color.White.copy(alpha = 0.30f), RoundedCornerShape(50.dp)),
                             shape = RoundedCornerShape(50.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface)
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = Color.White)
                         ) {
                             if (busy) CircularProgressIndicator(Modifier.size(19.dp), strokeWidth = 2.dp)
                             else Icon(if (resetCodeSent) Icons.Default.LockReset else Icons.Default.MarkEmailRead, null)
@@ -3361,8 +3393,8 @@ private fun AuthScreen(
                                 info = ""
                             },
                             modifier = Modifier.clip(RoundedCornerShape(50.dp))
-                                 .background(Brush.verticalGradient(listOf(Color(0xFF8190AE).copy(alpha = 0.34f), Color(0xFF394966).copy(alpha = 0.58f))))
-                                .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.24f), RoundedCornerShape(50.dp)),
+                                 .background(Brush.verticalGradient(listOf(Color(0xFF647695).copy(alpha = 0.28f), Color(0xFF2D405F).copy(alpha = 0.66f))))
+                                .border(1.dp, Color(0xFFB7C7E0).copy(alpha = 0.20f), RoundedCornerShape(50.dp)),
                             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
                         ) { Text("Torna all'accesso", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     } else {
@@ -3428,7 +3460,7 @@ private fun AuthScreen(
                                 TextButton(
                                     onClick = { recovery = true; error = ""; info = "" },
                                     modifier = Modifier.clip(RoundedCornerShape(50.dp))
-                                        .background(Brush.verticalGradient(listOf(Color(0xFF8190AE).copy(alpha = 0.34f), Color(0xFF394966).copy(alpha = 0.62f))))
+                                        .background(Brush.verticalGradient(listOf(Color(0xFF647695).copy(alpha = 0.28f), Color(0xFF2D405F).copy(alpha = 0.66f))))
                                         .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.24f), RoundedCornerShape(50.dp)),
                                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 7.dp)
                                 ) { Text("Hai dimenticato la password?", color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -3442,15 +3474,7 @@ private fun AuthScreen(
                                 .height(56.dp)
                                 .shadow(16.dp, RoundedCornerShape(50), ambientColor = accent.copy(alpha = 0.34f), spotColor = Color.Black.copy(alpha = 0.30f))
                                 .clip(RoundedCornerShape(50))
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(
-                                            accent.copy(alpha = 0.98f),
-                                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.92f),
-                                            accent.copy(alpha = 0.86f)
-                                        )
-                                    )
-                                )
+                                .background(authPrimaryButtonBrush)
                                 .border(1.dp, Color.White.copy(alpha = 0.32f), RoundedCornerShape(50))
 
                                 .clickable(enabled = canSubmit) {
