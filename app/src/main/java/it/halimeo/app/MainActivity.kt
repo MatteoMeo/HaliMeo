@@ -602,6 +602,21 @@ class MainActivity:ComponentActivity() {
         // switch dynamically between 120/96/90/60Hz based on content and power.
         lastSyncAtState.value = getSharedPreferences("halimeo_preferences", MODE_PRIVATE).getLong("last_sync_at", 0L)
         setContent { HaliMeoTheme { HaliMeoRoot() } }
+        // Ask for notification permission once on first launch, before login.
+        // Update discovery and notification actions do not depend on an account session.
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            val prefs = getSharedPreferences("halimeo_preferences", MODE_PRIVATE)
+            if (!prefs.getBoolean("update_notifications_permission_requested", false)) {
+                prefs.edit().putBoolean("update_notifications_permission_requested", true).apply()
+                window.decorView.post {
+                    if (!isFinishing && !isDestroyed) {
+                        requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 7302)
+                    }
+                }
+            }
+        }
 
         if (BuildConfig.DEBUG) {
             // Wait until Android has created the window decor before attaching JankStats.
@@ -622,6 +637,13 @@ class MainActivity:ComponentActivity() {
                     }.getOrNull()
                 }
             }
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 7302 && grantResults.firstOrNull() == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            lifecycleScope.launch { checkForUpdatesOnLaunch(applicationContext) }
         }
     }
 
