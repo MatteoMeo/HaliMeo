@@ -591,6 +591,7 @@ class MainActivity:ComponentActivity() {
         // the app cache on every launch or disturb a pending newer download.
         cleanupInstalledUpdateApks(applicationContext)
         SyncScheduler.schedule(this)
+        UpdateCheckScheduler.schedule(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         window.statusBarColor = android.graphics.Color.TRANSPARENT
