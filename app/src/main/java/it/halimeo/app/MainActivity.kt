@@ -3156,17 +3156,6 @@ private fun AuthScreen(
                     .blur(58.dp)
             )
         }
-            Box(
-                Modifier.align(Alignment.TopEnd).padding(top = 28.dp, end = 8.dp)
-                    .size(230.dp)
-                    .background(
-                        Brush.radialGradient(
-                            listOf(accent.copy(alpha = 0.13f), Color.Transparent)
-                        ),
-                        CircleShape
-                    )
-            )
-        }
         }
         Column(
             Modifier.fillMaxSize()
