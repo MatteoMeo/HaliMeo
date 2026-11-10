@@ -2879,18 +2879,18 @@ private fun AuthScreen(
     val authSurfaceTint = frostedSurfaceStrongColor()
     val authCardBlurStyle = remember(accent, authSurfaceTint) {
         HazeBlurStyle {
-            backgroundColor(authSurfaceTint.copy(alpha = 0.88f))
-            colorEffects(listOf(HazeColorEffect.tint(accent.copy(alpha = 0.09f))))
-            fallbackColorEffect(HazeColorEffect.tint(authSurfaceTint.copy(alpha = 0.96f)))
+            backgroundColor(Color(0xFF46536B).copy(alpha = 0.82f))
+            colorEffects(listOf(HazeColorEffect.tint(accent.copy(alpha = 0.075f))))
+            fallbackColorEffect(HazeColorEffect.tint(Color(0xFF35445D).copy(alpha = 0.94f)))
         }
     }
     // Inputs share the card's softer haze, but keep the satin finish of the
     // "Torna all'accesso" control: filled, matte and almost flat, never pill-3D.
     val authFieldBlurStyle = remember(accent, authSurfaceTint) {
         HazeBlurStyle {
-            backgroundColor(authSurfaceTint.copy(alpha = 0.86f))
-            colorEffects(listOf(HazeColorEffect.tint(accent.copy(alpha = 0.075f))))
-            fallbackColorEffect(HazeColorEffect.tint(authSurfaceTint.copy(alpha = 0.94f)))
+            backgroundColor(Color(0xFF596985).copy(alpha = 0.76f))
+            colorEffects(listOf(HazeColorEffect.tint(accent.copy(alpha = 0.065f))))
+            fallbackColorEffect(HazeColorEffect.tint(Color(0xFF52617B).copy(alpha = 0.88f)))
         }
     }
 
@@ -2901,26 +2901,26 @@ private fun AuthScreen(
         .background(
             Brush.verticalGradient(
                 listOf(
-                    Color(0xFF8190AE).copy(alpha = 0.43f),
-                    Color(0xFF53627F).copy(alpha = 0.60f),
-                    Color(0xFF394966).copy(alpha = 0.70f)
+                    Color(0xFF8190AE).copy(alpha = 0.34f),
+                    Color(0xFF596985).copy(alpha = 0.48f),
+                    Color(0xFF394966).copy(alpha = 0.62f)
                 )
             ),
             fieldShape
         )
-        .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.22f), fieldShape)
+        .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.24f), fieldShape)
     val authCardModifier = Modifier.fillMaxWidth()
         .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
         .clip(RoundedCornerShape(36.dp))
         .hazeBlur(HazeInput.Sources(authHaze), authCardBlurStyle)
-        .background(Brush.verticalGradient(listOf(Color(0xFF7785A2).copy(alpha = 0.48f), Color(0xFF455672).copy(alpha = 0.64f), Color(0xFF263750).copy(alpha = 0.76f))))
+        .background(Brush.verticalGradient(listOf(Color(0xFF65738D).copy(alpha = 0.52f), Color(0xFF4C5B74).copy(alpha = 0.68f), Color(0xFF35455F).copy(alpha = 0.78f))))
         .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.30f), RoundedCornerShape(36.dp))
         .drawPrismalGlass(
             backdrop = prismalBackdrop,
             shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
-            effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.36f),
+            effects = prismalGlassEffects(prismalDensity, adaptiveLuminance = true, luminance = 0.27f),
             onDrawSurface = {
-                drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.20f), accent.copy(alpha = 0.055f), Color(0xFF263750).copy(alpha = 0.24f))))
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.12f), accent.copy(alpha = 0.075f), Color(0xFF263750).copy(alpha = 0.28f))))
             }
         )
     val glassStyle = remember {
@@ -3014,7 +3014,7 @@ private fun AuthScreen(
                     .graphicsLayer { rotationZ = -24f }
                     .background(
                         Brush.linearGradient(
-                            listOf(waveA.copy(alpha = 0.48f), waveB.copy(alpha = 0.34f), waveC.copy(alpha = 0.20f), Color.Transparent)
+                            listOf(waveA.copy(alpha = 0.62f), waveB.copy(alpha = 0.46f), waveC.copy(alpha = 0.30f), Color.Transparent)
                         ),
                         RoundedCornerShape(topStart = 150.dp, topEnd = 120.dp, bottomEnd = 220.dp, bottomStart = 80.dp)
                     )
@@ -3027,7 +3027,7 @@ private fun AuthScreen(
                     .graphicsLayer { rotationZ = -31f }
                     .background(
                         Brush.linearGradient(
-                            listOf(Color.Transparent, waveB.copy(alpha = 0.32f), waveC.copy(alpha = 0.26f), waveA.copy(alpha = 0.38f))
+                            listOf(Color.Transparent, waveB.copy(alpha = 0.46f), waveC.copy(alpha = 0.38f), waveA.copy(alpha = 0.52f))
                         ),
                         RoundedCornerShape(topStart = 190.dp, topEnd = 80.dp, bottomEnd = 170.dp, bottomStart = 120.dp)
                     )
@@ -3040,11 +3040,42 @@ private fun AuthScreen(
                     .graphicsLayer { rotationZ = -19f }
                     .background(
                         Brush.horizontalGradient(
-                            listOf(Color.Transparent, waveA.copy(alpha = 0.34f), waveB.copy(alpha = 0.28f), waveC.copy(alpha = 0.22f))
+                            listOf(Color.Transparent, waveA.copy(alpha = 0.46f), waveB.copy(alpha = 0.38f), waveC.copy(alpha = 0.30f))
                         ),
                         RoundedCornerShape(topStart = 180.dp, topEnd = 110.dp, bottomEnd = 150.dp, bottomStart = 210.dp)
                     )
                     .blur(36.dp)
+            )
+            Box(
+                Modifier.align(Alignment.TopEnd)
+                    .offset(x = 105.dp, y = 205.dp)
+                    .size(330.dp)
+                    .background(
+                        Brush.radialGradient(listOf(waveC.copy(alpha = 0.42f), waveB.copy(alpha = 0.22f), Color.Transparent)),
+                        CircleShape
+                    )
+                    .blur(46.dp)
+            )
+            Box(
+                Modifier.align(Alignment.CenterStart)
+                    .offset(x = (-145).dp, y = 85.dp)
+                    .size(360.dp, 250.dp)
+                    .graphicsLayer { rotationZ = 18f }
+                    .background(
+                        Brush.linearGradient(listOf(waveB.copy(alpha = 0.38f), waveA.copy(alpha = 0.30f), waveC.copy(alpha = 0.22f), Color.Transparent)),
+                        RoundedCornerShape(180.dp)
+                    )
+                    .blur(48.dp)
+            )
+            Box(
+                Modifier.align(Alignment.BottomEnd)
+                    .offset(x = 120.dp, y = 80.dp)
+                    .size(370.dp, 300.dp)
+                    .background(
+                        Brush.radialGradient(listOf(waveA.copy(alpha = 0.38f), waveC.copy(alpha = 0.24f), Color.Transparent)),
+                        CircleShape
+                    )
+                    .blur(52.dp)
             )
         } else {
             Box(
@@ -3068,11 +3099,11 @@ private fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            Spacer(Modifier.height(30.dp))
+            Spacer(Modifier.height(42.dp))
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(
-                        Modifier.size(78.dp)
+                        Modifier.size(92.dp)
                             .clip(RoundedCornerShape(27.dp))
                             .background(
                                 Brush.linearGradient(
@@ -3085,7 +3116,7 @@ private fun AuthScreen(
                         Image(
                             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_launcher_foreground),
                             contentDescription = "Logo HaliMeo",
-                            modifier = Modifier.fillMaxSize().padding(8.dp),
+                            modifier = Modifier.fillMaxSize().padding(5.dp),
                             contentScale = ContentScale.Fit,
                             colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(accent)
                         )
@@ -3128,7 +3159,7 @@ private fun AuthScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(112.dp))
+            Spacer(Modifier.height(86.dp))
 
             Card(
                 modifier = authCardModifier,
@@ -3311,7 +3342,7 @@ private fun AuthScreen(
                                 IconButton(
                                     onClick = { passwordVisible = !passwordVisible },
                                     modifier = Modifier.clip(CircleShape)
-                                        .background(Brush.verticalGradient(listOf(Color(0xFF8190AE).copy(alpha = 0.34f), Color(0xFF394966).copy(alpha = 0.58f))))
+                                        .background(Brush.verticalGradient(listOf(Color(0xFF8190AE).copy(alpha = 0.34f), Color(0xFF394966).copy(alpha = 0.62f))))
                                         .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.24f), CircleShape)
                                 ) {
                                     Icon(
@@ -3330,8 +3361,8 @@ private fun AuthScreen(
                                 TextButton(
                                     onClick = { recovery = true; error = ""; info = "" },
                                     modifier = Modifier.clip(RoundedCornerShape(50.dp))
-                                        .background(Color(0xFF53617E).copy(alpha = 0.22f))
-                                        .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.16f), RoundedCornerShape(50.dp)),
+                                        .background(Brush.verticalGradient(listOf(Color(0xFF8190AE).copy(alpha = 0.34f), Color(0xFF394966).copy(alpha = 0.62f))))
+                                        .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.24f), RoundedCornerShape(50.dp)),
                                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 7.dp)
                                 ) { Text("Hai dimenticato la password?", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                             }
