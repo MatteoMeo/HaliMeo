@@ -1716,6 +1716,50 @@ private fun SettingsScreen(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(settingsScrollState).padding(start = 8.dp, end = 8.dp, bottom = 116.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+        if (selectedSettingsPage == null) {
+            Column(
+                Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(30.dp))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                Color(0xFF394B68).copy(alpha = 0.76f),
+                                Color(0xFF26364F).copy(alpha = 0.88f),
+                                Color(0xFF202B40).copy(alpha = 0.94f)
+                            )
+                        )
+                    )
+                    .border(1.dp, Color(0xFFCAD7EA).copy(alpha = 0.16f), RoundedCornerShape(30.dp))
+                    .padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFB9C9E4), modifier = Modifier.size(17.dp))
+                    Text("IL VOSTRO SPAZIO", color = Color(0xFFB9C9E4), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                }
+                Text("Tutto al proprio posto.", color = Color(0xFFF2F5FB), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                Text("Gestisci il diario condiviso, il tuo account e l'esperienza HaliMeo.", color = Color(0xFFD0D9E8), style = MaterialTheme.typography.bodyMedium)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(
+                        Modifier.weight(1f).clip(RoundedCornerShape(18.dp))
+                            .background(Color.White.copy(alpha = 0.075f)).padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Text("RICORDI", color = Color(0xFFB9C9E4), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Text(diaryEntries.size.toString(), color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    }
+                    Column(
+                        Modifier.weight(1f).clip(RoundedCornerShape(18.dp))
+                            .background(Color.White.copy(alpha = 0.075f)).padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Text("DA SINCRONIZZARE", color = Color(0xFFB9C9E4), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Text(pendingSyncCount.toString(), color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
         if (selectedSettingsPage == null || selectedSettingsPage == "profile") {
         val profileCardInteraction = remember { MutableInteractionSource() }
         Card(
