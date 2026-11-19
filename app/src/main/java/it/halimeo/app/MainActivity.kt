@@ -2304,7 +2304,7 @@ private fun SettingsScreen(
                 if (dynamicThemeEnabledState.value) {
                     Text("Frequenza di cambio", color = primaryText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                        listOf(15 to "15 sec", 20 to "20 sec", 30 to "30 sec").forEachIndexed { index, item ->
+                        listOf(30 to "30 sec", 60 to "1 min", 90 to "1:30", 120 to "2 min").forEachIndexed { index, item ->
                             SegmentedButton(
                                 selected = dynamicThemeIntervalSecondsState.intValue == item.first,
                                 onClick = {
@@ -2379,7 +2379,7 @@ private fun SettingsScreen(
                     )
                     Text("Intensa", color = secondaryText, style = MaterialTheme.typography.labelSmall)
                 }
-                Text("Preset rapidi", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text("Atmosfere", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Text("Atmosfere complete con sfondo, luce e accenti coordinati.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 val atmosphereOptions = listOf(
                     "aurora" to "Aurora",
@@ -2447,7 +2447,7 @@ private fun SettingsScreen(
                     }
                 }
                 Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
-                Text("Palette e colore d’accento", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text("Colore d’accento", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 val backgroundOptions = listOf(
                     "default" to "Predefinito", "blue" to "Blu", "lavender" to "Lavanda",
                     "mint" to "Menta", "rose" to "Rosa", "amber" to "Ambra",
@@ -2514,7 +2514,7 @@ private fun SettingsScreen(
                         }
                     }
                 }
-                Text("Scegli il colore d'accento dell'app.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                Text("Il colore selezionato aggiorna gli accenti dell’interfaccia. La scelta manuale mette in pausa l’atmosfera automatica.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
                 val iconChoices = listOf(
                     Triple("ocean", "Ametista", R.mipmap.ic_launcher),
@@ -2538,8 +2538,8 @@ private fun SettingsScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("Icona dell’app", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                            Text("Personalizza il simbolo di HaliMeo.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
+                            Text("Icona HaliMeo", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            Text("Scegli come appare HaliMeo nella schermata Home.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                         }
                         Surface(
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.13f),
@@ -2633,12 +2633,12 @@ private fun SettingsScreen(
                 }
                 Text("Il launcher potrebbe aggiornare l’icona dopo qualche secondo.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
-                Text("Prestazioni e movimento", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text("Fluidità", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 val prefs = ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
                 var selectedRefreshRate by remember { mutableIntStateOf(prefs.getInt("preferred_refresh_rate", 0)) }
                 var reduceAnimations by remember { mutableStateOf(prefs.getBoolean("reduce_animations", false)) }
                 var reduceStaticEffects by remember { mutableStateOf(prefs.getBoolean("reduce_static_effects", false)) }
-                Text("Frequenza schermo", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
+                Text("Frequenza di aggiornamento", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
                 SingleChoiceSegmentedButtonRow(
                     modifier = Modifier.fillMaxWidth()
                         .clip(RoundedCornerShape(22.dp))
