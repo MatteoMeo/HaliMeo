@@ -1576,7 +1576,7 @@ private fun SettingsScreen(
         }
     }
     val profilePhotoBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, profilePhotoUri, ctx) {
-        value = profilePhotoUri?.let { decodeScaledBitmap(ctx, it, maxDimension = 320) }
+        value = if (selectedSettingsPage == "profile") profilePhotoUri?.let { decodeScaledBitmap(ctx, it, maxDimension = 320) } else null
     }
     var specialDateLabel by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date_label", "") ?: "") }
     var specialDate by remember { mutableStateOf(ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).getString("special_date", "")?.let { displayHaliMeoDate(it) } ?: "") }
@@ -1616,9 +1616,6 @@ private fun SettingsScreen(
         }
     }
 
-    val settingsHaze = rememberHazeState()
-    val settingsPrismalBackdrop = rememberPrismalGlassLayer()
-    val settingsPrismalDensity = LocalDensity.current
     val settingsGlassTint = MaterialTheme.colorScheme.primary
     val settingsGlassStyle = remember(settingsGlassTint) {
         HazeBlurStyle {
@@ -1659,7 +1656,7 @@ private fun SettingsScreen(
         animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "settingsTitleScale"
     )
-    Column(Modifier.fillMaxSize().background(Color.Transparent).hazeSource(settingsHaze)) {
+    Column(Modifier.fillMaxSize().background(Color.Transparent)) {
         // A dedicated route header replaces accordion toggles with clear page navigation.
         Row(
             Modifier.fillMaxWidth().padding(start = 12.dp, top = 8.dp, end = 20.dp, bottom = 8.dp),
@@ -1727,7 +1724,7 @@ private fun SettingsScreen(
                 
                 .shadow(8.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.12f))
                 .clip(RoundedCornerShape(28.dp))
-                .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
+                .background(Brush.verticalGradient(listOf(Color(0xFF303B50).copy(alpha = 0.58f), Color(0xFF252F42).copy(alpha = 0.72f), Color(0xFF1D2739).copy(alpha = 0.82f))))
                 .clickable(interactionSource = profileCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "profile" }
                 .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(28.dp))
                 ,
