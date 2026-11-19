@@ -299,11 +299,13 @@ private fun haliMeoAtmosphere(key: String): HaliMeoAtmosphere? = when (key) {
 @Composable
 private fun haliMeoAnimatedAtmosphere(key: String): HaliMeoAtmosphere? {
     val target = haliMeoAtmosphere(key) ?: return null
-    // Let the whole palette morph almost for the entire interval. This keeps
-    // every colour field in sync instead of swapping presets in one frame.
-    val transitionDuration = if (reduceAnimationsState.value) 0
-        else ((dynamicThemeIntervalSecondsState.intValue.coerceIn(15, 120) - 2) * 1000).coerceAtLeast(1)
-    val transition = tween<Color>(durationMillis = transitionDuration, easing = LinearEasing)
+    // Animate only the short transition between presets. Previously each
+    // preset change triggered a near-full-interval animation on four colours;
+    // that kept the entire Compose tree invalidating for 13–118 seconds.
+    val transition = tween<Color>(
+        durationMillis = if (reduceAnimationsState.value) 0 else 420,
+        easing = LinearEasing
+    )
     val primary by animateColorAsState(target.primary, transition, label = "themePrimary")
     val secondary by animateColorAsState(target.secondary, transition, label = "themeSecondary")
     val top by animateColorAsState(target.top, transition, label = "themeTop")
@@ -1601,10 +1603,6 @@ private fun SettingsScreen(
             ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE).edit().putString("background_photo", uri.toString()).putString("background_color", "photo").apply()
         }
     }
-    LaunchedEffect(Unit) {
-        customBackgroundColorState.value = backgroundColor
-        customBackgroundUriState.value = backgroundPhoto
-    }
     LaunchedEffect(customBackgroundColorState.value) {
         if (customBackgroundColorState.value != backgroundColor) {
             backgroundColor = customBackgroundColorState.value
@@ -2136,7 +2134,7 @@ private fun SettingsScreen(
                 AnimatedVisibility(visible = selectedSettingsPage == "appearance", enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Aspetto dell'app", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                var selectedThemeMode by remember { mutableStateOf(appThemeModeState.value) }
+                var selectedThemeMode by remember(appThemeModeState.value) { mutableStateOf(appThemeModeState.value) }
                 SingleChoiceSegmentedButtonRow(
                     modifier = Modifier.fillMaxWidth()
                         .clip(RoundedCornerShape(22.dp))
@@ -2298,12 +2296,19 @@ private fun SettingsScreen(
                             modifier = Modifier.width(86.dp).clip(RoundedCornerShape(20.dp))
                                 .clickable {
                                     settingsFeedbackView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    // A manual choice must take control immediately; otherwise
+                                    // the dynamic scheduler replaces it at the next interval.
+                                    dynamicThemeEnabledState.value = false
                                     backgroundColor = option.first
                                     backgroundPhoto = null
                                     customBackgroundColorState.value = option.first
                                     customBackgroundUriState.value = null
                                     ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
-                                        .edit().putString("background_color", option.first).remove("background_photo").apply()
+                                        .edit()
+                                        .putBoolean("dynamic_theme_enabled", false)
+                                        .putString("background_color", option.first)
+                                        .remove("background_photo")
+                                        .apply()
                                 }.padding(vertical = 5.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -2367,12 +2372,18 @@ private fun SettingsScreen(
                         Column(
                             modifier = Modifier.width(64.dp).clip(RoundedCornerShape(16.dp))
                                 .clickable {
+                                    // Manual palette selection disables the rotating theme.
+                                    dynamicThemeEnabledState.value = false
                                     backgroundColor = option.first
                                     backgroundPhoto = null
                                     customBackgroundColorState.value = option.first
                                     customBackgroundUriState.value = null
                                     ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
-                                        .edit().putString("background_color", option.first).remove("background_photo").apply()
+                                        .edit()
+                                        .putBoolean("dynamic_theme_enabled", false)
+                                        .putString("background_color", option.first)
+                                        .remove("background_photo")
+                                        .apply()
                                 }.padding(vertical = 6.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(6.dp)
