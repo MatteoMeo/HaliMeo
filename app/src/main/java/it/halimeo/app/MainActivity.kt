@@ -1724,21 +1724,14 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(profileCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsProfilePress")
-                .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
-                .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
-                .clip(RoundedCornerShape(36.dp))
+                
+                .shadow(8.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.12f))
+                .clip(RoundedCornerShape(28.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
                 .clickable(interactionSource = profileCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "profile" }
-                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(36.dp))
-                .drawPrismalGlass(
-                    backdrop = settingsPrismalBackdrop,
-                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
-                    effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
-                    onDrawSurface = {
-                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsGlassTint.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
-                    }
-                ),
-            shape = RoundedCornerShape(36.dp),
+                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(28.dp))
+                ,
+            shape = RoundedCornerShape(28.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2048,21 +2041,14 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(invitesCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsInvitesPress")
-                .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
-                .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
-                .clip(RoundedCornerShape(36.dp))
+                
+                .shadow(8.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.12f))
+                .clip(RoundedCornerShape(28.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
                 .clickable(interactionSource = invitesCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "invites" }
-                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(36.dp))
-                .drawPrismalGlass(
-                    backdrop = settingsPrismalBackdrop,
-                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
-                    effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
-                    onDrawSurface = {
-                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsGlassTint.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
-                    }
-                ),
-            shape = RoundedCornerShape(36.dp),
+                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(28.dp))
+                ,
+            shape = RoundedCornerShape(28.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2120,7 +2106,7 @@ private fun SettingsScreen(
 
                         if (inviteCode.isNotBlank()) {
                             Card(
-                                modifier = Modifier.fillMaxWidth().hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle).clip(RoundedCornerShape(20.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(20.dp)),
+                                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).border(1.dp, frostedEdgeColor(), RoundedCornerShape(20.dp)),
                                 shape = RoundedCornerShape(20.dp),
                                 colors = CardDefaults.cardColors(containerColor = frostedSurfaceStrongColor())
                             ) {
@@ -2181,21 +2167,14 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(appearanceCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsAppearancePress")
-                .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
-                .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
-                .clip(RoundedCornerShape(36.dp))
+                
+                .shadow(8.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.12f))
+                .clip(RoundedCornerShape(28.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
-                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(36.dp))
-                .drawPrismalGlass(
-                    backdrop = settingsPrismalBackdrop,
-                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
-                    effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
-                    onDrawSurface = {
-                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsGlassTint.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
-                    }
-                )
+                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(28.dp))
+                
                 .clickable(interactionSource = appearanceCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "appearance" },
-            shape = RoundedCornerShape(36.dp),
+            shape = RoundedCornerShape(28.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2690,21 +2669,14 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(dateCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsDatePress")
-                .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
-                .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
-                .clip(RoundedCornerShape(36.dp))
+                
+                .shadow(8.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.12f))
+                .clip(RoundedCornerShape(28.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
                 .clickable(interactionSource = dateCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "date" }
-                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(36.dp))
-                .drawPrismalGlass(
-                    backdrop = settingsPrismalBackdrop,
-                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
-                    effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
-                    onDrawSurface = {
-                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsGlassTint.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
-                    }
-                ),
-            shape = RoundedCornerShape(36.dp),
+                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(28.dp))
+                ,
+            shape = RoundedCornerShape(28.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -2758,21 +2730,14 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(syncCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsSyncPress")
-                .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
-                .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
-                .clip(RoundedCornerShape(36.dp))
+                
+                .shadow(8.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.12f))
+                .clip(RoundedCornerShape(28.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
                 .clickable(interactionSource = syncCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "sync" }
-                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(36.dp))
-                .drawPrismalGlass(
-                    backdrop = settingsPrismalBackdrop,
-                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
-                    effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
-                    onDrawSurface = {
-                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsGlassTint.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
-                    }
-                ),
-            shape = RoundedCornerShape(36.dp),
+                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(28.dp))
+                ,
+            shape = RoundedCornerShape(28.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -2853,21 +2818,14 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(appInfoInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsAppInfoPress")
-                .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
-                .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
-                .clip(RoundedCornerShape(36.dp))
+                
+                .shadow(8.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.12f))
+                .clip(RoundedCornerShape(28.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
                 .clickable(interactionSource = appInfoInteraction, indication = LocalIndication.current) { selectedSettingsPage = "appInfo" }
-                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(36.dp))
-                .drawPrismalGlass(
-                    backdrop = settingsPrismalBackdrop,
-                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
-                    effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
-                    onDrawSurface = {
-                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsGlassTint.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
-                    }
-                ),
-            shape = RoundedCornerShape(36.dp),
+                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(28.dp))
+                ,
+            shape = RoundedCornerShape(28.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -2914,21 +2872,14 @@ private fun SettingsScreen(
         if (isOwner == true && (selectedSettingsPage == null || selectedSettingsPage == "developer")) {
         Card(
             modifier = Modifier.fillMaxWidth()
-                .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
-                .shadow(20.dp, RoundedCornerShape(36.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.22f))
-                .clip(RoundedCornerShape(36.dp))
+                
+                .shadow(8.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.12f))
+                .clip(RoundedCornerShape(28.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
                 .clickable { if (developerUnlocked) selectedSettingsPage = "developer" else { showDeveloperPinDialog = true; developerPin = ""; developerPinError = false } }
-                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(36.dp))
-                .drawPrismalGlass(
-                    backdrop = settingsPrismalBackdrop,
-                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
-                    effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
-                    onDrawSurface = {
-                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsGlassTint.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
-                    }
-                ),
-            shape = RoundedCornerShape(36.dp),
+                .border(1.dp, Color(0xFFB9C8E2).copy(alpha = 0.18f), RoundedCornerShape(28.dp))
+                ,
+            shape = RoundedCornerShape(28.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
