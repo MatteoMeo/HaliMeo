@@ -1501,6 +1501,19 @@ private fun SettingsScreen(
         }
     }
 
+
+    val settingsHaze = rememberHazeState()
+    val settingsPrismalBackdrop = rememberPrismalGlassLayer()
+    val settingsPrismalDensity = LocalDensity.current
+    val settingsAccent = MaterialTheme.colorScheme.primary
+    val settingsAuthGlassStyle = remember(settingsAccent) {
+        HazeBlurStyle {
+            backgroundColor(Color(0xFF26344B).copy(alpha = 0.94f))
+            colorEffects(listOf(HazeColorEffect.tint(settingsAccent.copy(alpha = 0.045f))))
+            fallbackColorEffect(HazeColorEffect.tint(Color(0xFF202C42).copy(alpha = 0.98f)))
+        }
+    }
+
     val primaryText = MaterialTheme.colorScheme.onSurface
     val secondaryText = MaterialTheme.colorScheme.onSurfaceVariant
     val accentText = MaterialTheme.colorScheme.primary
@@ -1656,7 +1669,7 @@ private fun SettingsScreen(
         animationSpec = if (reduceAnimationsState.value) tween(0) else tween(90, easing = OneUiMotionEasing),
         label = "settingsTitleScale"
     )
-    Column(Modifier.fillMaxSize().background(Color.Transparent)) {
+    Column(Modifier.fillMaxSize().background(Color.Transparent).hazeSource(settingsHaze)) {
         // A dedicated route header replaces accordion toggles with clear page navigation.
         Row(
             Modifier.fillMaxWidth().padding(start = 12.dp, top = 8.dp, end = 20.dp, bottom = 8.dp),
@@ -1766,6 +1779,17 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(profileCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsProfilePress")
                 
+                .then(if (selectedSettingsPage == "profile") Modifier
+                .hazeBlur(HazeInput.Sources(settingsHaze), settingsAuthGlassStyle)
+                .drawPrismalGlass(
+                    backdrop = settingsPrismalBackdrop,
+                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
+                    effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
+                    onDrawSurface = {
+                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsAccent.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
+                    }
+                )
+            else Modifier)
                 .shadow(8.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.12f))
                 .clip(RoundedCornerShape(28.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF303B50).copy(alpha = 0.58f), Color(0xFF252F42).copy(alpha = 0.72f), Color(0xFF1D2739).copy(alpha = 0.82f))))
@@ -2209,6 +2233,17 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(appearanceCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsAppearancePress")
                 
+                .then(if (selectedSettingsPage == "appearance") Modifier
+                .hazeBlur(HazeInput.Sources(settingsHaze), settingsAuthGlassStyle)
+                .drawPrismalGlass(
+                    backdrop = settingsPrismalBackdrop,
+                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
+                    effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
+                    onDrawSurface = {
+                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsAccent.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
+                    }
+                )
+            else Modifier)
                 .shadow(8.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.12f))
                 .clip(RoundedCornerShape(28.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
@@ -2231,38 +2266,14 @@ private fun SettingsScreen(
                 }
                 AnimatedVisibility(visible = selectedSettingsPage == "appearance", enter = fadeIn(tween(90)), exit = fadeOut(tween(70))) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Aspetto dell'app", color = primaryText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                var selectedThemeMode by remember(appThemeModeState.value) { mutableStateOf(appThemeModeState.value) }
-                SingleChoiceSegmentedButtonRow(
-                    modifier = Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(frostedSurfaceColor(), RoundedCornerShape(22.dp))
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f), RoundedCornerShape(22.dp))
-                        .padding(4.dp),
-                    space = 3.dp
-                ) {
-                    listOf("dark" to "Scuro", "light" to "Chiaro", "system" to "Sistema").forEachIndexed { index, item ->
-                        SegmentedButton(
-                            selected = selectedThemeMode == item.first,
-                            onClick = {
-                                selectedThemeMode = item.first
-                                appThemeModeState.value = item.first
-                                ctx.getSharedPreferences("halimeo_preferences", android.content.Context.MODE_PRIVATE)
-                                    .edit().putString("app_theme_mode", item.first).apply()
-                            },
-                            shape = SegmentedButtonDefaults.itemShape(index, 3, RoundedCornerShape(18.dp)),
-                            colors = SegmentedButtonDefaults.colors(
-                                activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
-                                activeContentColor = MaterialTheme.colorScheme.onSurface,
-                                activeBorderColor = Color.Transparent,
-                                inactiveContainerColor = Color.Transparent,
-                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                inactiveBorderColor = Color.Transparent
-                            )
-                        ) { Text(item.second, maxLines = 1, fontWeight = if (selectedThemeMode == item.first) FontWeight.SemiBold else FontWeight.Medium) }
+                Text("PERSONALIZZA IL VETRO", color = accentText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                Text("Colori, atmosfera e fluidità del vostro spazio.", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
+                LaunchedEffect(Unit) {
+                    if (appThemeModeState.value != "dark") {
+                        appThemeModeState.value = "dark"
+                        generalPrefs.edit().putString("app_theme_mode", "dark").apply()
                     }
                 }
-                Text("Il tema chiaro mantiene gli stessi accenti, sfondi e personalizzazioni del tema scuro.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 Row(
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -2711,6 +2722,17 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(dateCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsDatePress")
                 
+                .then(if (selectedSettingsPage == "date") Modifier
+                .hazeBlur(HazeInput.Sources(settingsHaze), settingsAuthGlassStyle)
+                .drawPrismalGlass(
+                    backdrop = settingsPrismalBackdrop,
+                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
+                    effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
+                    onDrawSurface = {
+                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsAccent.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
+                    }
+                )
+            else Modifier)
                 .shadow(8.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.12f))
                 .clip(RoundedCornerShape(28.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
@@ -2772,6 +2794,17 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(syncCardInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsSyncPress")
                 
+                .then(if (selectedSettingsPage == "sync") Modifier
+                .hazeBlur(HazeInput.Sources(settingsHaze), settingsAuthGlassStyle)
+                .drawPrismalGlass(
+                    backdrop = settingsPrismalBackdrop,
+                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
+                    effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
+                    onDrawSurface = {
+                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsAccent.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
+                    }
+                )
+            else Modifier)
                 .shadow(8.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.12f))
                 .clip(RoundedCornerShape(28.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
@@ -2860,6 +2893,17 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
                 .haliMeoPressScale(appInfoInteraction, reduceMotion = reduceAnimationsState.value, pressedScale = 0.985f, label = "settingsAppInfoPress")
                 
+                .then(if (selectedSettingsPage == "appInfo") Modifier
+                .hazeBlur(HazeInput.Sources(settingsHaze), settingsAuthGlassStyle)
+                .drawPrismalGlass(
+                    backdrop = settingsPrismalBackdrop,
+                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
+                    effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
+                    onDrawSurface = {
+                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsAccent.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
+                    }
+                )
+            else Modifier)
                 .shadow(8.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.12f))
                 .clip(RoundedCornerShape(28.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
@@ -2914,6 +2958,17 @@ private fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth()
                 
+                .then(if (isOwner == true && selectedSettingsPage == "developer") Modifier
+                .hazeBlur(HazeInput.Sources(settingsHaze), settingsAuthGlassStyle)
+                .drawPrismalGlass(
+                    backdrop = settingsPrismalBackdrop,
+                    shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(28.dp) },
+                    effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
+                    onDrawSurface = {
+                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsAccent.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
+                    }
+                )
+            else Modifier)
                 .shadow(8.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.12f))
                 .clip(RoundedCornerShape(28.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF35435C).copy(alpha = 0.64f), Color(0xFF293951).copy(alpha = 0.80f), Color(0xFF202F49).copy(alpha = 0.88f))))
