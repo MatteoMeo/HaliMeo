@@ -1710,7 +1710,7 @@ private fun SettingsScreen(
             }
         }
         Column(
-            Modifier.weight(1f).fillMaxWidth().verticalScroll(settingsScrollState).padding(start = 22.dp, end = 22.dp, bottom = 116.dp),
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(settingsScrollState).padding(start = 8.dp, end = 8.dp, bottom = 116.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
         if (selectedSettingsPage == null || selectedSettingsPage == "profile") {
