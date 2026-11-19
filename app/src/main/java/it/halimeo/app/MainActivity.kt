@@ -1729,7 +1729,7 @@ private fun SettingsScreen(
                     shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
                     effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
                     onDrawSurface = {
-                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), MaterialTheme.colorScheme.primary.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
+                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsGlassTint.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
                     }
                 ),
             shape = RoundedCornerShape(36.dp),
@@ -2007,7 +2007,7 @@ private fun SettingsScreen(
                     shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
                     effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
                     onDrawSurface = {
-                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), MaterialTheme.colorScheme.primary.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
+                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsGlassTint.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
                     }
                 ),
             shape = RoundedCornerShape(36.dp),
@@ -2139,7 +2139,7 @@ private fun SettingsScreen(
                     shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
                     effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
                     onDrawSurface = {
-                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), MaterialTheme.colorScheme.primary.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
+                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsGlassTint.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
                     }
                 )
                 .clickable(interactionSource = appearanceCardInteraction, indication = LocalIndication.current) { selectedSettingsPage = "appearance" },
@@ -2649,7 +2649,7 @@ private fun SettingsScreen(
                     shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
                     effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
                     onDrawSurface = {
-                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), MaterialTheme.colorScheme.primary.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
+                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsGlassTint.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
                     }
                 ),
             shape = RoundedCornerShape(36.dp),
@@ -2717,7 +2717,7 @@ private fun SettingsScreen(
                     shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
                     effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
                     onDrawSurface = {
-                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), MaterialTheme.colorScheme.primary.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
+                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsGlassTint.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
                     }
                 ),
             shape = RoundedCornerShape(36.dp),
@@ -2812,7 +2812,7 @@ private fun SettingsScreen(
                     shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
                     effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
                     onDrawSurface = {
-                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), MaterialTheme.colorScheme.primary.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
+                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsGlassTint.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
                     }
                 ),
             shape = RoundedCornerShape(36.dp),
@@ -2873,7 +2873,7 @@ private fun SettingsScreen(
                     shape = { com.styropyr0.prismal.shapes.PrismalRoundedRectangle(36.dp) },
                     effects = prismalGlassEffects(settingsPrismalDensity, adaptiveLuminance = true, luminance = 0.12f),
                     onDrawSurface = {
-                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), MaterialTheme.colorScheme.primary.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
+                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9AA8C5).copy(alpha = 0.018f), settingsGlassTint.copy(alpha = 0.045f), Color(0xFF1D2A40).copy(alpha = 0.40f))))
                     }
                 ),
             shape = RoundedCornerShape(36.dp),
