@@ -1631,6 +1631,12 @@ private fun SettingsScreen(
     val settingsScrollState = rememberScrollState()
     BackHandler(enabled = selectedSettingsPage != null) { selectedSettingsPage = null }
     LaunchedEffect(selectedSettingsPage) { settingsScrollState.scrollTo(0) }
+    // Owner-only destinations are never left selected if the account is not the owner.
+    LaunchedEffect(isOwner, selectedSettingsPage) {
+        if (isOwner == false && selectedSettingsPage in setOf("invites", "developer")) {
+            selectedSettingsPage = null
+        }
+    }
     val updateCenterRequester = remember { BringIntoViewRequester() }
     LaunchedEffect(focusUpdater) {
         if (focusUpdater) {
@@ -1752,11 +1758,27 @@ private fun SettingsScreen(
                     exit = HaliMeoMotion.sectionExit(reduceAnimationsState.value)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Account: $displayName", color = secondaryText, style = MaterialTheme.typography.bodyMedium)
-                Text("I ricordi vengono salvati sul dispositivo prima della sincronizzazione.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                // Profile hero: a larger portrait and clearer identity hierarchy, matching the login glass language.
+                Column(
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(30.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color(0xFF647695).copy(alpha = 0.16f),
+                                    Color(0xFF40516E).copy(alpha = 0.10f),
+                                    Color(0xFF26344B).copy(alpha = 0.24f)
+                                )
+                            )
+                        )
+                        .border(1.dp, Color(0xFFC3D0E7).copy(alpha = 0.14f), RoundedCornerShape(30.dp))
+                        .padding(horizontal = 18.dp, vertical = 22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(contentAlignment = Alignment.BottomEnd) {
                     Surface(
-                        modifier = Modifier.size(76.dp).clickable(enabled = isProfileEditing) { profilePhotoPicker.launch(arrayOf("image/*")) },
+                        modifier = Modifier.size(112.dp).clickable(enabled = isProfileEditing) { profilePhotoPicker.launch(arrayOf("image/*")) },
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
                         border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.55f))
@@ -1765,14 +1787,44 @@ private fun SettingsScreen(
                             if (profilePhotoBitmap != null) {
                                 Image(bitmap = profilePhotoBitmap!!.asImageBitmap(), contentDescription = "Foto profilo", modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
                             } else {
-                                Icon(Icons.Default.AddAPhoto, contentDescription = "Aggiungi foto profilo", tint = accentText, modifier = Modifier.size(30.dp))
+                                Icon(Icons.Default.AddAPhoto, contentDescription = "Aggiungi foto profilo", tint = accentText, modifier = Modifier.size(38.dp))
                             }
                         }
                     }
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(if (profileNickname.isBlank()) displayName else profileNickname, color = primaryText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    if (isProfileEditing) {
+                        Box(
+                            Modifier.size(34.dp).clip(CircleShape)
+                                .background(accentText)
+                                .border(2.dp, Color(0xFF26344B), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = "Cambia foto profilo", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(17.dp))
+                        }
                     }
+                    }
+                    Text(
+                        if (profileNickname.isBlank()) displayName else profileNickname,
+                        color = primaryText,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        accountEmail.ifBlank { "Account HaliMeo" },
+                        color = secondaryText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        if (isProfileEditing) "Tocca la foto per cambiarla" else "Profilo personale",
+                        color = accentText,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
+                Text("I ricordi vengono salvati sul dispositivo prima della sincronizzazione.", color = secondaryText, style = MaterialTheme.typography.bodySmall)
                 if (isProfileEditing) {
                     OutlinedTextField(value = profileNickname, onValueChange = { profileNickname = it }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), label = { Text("Nome o soprannome") }, singleLine = true,
                         colors = haliMeoTextFieldColors())
@@ -1991,7 +2043,7 @@ private fun SettingsScreen(
 
         }
 
-        if (selectedSettingsPage == null || selectedSettingsPage == "invites") {
+        if (isOwner == true && (selectedSettingsPage == null || selectedSettingsPage == "invites")) {
         val invitesCardInteraction = remember { MutableInteractionSource() }
         Card(
             modifier = Modifier.fillMaxWidth()
@@ -2859,7 +2911,7 @@ private fun SettingsScreen(
 
         }
 
-        if (selectedSettingsPage == null || selectedSettingsPage == "developer") {
+        if (isOwner == true && (selectedSettingsPage == null || selectedSettingsPage == "developer")) {
         Card(
             modifier = Modifier.fillMaxWidth()
                 .hazeBlur(HazeInput.Sources(settingsHaze), settingsGlassStyle)
